@@ -265,6 +265,8 @@ body {
   transform-origin: left;
 }
 .chip.on { opacity: 1; transform: translateY(-2px); }
+.chip.rest { opacity: 0.6; }
+.chip.rest .bar { transform: scaleX(0) !important; }
 .chip.wait { opacity: 0.8; animation: wait 0.5s ease-in-out infinite alternate; }
 @keyframes wait { to { opacity: 0.45; } }
 

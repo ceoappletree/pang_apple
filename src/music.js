@@ -7,6 +7,7 @@
  * - 새 악기는 다음 소절 묶음의 첫 박에 다른 악기들과 같은 순간에 들어간다.
  *   무대가 조용할 때 온 악기는 그 순간을 첫 박으로 삼아 바로 시작한다.
  * - 판에서 사라진 악기는 다음 마디가 시작될 때 멈춘다.
+ * - 낮은 단계 리듬(1~4단계)은 계속 연주하고, 5단계부터는 3~5번 연주한 뒤 1~3번 쉬기를 무작위로 반복한다.
  * - 같은 악기가 k개 있으면 한 소절 묶음마다 차례로 변주 A, B, C, D… 를 이어서 연주한다.
  *   그래서 2개면 2배, 3개면 3배 길이의 리듬이나 멜로디가 된다(피아노 같은 주선율은 묶음 2개가 한 변주).
  */
@@ -641,6 +642,12 @@
     return [...names];
   }
 
+  // 낮은 단계(0~3)는 쉬지 않고, 그 위 단계와 보컬은 3~5번 연주하고 1~3번 쉰다. 한 번 = 한 변주(소절 묶음).
+  const STEADY_TIERS = 4;
+  const PLAY_TIMES = [3, 5];
+  const REST_TIMES = [1, 3];
+  const rand = ([lo, hi]) => lo + Math.floor(Math.random() * (hi - lo + 1));
+
   // 판 위 악기 외에 합주가 커지면 들어오는 보컬(11 = 합창, 12 = 리드 보컬)
   const VOCAL_AT = [5, 7];   // 이만큼의 악기 종류가 연주 중이면 들어온다
   function partOf(tier) { return tier < 11 ? song.instruments[tier] : (song.vocals || [])[tier - 11]; }
@@ -748,12 +755,27 @@
     const phraseLen = part.main ? 128 : 64;
     const ph = Math.floor(rel / phraseLen);
     if (ph !== a.phrase) {
-      // 소절 묶음이 바뀔 때마다 다음 차례의 악기가 이어받는다
       const k = Math.max(1, counts[tier] || 1);
-      a.slot = ph === 0 ? 0 : (a.slot + 1) % k;
+      if (ph === 0) {
+        a.slot = 0;
+        a.mode = 'play';
+        a.left = rand(PLAY_TIMES);
+      } else {
+        // 중간 단계부터는 몇 번 연주하고 몇 번 쉰다(횟수는 매번 무작위)
+        if (tier >= STEADY_TIERS) {
+          a.left--;
+          if (a.left <= 0) {
+            a.mode = a.mode === 'play' ? 'rest' : 'play';
+            a.left = rand(a.mode === 'play' ? PLAY_TIMES : REST_TIMES);
+          }
+        }
+        // 소절 묶음이 바뀔 때마다 다음 차례의 악기가 이어받는다
+        if (a.mode === 'play') a.slot = (a.slot + 1) % k;
+      }
       a.k = k;
       a.phrase = ph;
     }
+    if (a.mode === 'rest') return false;
     const v = a.slot % 4;
     const inPhrase = rel % phraseLen;
     const bar = Math.floor(inPhrase / 16), s = inPhrase % 16;
@@ -925,7 +947,7 @@
     } else {
       fromStep = Math.max(0, Math.ceil((now + 0.03 - t0) / CYCLE)) * 64;
     }
-    active[tier] = { fromStep, from: t0 + fromStep * STEP, until: Infinity, phrase: -1, slot: 0, k: 1 };
+    active[tier] = { fromStep, from: t0 + fromStep * STEP, until: Infinity, phrase: -1, slot: 0, k: 1, mode: 'play', left: 0 };
   }
 
   // 판 위 악기 수를 알려준다(매 프레임). 있는 악기는 계속 연주하고, 사라진 악기는 다음 마디에 멈춘다.
@@ -966,7 +988,7 @@
     const now = ctx.currentTime;
     if (a.until <= now) return null;
     if (now < a.from) return { waiting: true, wait: a.from - now };
-    return { playing: true, slot: a.slot, k: a.k, variation: a.slot % 4 };
+    return { playing: true, resting: a.mode === 'rest', slot: a.slot, k: a.k, variation: a.slot % 4 };
   }
 
   function conductor() {

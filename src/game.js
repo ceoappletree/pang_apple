@@ -277,7 +277,7 @@
   // 같은 악기 중 지금 차례인 것(먼저 온 순서대로 돌아간다)
   function soloist(list, tier) {
     const st = Music.status(tier);
-    if (!st || !st.playing) return null;
+    if (!st || !st.playing || st.resting) return null;
     const same = list.filter((b) => b.tier === tier).sort((a, b) => a.born - b.born);
     return same.length ? same[st.slot % same.length] : null;
   }
@@ -338,12 +338,14 @@
       const isSolo = solo[b.tier] === b;
       // 소리가 날 때마다 커졌다가 작아진다. 지금 차례인 악기는 더 크게.
       const hitAge = audioNow - pulse[b.tier];
-      const bump = st && st.playing && hitAge >= 0 ? Math.exp(-hitAge * 10) : 0;
+      const sounding = !!(st && st.playing && !st.resting);
+      const bump = sounding && hitAge >= 0 ? Math.exp(-hitAge * 10) : 0;
       const s = easeBack(b.pop) * (1 + bump * (isSolo ? 0.16 : 0.09));
       c.save();
       c.translate(b.position.x, b.position.y);
       c.scale(s, s);
-      const glowAmt = isSolo ? 0.6 + bump : st && st.playing ? 0.18 : 0;
+      const glowAmt = isSolo ? 0.6 + bump : sounding ? 0.18 : 0;
+      if (st && st.resting) c.globalAlpha = 0.72;   // 쉬는 악기는 살짝 흐리게
       Icons.drawBall(c, INST[b.tier], r, { angle: b.angle, glow: glowAmt });
       if (st && st.waiting) {
         // 합류 대기: 다음 첫 박까지 남은 시간을 테두리 호로 보여준다
@@ -503,12 +505,14 @@
   }
 
   function updateChain(counts) {
-    const names = [], waiting = [], joined = [];
+    const names = [], waiting = [], joined = [], resting = [];
     let waitSec = 0;
     chips.forEach((ch, i) => {
       const st = Music.status(i);
-      const on = !!(st && st.playing), wait = !!(st && st.waiting);
+      const live = !!(st && st.playing), wait = !!(st && st.waiting);
+      const rest = live && st.resting, on = live && !rest;
       ch.li.classList.toggle('on', on);
+      ch.li.classList.toggle('rest', rest);
       ch.li.classList.toggle('wait', wait);
       if (ch.k !== counts[i]) {
         ch.k = counts[i];
@@ -517,27 +521,30 @@
       // 같은 악기가 여러 개면 막대가 지금 몇 번째 차례인지 보여준다
       ch.bar.style.transform = `scaleX(${on ? (st.slot + 1) / Math.max(1, counts[i], st.slot + 1) : 0})`;
       if (on) names.push(INST[i].name + (counts[i] > 1 ? `×${counts[i]}` : ''));
+      if (rest) resting.push(INST[i].name);
       if (wait) { waiting.push(INST[i].name); waitSec = st.wait; }
-      if (on && wasWaiting[i]) joined.push(INST[i].name);
+      if (live && wasWaiting[i]) joined.push(INST[i].name);
       wasWaiting[i] = wait;
     });
     // 합주가 커지면 들어오는 보컬
     (SET.vocals || []).forEach((vc, j) => {
       const i = N + j;
       const st = Music.status(i);
-      const on = !!(st && st.playing), wait = !!(st && st.waiting);
-      if (on) names.push(vc.name);
+      const live = !!(st && st.playing), wait = !!(st && st.waiting);
+      if (live && !st.resting) names.push(vc.name);
+      if (live && st.resting) resting.push(vc.name);
       if (wait) { waiting.push(vc.name); waitSec = st.wait; }
-      if (on && wasWaiting[i]) joined.push(vc.name);
+      if (live && wasWaiting[i]) joined.push(vc.name);
       wasWaiting[i] = wait;
     });
     if (joined.length) toast(joined.join(' · ') + ' 합류!');
 
     let text = names.length ? names.join(' · ') : '악기를 떨어뜨리면 첫 박부터 연주가 시작돼요';
+    if (resting.length) text += (names.length ? ' · ' : '') + '쉬는 중: ' + resting.join(', ');
     if (waiting.length) text = `다음 첫 박까지 ${Math.ceil(waitSec)}초 · ${waiting.join(' · ')} 대기`;
     if (text !== lastPlaying) {
       $('playing').textContent = text;
-      $('playing').classList.toggle('idle', !names.length && !waiting.length);
+      $('playing').classList.toggle('idle', !names.length && !waiting.length && !resting.length);
       $('count').textContent = names.length ? names.length + '중주' : waiting.length ? '준비' : '쉼표';
       lastPlaying = text;
     }
@@ -615,7 +622,7 @@
     DJ.draw(djc, 160, 110, {
       animal: SET.dj, accent, setName: SET.name, phase: phase >= 1 ? 0 : phase,
       beat: cond ? cond.beat : 0, bar: cond ? cond.bar : 0, playing: !!cond, time: now,
-      singing: (() => { const v = Music.status(N + 1); return !!(v && v.playing); })(),
+      singing: (() => { const v = Music.status(N + 1); return !!(v && v.playing && !v.resting); })(),
     });
   }
 
