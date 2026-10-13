@@ -141,15 +141,15 @@
         Body.setVelocity(nb, { x: (a.velocity.x + b.velocity.x) / 2, y: Math.min(0, (a.velocity.y + b.velocity.y) / 2) });
         Composite.add(engine.world, nb);
         score += INST[nt].points;
-        Music.trigger(nt, INST[nt].secs);
+        const wait = Music.trigger(nt, INST[nt].secs);
         burst(x, y, INST[nt].color, 10 + nt * 2);
-        toast(INST[nt].name + ' 합류!');
+        toast(INST[nt].name + (wait > 0.3 ? ' 등장 · 다음 첫 박에 합류' : ' 합류!'));
       } else {
         // 피아노 두 대가 만나면 사라지면서 모든 악기의 대합주
         score += 100;
         burst(x, y, '#ffd36b', 60);
         for (let i = 0; i < INST.length; i++) Music.trigger(i, 16);
-        toast('대합주! +100');
+        toast('대합주 준비! +100');
       }
       updateHud();
     }
@@ -210,10 +210,16 @@
     c.clearRect(0, 0, W, H);
 
     // 무대 바닥 조명: 박자에 맞춰 살짝 밝아진다
-    const beat = Math.max(0, 1 - ((audioNow / (Music.STEP * 4)) % 1) * 2.2);
-    const anyActive = INST.some((_, i) => Music.remaining(i) > 0);
+    // 지휘 박자에 맞춰 바닥 조명이 밝아지고, 4마디 묶음의 첫 박에는 크게 번쩍인다
+    const cond = Music.conductor();
+    let light = 0;
+    if (cond) {
+      const inBeat = 1 - ((cond.toNext % (Music.STEP * 4)) / (Music.STEP * 4));
+      const k = Math.max(0, 1 - inBeat * 2.2);
+      light = (cond.bar === 0 && cond.beat === 0 ? 0.35 : 0.12) * k;
+    }
     const glow = c.createRadialGradient(W / 2, H + 40, 20, W / 2, H + 40, H * 0.9);
-    glow.addColorStop(0, `rgba(255,196,110,${0.16 + (anyActive ? beat * 0.12 : 0)})`);
+    glow.addColorStop(0, `rgba(255,196,110,${0.16 + light})`);
     glow.addColorStop(1, 'rgba(255,196,110,0)');
     c.fillStyle = glow;
     c.fillRect(0, 0, W, H);
@@ -245,7 +251,8 @@
     for (const b of bodies()) {
       const r = b.circleRadius;
       b.pop = Math.min(1, b.pop + 0.08);
-      const playing = Music.remaining(b.tier) > 0;
+      const st = Music.status(b.tier);
+      const playing = !!(st && st.playing);
       const hitAge = audioNow - pulse[b.tier];
       const bump = playing && hitAge >= 0 ? Math.exp(-hitAge * 14) : 0;
       const s = easeBack(b.pop) * (1 + bump * 0.07);
@@ -253,6 +260,15 @@
       c.translate(b.position.x, b.position.y);
       c.scale(s, s);
       Instruments.drawBall(c, b.tier, r, { angle: b.angle, glow: playing ? 0.5 + bump : 0 });
+      if (st && st.waiting) {
+        // 합류 대기: 다음 첫 박까지 남은 시간을 테두리 호로 보여준다
+        const left = Math.min(1, st.wait / Music.CYCLE);
+        c.lineWidth = 3;
+        c.strokeStyle = 'rgba(255,231,199,.25)';
+        c.beginPath(); c.arc(0, 0, r + 4, 0, Math.PI * 2); c.stroke();
+        c.strokeStyle = '#ffc65c';
+        c.beginPath(); c.arc(0, 0, r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - left)); c.stroke();
+      }
       c.restore();
     }
 
@@ -336,21 +352,57 @@
     }
   }
 
-  let lastPlaying = '';
+  let lastPlaying = '', lastBeat = -2;
+  const wasWaiting = new Array(INST.length).fill(false);
+  const joined = [];
+  const beats = [];
+  function buildBaton() {
+    const baton = $('baton');
+    for (let bar = 0; bar < 4; bar++) {
+      const g = document.createElement('span');
+      g.className = 'measure';
+      for (let b = 0; b < 4; b++) {
+        const d = document.createElement('i');
+        if (bar === 0 && b === 0) d.className = 'one';
+        g.appendChild(d);
+        beats.push(d);
+      }
+      baton.appendChild(g);
+    }
+  }
   function updateChain() {
     const names = [];
+    const waiting = [];
+    let waitSec = 0;
     chips.forEach((ch, i) => {
-      const rem = Music.remaining(i);
-      ch.li.classList.toggle('on', rem > 0);
-      ch.bar.style.transform = `scaleX(${rem})`;
-      if (rem > 0) names.push(INST[i].name);
+      const st = Music.status(i);
+      const on = !!(st && st.playing), wait = !!(st && st.waiting);
+      ch.li.classList.toggle('on', on);
+      ch.li.classList.toggle('wait', wait);
+      ch.bar.style.transform = `scaleX(${on ? st.rem : 0})`;
+      if (on) names.push(INST[i].name);
+      if (wait) { waiting.push(i); waitSec = st.wait; }
+      // 대기하던 악기가 첫 박에 들어오는 순간
+      if (on && wasWaiting[i]) joined.push(INST[i].name);
+      wasWaiting[i] = wait;
     });
-    const text = names.length ? names.join(' · ') : '악기를 떨어뜨리면 연주가 시작돼요';
+    if (joined.length) { toast(joined.join(' · ') + ' 합류!'); joined.length = 0; }
+
+    let text = names.length ? names.join(' · ') : '악기를 떨어뜨리면 첫 박부터 연주가 시작돼요';
+    if (waiting.length) text = `다음 첫 박까지 ${Math.ceil(waitSec)}초 · ` + waiting.map((i) => INST[i].name).join(' · ') + ' 대기';
     if (text !== lastPlaying) {
       $('playing').textContent = text;
-      $('playing').classList.toggle('idle', !names.length);
-      $('count').textContent = names.length ? names.length + '중주' : '쉼표';
+      $('playing').classList.toggle('idle', !names.length && !waiting.length);
+      $('count').textContent = names.length ? names.length + '중주' : waiting.length ? '준비' : '쉼표';
       lastPlaying = text;
+    }
+
+    // 지휘 표시: 4마디 × 4박
+    const cond = Music.conductor();
+    const cur = cond ? cond.bar * 4 + cond.beat : -1;
+    if (cur !== lastBeat) {
+      beats.forEach((el, i) => el.classList.toggle('cur', i === cur));
+      lastBeat = cur;
     }
   }
 
@@ -402,6 +454,7 @@
     // 판에 남은 모든 악기가 마지막으로 함께 연주한다
     const tiers = new Set(bodies().map((b) => b.tier));
     tiers.forEach((t) => Music.trigger(t, 8));
+    wasWaiting.fill(false);
     $('final').textContent = score.toLocaleString('ko-KR');
     $('finalCount').textContent = tiers.size;
     $('over').hidden = false;
@@ -412,8 +465,9 @@
     if (!started) return;
     const tiers = new Set(bodies().map((b) => b.tier));
     if (!tiers.size) { toast('판에 악기가 없어요'); return; }
-    tiers.forEach((t) => Music.trigger(t, INST[t].secs));
-    toast(tiers.size + '중주 합주!');
+    let wait = 0;
+    tiers.forEach((t) => { wait = Music.trigger(t, INST[t].secs); });
+    toast(tiers.size + '중주 ' + (wait > 0.3 ? '· 다음 첫 박에 다 함께' : '합주!'));
   }
 
   /* ---------- 시작 ---------- */
@@ -437,6 +491,7 @@
 
   window.addEventListener('resize', resize);
   buildChain();
+  buildBaton();
   setupWorld();
   current = randomTier(); next = randomTier();
   updateHud();

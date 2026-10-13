@@ -207,6 +207,31 @@ body {
   transform-origin: left;
 }
 .chip.on { opacity: 1; transform: translateY(-2px); }
+.chip.wait { opacity: 0.8; animation: wait 0.5s ease-in-out infinite alternate; }
+@keyframes wait { to { opacity: 0.45; } }
+
+/* 지휘 박자: 4마디 × 4박, 첫 박은 금색 */
+.baton {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.measure {
+  display: flex;
+  gap: 4px;
+  padding-left: 6px;
+  border-left: 2px solid rgba(255, 231, 199, 0.25);
+}
+.measure i {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 231, 199, 0.12);
+  transition: background 0.08s;
+}
+.measure i.one { background: rgba(255, 198, 92, 0.3); }
+.measure i.cur { background: var(--light); }
+.measure i.one.cur { background: var(--gold); box-shadow: 0 0 10px var(--gold); }
 
 .actions { display: flex; gap: 8px; }
 .btn {
@@ -235,6 +260,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .toast.show { animation-duration: 0.01s; }
   .chip { transition: none; }
+  .chip.wait { animation: none; }
 }
 
 @media (max-height: 640px) {

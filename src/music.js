@@ -1,7 +1,7 @@
 /* 합주팡 — 음악 엔진
  * 모든 소리는 Web Audio API로 합성한다(샘플 파일 없음).
  * 120 BPM, 16분음표 = 0.125초, 1마디 = 2초, 4마디 = 8초.
- * 모든 악기는 하나의 공용 박자 격자에 맞춰 연주되므로 언제 등장해도 합주가 어긋나지 않는다.
+ * 모든 악기는 하나의 지휘(공용 박자)를 따르고, 새 악기는 항상 다음 4마디 묶음의 첫 박에 함께 들어간다.
  */
 (function () {
   'use strict';
@@ -17,7 +17,7 @@
   ];
 
   let ctx = null, master = null, reverbIn = null, noiseBuf = null;
-  let t0 = 0, nextStep = 0, timer = null, muted = false;
+  let t0 = 0, nextStep = 0, timer = null, muted = false, running = false;
   const buses = [];
   const active = {};                  // tier -> { from, until }
   let hitListener = null;
@@ -170,7 +170,7 @@
   }
 
   /* ---------- 악기별 연주 패턴 ----------
-   * play(out, t, s, bar) : s = 마디 안의 16분음표 위치(0-15), bar = 전체 마디 번호
+   * play(out, t, s, bar, rel) : s = 마디 안의 16분음표 위치(0-15), bar = 전체 마디 번호, rel = 이 악기가 합류한 뒤 지난 마디 수
    * 소리를 냈으면 true 를 돌려준다(화면 효과용).
    */
   const N = (list) => { const m = {}; for (const [s, n, l] of list) m[s] = [n, l]; return m; };
@@ -306,8 +306,8 @@
       });
       return true;
     } },
-    // 10 피아노: 왼손 화음 + 오른손 8마디(16초) 멜로디
-    { vol: 0.32, rev: 0.35, play(out, t, s, bar) {
+    // 10 피아노: 왼손 화음 + 오른손 8마디(16초) 멜로디. 멜로디는 피아노가 합류한 마디부터 첫 음으로 시작한다.
+    { vol: 0.32, rev: 0.35, play(out, t, s, bar, rel) {
       let hit = false;
       const ch = CHORDS[bar % 4];
       if (s === 0 || s === 6 || s === 10) {
@@ -316,16 +316,24 @@
         for (const n of ch.tones.slice(0, 3)) pianoNote(out, t, n, v, STEP * 3);
         hit = true;
       }
-      const m = PIANO[bar % 8][s];
+      const m = PIANO[rel % 8][s];
       if (m) { pianoNote(out, t, m[0], 0.6, m[1] * STEP); hit = true; }
       return hit;
     } },
   ];
 
-  /* ---------- 스케줄러 ---------- */
+  /* ---------- 스케줄러 ----------
+   * 합주는 4마디(8초)짜리 '소절 묶음'을 단위로 돈다.
+   * 새 악기는 언제 생기든 다음 소절 묶음의 첫 박에 다 같이 들어가고, 소절 묶음이 끝나는 순간에 멈춘다.
+   * 그래서 모든 악기의 연주 시작점이 항상 같다.
+   * 아무 악기도 연주하지 않을 때 새 악기가 오면, 그 순간을 첫 박으로 삼아 지휘를 새로 시작한다.
+   */
+  const CYCLE_STEPS = 64;
+  const CYCLE = CYCLE_STEPS * STEP;   // 8초
+  const BAR = 16 * STEP;              // 2초
 
   function schedule() {
-    if (!ctx) return;
+    if (!ctx || !running) return;
     const now = ctx.currentTime;
     while (t0 + nextStep * STEP < now + LOOKAHEAD) {
       const t = t0 + nextStep * STEP;
@@ -334,7 +342,8 @@
         for (let i = 0; i < PATTERNS.length; i++) {
           const a = active[i];
           if (!a || t < a.from - 1e-4 || t >= a.until - 1e-4) continue;
-          if (PATTERNS[i].play(buses[i], t, s, bar) && hitListener) hitListener(i, t, s);
+          const rel = bar - Math.round((a.from - t0) / BAR);
+          if (PATTERNS[i].play(buses[i], t, s, bar, rel) && hitListener) hitListener(i, t, s);
         }
       }
       nextStep++;
@@ -373,32 +382,73 @@
       buses[i] = g;
     });
 
-    t0 = ctx.currentTime + 0.1;
-    nextStep = 0;
     timer = setInterval(schedule, 25);
   }
 
-  // 악기를 seconds 동안 연주 목록에 올린다. 같은 악기가 다시 오면 시간만 늘어난다.
+  // 연주 중이거나 합류를 기다리는 악기가 하나라도 있는가
+  function busy(now) {
+    for (const k in active) if (active[k].until > now) return true;
+    return false;
+  }
+
+  // 지금 이후 가장 가까운 소절 묶음의 첫 박
+  function nextDownbeat(now) {
+    const k = Math.ceil((now + 0.03 - t0) / CYCLE);
+    return t0 + Math.max(0, k) * CYCLE;
+  }
+
+  // 악기를 연주 목록에 올린다. seconds 는 8의 배수(소절 묶음 단위).
+  // 같은 악기가 이미 이어서 연주 중이면 끝나는 시간만 늘어난다.
+  // 돌려주는 값: 이 악기 소리가 들리기 시작할 때까지 남은 초(이미 연주 중이면 0)
   function trigger(tier, seconds) {
     if (!ctx) return;
     const now = ctx.currentTime;
+    let start;
+    if (!running || !busy(now)) {
+      // 무대가 조용하면 지금이 첫 박
+      t0 = now + 0.06;
+      nextStep = 0;
+      running = true;
+      for (const k in active) delete active[k];
+      start = t0;
+    } else {
+      start = nextDownbeat(now);
+    }
+    const len = Math.max(1, Math.round(seconds / CYCLE)) * CYCLE;
     const a = active[tier];
-    if (a && a.until > now) a.until = Math.max(a.until, now + seconds);
-    else active[tier] = { from: now, until: now + seconds };
+    if (a && a.until >= start - 1e-3) {
+      // 이미 연주(또는 대기) 중이면 끊지 않고 끝나는 시간만 늘린다
+      a.until = Math.max(a.until, start + len);
+      schedule();
+      return Math.max(0, a.from - now);
+    }
+    active[tier] = { from: start, until: start + len };
     schedule();
+    return start - now;
   }
 
-  // 0~1: 남은 연주 시간 비율
-  function remaining(tier) {
+  // 악기 상태: playing(연주 중) / waiting(다음 첫 박을 기다림), rem = 남은 연주 비율, wait = 합류까지 남은 초
+  function status(tier) {
     const a = active[tier];
-    if (!ctx || !a) return 0;
-    const left = a.until - ctx.currentTime;
-    return left > 0 ? left / (a.until - a.from) : 0;
+    if (!ctx || !a) return null;
+    const now = ctx.currentTime;
+    if (a.until <= now) return null;
+    if (now < a.from) return { waiting: true, wait: a.from - now, rem: 1 };
+    return { playing: true, rem: (a.until - now) / (a.until - a.from) };
+  }
+
+  // 지휘 정보: 소절 묶음 안의 위치
+  function conductor() {
+    if (!ctx || !running) return null;
+    const now = ctx.currentTime;
+    if (now < t0 || !busy(now)) return null;
+    const pos = (now - t0) % CYCLE;
+    return { bar: Math.floor(pos / BAR), beat: Math.floor((pos % BAR) / (STEP * 4)), toNext: CYCLE - pos };
   }
 
   function stopAll() {
-    if (!ctx) return;
     for (const k in active) delete active[k];
+    running = false;
   }
 
   function setMuted(m) {
@@ -407,10 +457,10 @@
   }
 
   window.Music = {
-    init, trigger, remaining, stopAll, setMuted,
+    init, trigger, status, conductor, stopAll, setMuted,
     isMuted: () => muted,
     now: () => (ctx ? ctx.currentTime : 0),
     onHit: (fn) => { hitListener = fn; },
-    STEP,
+    STEP, CYCLE,
   };
 })();

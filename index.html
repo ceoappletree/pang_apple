@@ -33,7 +33,7 @@
     <section id="intro" class="overlay">
       <div class="card">
         <h1>합주팡</h1>
-        <p>같은 악기 둘이 만나면 더 큰 악기가 돼요.<br>새 악기는 8초 동안 자기 가락을 연주하고, 피아노는 16초짜리 멜로디를 들려줘요. 악기가 모일수록 합주가 커져요.</p>
+        <p>같은 악기 둘이 만나면 더 큰 악기가 돼요.<br>새 악기는 다음 첫 박을 기다렸다가 모두와 같은 순간에 들어가요. 8초 동안 자기 가락을 연주하고, 피아노는 16초 멜로디를 들려줘요. 악기가 모일수록 하나의 오케스트라가 돼요.</p>
         <ol id="roster" class="roster"></ol>
         <button id="startBtn" class="btn primary" type="button">연주 시작</button>
         <p class="hint">판을 눌러 위치를 정하고, 손을 떼면 떨어져요.</p>
@@ -53,8 +53,9 @@
   <footer class="dock">
     <div class="now">
       <span id="count" class="count">쉼표</span>
-      <span id="playing" class="playing idle">악기를 떨어뜨리면 연주가 시작돼요</span>
+      <span id="playing" class="playing idle">악기를 떨어뜨리면 첫 박부터 연주가 시작돼요</span>
     </div>
+    <div id="baton" class="baton" aria-label="지휘 박자: 4마디, 마디마다 4박"></div>
     <ol id="chain" class="chain" aria-label="악기 진화 순서"></ol>
     <div class="actions">
       <button id="ensembleBtn" class="btn" type="button">판 위 악기 모두 연주</button>
