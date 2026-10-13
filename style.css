@@ -185,6 +185,7 @@ body {
 .card h2 { font-size: 34px; }
 .card p { margin: 0; line-height: 1.6; font-size: 14px; color: var(--light); text-wrap: pretty; }
 .card .hint { font-size: 12px; color: var(--muted); }
+.card .credit { font-size: 10px; color: var(--muted); opacity: 0.75; }
 .final { font-family: var(--display); font-size: 40px !important; color: var(--gold) !important; }
 
 .roster {

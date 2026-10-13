@@ -586,6 +586,65 @@
     },
   };
 
+  // 녹음 샘플이 없을 때 보컬이 대신 쓰는 합성 목소리
+  VOICES.chorus = (out, t, o) => catVoice(out, t, o.len, { note: o.note, v: 0.6, a: 0.15, r: 0.2, vib: 0.006, vowels: [[0, 'a'], [1, 'a']] });
+  VOICES.vocal = (out, t, o) => catVoice(out, t, o.len, { note: o.note, v: 0.8, a: 0.05, r: 0.1, vib: 0.01, vowels: [[0, 'u'], [0.5, 'o']] });
+  VOICES.synthChorus = VOICES.spad;
+
+  /* ---------- 실제 악기 녹음 ----------
+   * 선율 악기는 녹음 샘플이 준비되면 그것으로 연주하고, 아니면 위의 합성 소리로 연주한다.
+   * inst = 사운드폰트 악기 이름, shift = 옮길 반음 수, min = 최소 울림 길이(초), vib = 비브라토(센트)
+   * gain = 합주 속 음량 보정(녹음 음량을 맞춘 뒤 선율이 북에 묻히지 않도록 측정해서 정함)
+   */
+  const SAMPLED = {
+    piano: { inst: 'acoustic_grand_piano', r: 0.45, gain: 2.3 },
+    flute: { inst: 'flute', a: 0.03, r: 0.12, vib: 8, gain: 6 },
+    violin: { inst: 'violin', a: 0.07, r: 0.2, vib: 12, gain: 3.5 },
+    pizz: { inst: 'pizzicato_strings', min: 0.4, r: 0.25, gain: 1.3 },
+    sax: { inst: 'alto_sax', a: 0.015, r: 0.08, vib: 10, gain: 8 },
+    dizi: { inst: 'flute', a: 0.02, r: 0.1, vib: 16, vibRate: 6, membrane: true, gain: 7.5 },
+    sheng: { inst: 'harmonica', a: 0.08, r: 0.15, gain: 3.5 },
+    guzheng: { inst: 'koto', shift: 12, min: 0.7, r: 0.5, gain: 1 },
+    pipa: { inst: 'shamisen', tremolo: true, r: 0.12, gain: 1.6 },
+    erhu: { inst: 'fiddle', a: 0.05, r: 0.12, vib: 22, vibRate: 6.2, gain: 7 },
+    bansuri: { inst: 'shakuhachi', a: 0.05, r: 0.15, vib: 10, gain: 8 },
+    harmonium: { inst: 'reed_organ', a: 0.05, r: 0.12, gain: 3.5 },
+    tanpura: { inst: 'sitar', min: 1.4, r: 1.0, gain: 1.3 },
+    santoor: { inst: 'dulcimer', min: 0.6, r: 0.5, gain: 2.2 },
+    sitar: { inst: 'sitar', min: 0.5, r: 0.5, sympathetic: true, gain: 2.7 },
+    chorus: { inst: 'choir_aahs', a: 0.18, r: 0.3, gain: 0.9 },
+    vocal: { inst: 'voice_oohs', a: 0.05, r: 0.15, vib: 14, gain: 2.7 },
+    synthChorus: { inst: 'synth_choir', a: 0.15, r: 0.3, gain: 0.8 },
+  };
+
+  function sound(name, out, t, o) {
+    const sp = SAMPLED[name];
+    if (sp && o.note !== undefined && window.Sampler && Sampler.has(sp.inst)) {
+      const note = o.note + (sp.shift || 0);
+      const opt = { v: o.v || 0.8, a: sp.a, r: sp.r, vib: sp.vib, vibRate: sp.vibRate, min: sp.min, gain: sp.gain };
+      if (sp.tremolo && o.len > STEP * 1.5) {
+        // 비파: 긴 음은 빠르게 떨며 뜯는다
+        const n = Math.max(2, Math.round(o.len / 0.06));
+        for (let i = 0; i < n; i++) Sampler.play(ctx, out, t + i * 0.06, sp.inst, note, 0.05, Object.assign({}, opt, { v: opt.v * (i ? 0.6 : 1) }));
+      } else Sampler.play(ctx, out, t, sp.inst, note, o.len, opt);
+      if (sp.membrane) noise(out, t, { type: 'bandpass', f: midi(note) * 3, q: 10, v: 0.06, a: 0.04, d: Math.max(0.1, o.len * 0.7) });
+      if (sp.sympathetic) tone(out, t + 0.02, { f: midi(note + 12), v: 0.04, a: 0.05, d: 1.2 });
+      return;
+    }
+    VOICES[name](out, t, o);
+  }
+
+  // 세트가 쓰는 녹음 악기 목록
+  function sampleList(set) {
+    const names = new Set();
+    set.instruments.concat(set.vocals || []).forEach((it) => { if (SAMPLED[it.voice]) names.add(SAMPLED[it.voice].inst); });
+    return [...names];
+  }
+
+  // 판 위 악기 외에 합주가 커지면 들어오는 보컬(11 = 합창, 12 = 리드 보컬)
+  const VOCAL_AT = [5, 7];   // 이만큼의 악기 종류가 연주 중이면 들어온다
+  function partOf(tier) { return tier < 11 ? song.instruments[tier] : (song.vocals || [])[tier - 11]; }
+
   /* ---------- 연주 패턴 ---------- */
 
   const NOTE_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -680,9 +739,10 @@
 
   // 한 악기의 한 16분음표를 연주한다. 소리를 냈으면 true.
   function playPart(tier, a, n, t) {
-    const it = song.instruments[tier];
+    const it = partOf(tier);
+    if (!it) return false;
     const part = it.part;
-    const voice = VOICES[it.voice];
+    const voice = (o2, t2, args) => sound(it.voice, o2, t2, args);
     const out = buses[tier];
     const rel = n - a.fromStep;
     const phraseLen = part.main ? 128 : 64;
@@ -720,7 +780,7 @@
         hit = true;
       }
       const m = song._phr[part.main ? 'main' : part.phrases][v][bar][s];
-      if (m) { voice(out, t, { note: m[0], len: L(m[1]), v: 0.6 }); hit = true; }
+      if (m) { voice(out, t, { note: m[0] + (part.shift || 0), len: L(m[1]), v: 0.6 }); hit = true; }
       return hit;
     }
 
@@ -789,7 +849,7 @@
 
   function buildBuses() {
     buses.forEach((b) => b.disconnect());
-    buses = song.instruments.map((it) => {
+    buses = song.instruments.concat(song.vocals || []).map((it) => {
       const g = ctx.createGain();
       g.gain.value = it.vol;
       g.connect(master);
@@ -822,7 +882,7 @@
     reverbIn.gain.value = 0.9;
     reverbIn.connect(conv); conv.connect(master);
 
-    if (song) buildBuses();
+    if (song) { buildBuses(); loadSamples(); }
     timer = setInterval(schedule, 25);
   }
 
@@ -834,7 +894,18 @@
     STEP = 60 / song.bpm / 4;
     BAR = 16 * STEP;
     CYCLE = 64 * STEP;
-    if (ctx) buildBuses();
+    if (ctx) { buildBuses(); loadSamples(); }
+  }
+
+  let samplesListener = null;
+  function loadSamples() {
+    if (!window.Sampler || !ctx || !song) return;
+    const s = song;
+    const list = sampleList(s);
+    if (!list.length) return;
+    Sampler.ensure(ctx, list).then(() => {
+      if (song === s && samplesListener) samplesListener(list.every((x) => Sampler.has(x)));
+    });
   }
 
   function busy(now) {
@@ -858,10 +929,21 @@
   }
 
   // 판 위 악기 수를 알려준다(매 프레임). 있는 악기는 계속 연주하고, 사라진 악기는 다음 마디에 멈춘다.
-  function sync(cs) {
+  function sync(instCounts) {
     if (!ctx || !song) return;
-    counts = cs;
     const now = ctx.currentTime;
+    const cs = instCounts.slice();
+    if (song.vocals) {
+      // 연주 중인 악기 종류가 많아지면 합창, 더 많아지면 리드 보컬이 들어온다
+      let kinds = 0;
+      for (let i = 0; i < instCounts.length; i++) {
+        const a = active[i];
+        if (a && a.from <= now && a.until > now && instCounts[i] > 0) kinds++;
+      }
+      cs[11] = kinds >= VOCAL_AT[0] ? 2 : 0;
+      cs[12] = kinds >= VOCAL_AT[1] ? 2 : 0;
+    }
+    counts = cs;
     let changed = false;
     for (let i = 0; i < cs.length; i++) {
       const a = active[i];
@@ -910,6 +992,9 @@
     isMuted: () => muted,
     now: () => (ctx ? ctx.currentTime : 0),
     onHit: (fn) => { hitListener = fn; },
+    onSamples: (fn) => { samplesListener = fn; },
+    _buses: () => ({ ctx, buses }),   // 음량 점검용
+    VOCAL_AT,
     cycle: () => CYCLE,
   };
 })();

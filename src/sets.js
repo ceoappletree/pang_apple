@@ -8,6 +8,9 @@
  *
  * 리듬 표기: 16칸 문자열, '.' = 쉼, 1~9 = 세기. first = 묶음 첫 마디, bar = 보통 마디, fill = 묶음 마지막 마디
  * 선율 표기: '음이름옥타브:16분음표 개수', r = 쉼표. 한 마디는 16칸.
+ *
+ * vocals: 판 위 악기가 아니라, 연주 중인 악기 종류가 많아지면 저절로 들어오는 목소리.
+ *   [합창(화음), 리드 보컬(주선율을 한 옥타브 아래로)]
  */
 (function () {
   'use strict';
@@ -207,6 +210,10 @@
   const SETS = [
     {
       id: 'orchestra',
+      vocals: [
+        { name: '합창단', voice: 'chorus', part: { gen: 'pad', center: 64 }, vol: 0.35, rev: 0.5 },
+        { name: '보컬', voice: 'vocal', part: { main: true, shift: -12 }, vol: 0.45, rev: 0.4 },
+      ],
       name: '오케스트라',
       blurb: '캐스터네츠부터 피아노까지, 무대 위 오케스트라',
       bpm: 120,
@@ -220,7 +227,7 @@
         { name: '탬버린', color: '#ef5b6f', ink: '#fff0f2', icon: 'tambourine', voice: 'tambourine', part: { rhythm: 'r2' }, vol: 0.32, rev: 0.2 },
         { name: '작은북', color: '#4f74f0', ink: '#eef2ff', icon: 'snare', voice: 'snare', part: { rhythm: 'r3' }, vol: 0.5, rev: 0.2 },
         { name: '심벌즈', color: '#f2c53d', ink: '#6b4c00', icon: 'cymbals', voice: 'cymbal', part: { rhythm: 'r4' }, vol: 0.26, rev: 0.3 },
-        { name: '드럼', color: '#9658e0', ink: '#f6eeff', icon: 'drum', voice: 'bassdrum', part: { rhythm: 'r5' }, vol: 0.85, rev: 0.08 },
+        { name: '드럼', color: '#9658e0', ink: '#f6eeff', icon: 'drum', voice: 'bassdrum', part: { rhythm: 'r5' }, vol: 0.7, rev: 0.08 },
         { name: '피리', color: '#33bf86', ink: '#effff7', icon: 'flute', voice: 'flute', part: { phrases: 'counter' }, vol: 0.2, rev: 0.4 },
         { name: '바이올린', color: '#b8432f', ink: '#ffe2b8', icon: 'violin', voice: 'violin', part: { gen: 'line', center: 74 }, vol: 0.13, rev: 0.45 },
         { name: '콘트라베이스', color: '#6e3f22', ink: '#f6cf94', icon: 'contrabass', voice: 'pizz', part: { gen: 'bass' }, vol: 0.7, rev: 0.12 },
@@ -246,6 +253,10 @@
     },
     {
       id: 'electro',
+      vocals: [
+        { name: '신스 코러스', voice: 'synthChorus', part: { gen: 'pad', center: 64 }, vol: 0.3, rev: 0.5 },
+        { name: '보컬', voice: 'vocal', part: { main: true, shift: -12 }, vol: 0.45, rev: 0.4 },
+      ],
       name: '일렉트로',
       blurb: '하이햇과 킥 위에 신스가 쏟아지는 전자 악기',
       bpm: 124,
@@ -260,7 +271,7 @@
         { name: '클랩', color: '#ff4f9a', ink: '#fff0f7', icon: 'clap', voice: 'clap', part: { rhythm: 'r2' }, vol: 0.45, rev: 0.3 },
         { name: '스네어', color: '#2fb3a0', ink: '#eafffb', icon: 'pad', voice: 'esnare', part: { rhythm: 'r3' }, vol: 0.4, rev: 0.25 },
         { name: '크래시', color: '#c9d64a', ink: '#2e3300', icon: 'crash', voice: 'ecrash', part: { rhythm: 'r4' }, vol: 0.22, rev: 0.2 },
-        { name: '킥', color: '#ff6a3d', ink: '#fff2ea', icon: 'speaker', voice: 'kick808', part: { rhythm: 'r5' }, vol: 0.95, rev: 0.02 },
+        { name: '킥', color: '#ff6a3d', ink: '#fff2ea', icon: 'speaker', voice: 'kick808', part: { rhythm: 'r5' }, vol: 0.8, rev: 0.02 },
         { name: '아르페지오', color: '#7a5cff', ink: '#f1edff', icon: 'arp', voice: 'arp', part: { gen: 'arp', center: 64 }, vol: 0.13, rev: 0.3 },
         { name: '신스 패드', color: '#1f8fff', ink: '#e9f4ff', icon: 'wave', voice: 'spad', part: { gen: 'pad', center: 62 }, vol: 0.09, rev: 0.5 },
         { name: '신스 베이스', color: '#14b85a', ink: '#eafff2', icon: 'saw', voice: 'sbass', part: { gen: 'bass' }, vol: 0.5, rev: 0.05 },
@@ -282,6 +293,10 @@
     },
     {
       id: 'cats',
+      vocals: [
+        { name: '냥냥 합창단', voice: 'oo', part: { gen: 'pad', center: 64 }, vol: 0.12, rev: 0.5 },
+        { name: '메인 보컬냥', voice: 'meow', part: { main: true, shift: -12 }, vol: 0.18, rev: 0.45 },
+      ],
       name: '고양이 아카펠라',
       blurb: '츳츳 비트박스부터 디바냥까지, 목소리만으로 하는 합창',
       bpm: 100,
@@ -295,7 +310,7 @@
         { name: '꾹꾹냥', color: '#a9adb8', ink: '#2c2e36', icon: 'cat', cat: { eyes: 'dot', mouth: 'w', paws: true }, voice: 'click', part: { rhythm: 'r2' }, vol: 0.45, rev: 0.2 },
         { name: '카냥', color: '#2c2a33', ink: '#f4f1ff', icon: 'cat', cat: { eyes: 'wide', mouth: 'open' }, voice: 'kah', part: { rhythm: 'r3' }, vol: 0.45, rev: 0.2 },
         { name: '하악냥', color: '#f6f3ee', ink: '#3b3530', icon: 'cat', cat: { eyes: 'angry', mouth: 'fang' }, voice: 'hiss', part: { rhythm: 'r4' }, vol: 0.22, rev: 0.25 },
-        { name: '붐냥', color: '#8a5a3b', ink: '#fff1e2', icon: 'cat', cat: { eyes: 'happy', mouth: 'small', phones: true }, voice: 'boom', part: { rhythm: 'r5' }, vol: 0.9, rev: 0.05 },
+        { name: '붐냥', color: '#8a5a3b', ink: '#fff1e2', icon: 'cat', cat: { eyes: 'happy', mouth: 'small', phones: true }, voice: 'boom', part: { rhythm: 'r5' }, vol: 0.75, rev: 0.05 },
         { name: '알토냥', color: '#e7c9a0', ink: '#4a2f17', icon: 'cat', cat: { eyes: 'happy', mouth: 'o', patches: true, bow: true }, voice: 'oo', part: { gen: 'line', center: 67 }, vol: 0.2, rev: 0.45 },
         { name: '테너냥', color: '#7d8fa6', ink: '#f1f5ff', icon: 'cat', cat: { eyes: 'dot', mouth: 'open', bow: true }, voice: 'ah', part: { gen: 'pad', center: 60 }, vol: 0.1, rev: 0.45 },
         { name: '베이스냥', color: '#4a3326', ink: '#ffe9cf', icon: 'cat', cat: { eyes: 'shades', mouth: 'o' }, voice: 'doom', part: { gen: 'bass' }, vol: 0.6, rev: 0.12 },
@@ -317,6 +332,10 @@
     },
     {
       id: 'china',
+      vocals: [
+        { name: '합창단', voice: 'chorus', part: { gen: 'pad', center: 64 }, vol: 0.33, rev: 0.5 },
+        { name: '보컬', voice: 'vocal', part: { main: true, shift: -12 }, vol: 0.45, rev: 0.45 },
+      ],
       name: '중국풍',
       blurb: '목어와 징 위로 얼후가 노래하는 오음계 가락',
       bpm: 96,
@@ -330,7 +349,7 @@
         { name: '박판', color: '#8c5a33', ink: '#ffe3c2', icon: 'paiban', voice: 'paiban', part: { rhythm: 'r2' }, vol: 0.45, rev: 0.25 },
         { name: '판고', color: '#2c2a2a', ink: '#ff6b5a', icon: 'bangu', voice: 'bangu', part: { rhythm: 'r3' }, vol: 0.4, rev: 0.25 },
         { name: '징', color: '#c9902a', ink: '#3b2600', icon: 'gong', voice: 'gong', part: { rhythm: 'r4' }, vol: 0.3, rev: 0.35 },
-        { name: '대고', color: '#c8242d', ink: '#ffd76b', icon: 'barrel', voice: 'dagu', part: { rhythm: 'r5' }, vol: 0.85, rev: 0.15 },
+        { name: '대고', color: '#c8242d', ink: '#ffd76b', icon: 'barrel', voice: 'dagu', part: { rhythm: 'r5' }, vol: 0.7, rev: 0.15 },
         { name: '디즈', color: '#5c9e3e', ink: '#fff6dc', icon: 'dizi', voice: 'dizi', part: { phrases: 'counter' }, vol: 0.16, rev: 0.45 },
         { name: '생황', color: '#2f6f5e', ink: '#ffd76b', icon: 'sheng', voice: 'sheng', part: { gen: 'pad', center: 64 }, vol: 0.08, rev: 0.4 },
         { name: '구정', color: '#7a3b1e', ink: '#ffe0b0', icon: 'guzheng', voice: 'guzheng', part: { gen: 'bass' }, vol: 0.45, rev: 0.35 },
@@ -356,6 +375,10 @@
     },
     {
       id: 'india',
+      vocals: [
+        { name: '합창단', voice: 'chorus', part: { gen: 'pad', center: 62 }, vol: 0.33, rev: 0.5 },
+        { name: '보컬', voice: 'vocal', part: { main: true, shift: -12 }, vol: 0.45, rev: 0.45 },
+      ],
       name: '인도',
       blurb: '타블라와 탄푸라 드론 위에 시타르가 휘어지는 라가',
       bpm: 108,
@@ -369,7 +392,7 @@
         { name: '칸제라', color: '#e0b97a', ink: '#5a3410', icon: 'tambourine', voice: 'kanjira', part: { rhythm: 'r2' }, vol: 0.4, rev: 0.2 },
         { name: '타블라', color: '#3d2a5c', ink: '#ffd7a0', icon: 'tabla', voice: 'tabla', part: { rhythm: 'r3' }, vol: 0.5, rev: 0.25 },
         { name: '간타', color: '#e8b33a', ink: '#5a3a00', icon: 'bell', voice: 'ghanta', part: { rhythm: 'r4' }, vol: 0.22, rev: 0.45 },
-        { name: '돌', color: '#d6402f', ink: '#fff0d6', icon: 'dhol', voice: 'dhol', part: { rhythm: 'r5' }, vol: 0.85, rev: 0.12 },
+        { name: '돌', color: '#d6402f', ink: '#fff0d6', icon: 'dhol', voice: 'dhol', part: { rhythm: 'r5' }, vol: 0.7, rev: 0.12 },
         { name: '반수리', color: '#6aa84f', ink: '#fff7e0', icon: 'flute', voice: 'bansuri', part: { phrases: 'counter' }, vol: 0.16, rev: 0.45 },
         { name: '하모니움', color: '#8a3b5c', ink: '#ffe9f2', icon: 'harmonium', voice: 'harmonium', part: { gen: 'pad', center: 62 }, vol: 0.07, rev: 0.3 },
         { name: '탄푸라', color: '#a0672e', ink: '#fff0d8', icon: 'tanpura', voice: 'tanpura', part: { gen: 'drone', tonic: 50 }, vol: 0.32, rev: 0.4 },

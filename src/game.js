@@ -255,7 +255,8 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 1300);
   }
 
-  Music.onHit((tier, t, slot) => { pendingHits.push([tier, t, slot]); });
+  Music.onHit((tier, t, slot) => { if (tier < N) pendingHits.push([tier, t, slot]); });
+  Music.onSamples((ok) => { if (ok && inGame) toast('실제 악기 소리 준비 완료'); });
 
   /* ---------- 화면 ---------- */
 
@@ -484,7 +485,7 @@
   }
 
   let lastPlaying = '', lastBeat = -2;
-  const wasWaiting = new Array(N).fill(false);
+  const wasWaiting = new Array(N + 2).fill(false);
   const beats = [];
   function buildBaton() {
     const baton = $('baton');
@@ -518,6 +519,16 @@
       if (on) names.push(INST[i].name + (counts[i] > 1 ? `×${counts[i]}` : ''));
       if (wait) { waiting.push(INST[i].name); waitSec = st.wait; }
       if (on && wasWaiting[i]) joined.push(INST[i].name);
+      wasWaiting[i] = wait;
+    });
+    // 합주가 커지면 들어오는 보컬
+    (SET.vocals || []).forEach((vc, j) => {
+      const i = N + j;
+      const st = Music.status(i);
+      const on = !!(st && st.playing), wait = !!(st && st.waiting);
+      if (on) names.push(vc.name);
+      if (wait) { waiting.push(vc.name); waitSec = st.wait; }
+      if (on && wasWaiting[i]) joined.push(vc.name);
       wasWaiting[i] = wait;
     });
     if (joined.length) toast(joined.join(' · ') + ' 합류!');
@@ -604,6 +615,7 @@
     DJ.draw(djc, 160, 110, {
       animal: SET.dj, accent, setName: SET.name, phase: phase >= 1 ? 0 : phase,
       beat: cond ? cond.beat : 0, bar: cond ? cond.bar : 0, playing: !!cond, time: now,
+      singing: (() => { const v = Music.status(N + 1); return !!(v && v.playing); })(),
     });
   }
 

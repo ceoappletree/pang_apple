@@ -106,7 +106,7 @@
     const tilt = s.playing ? side * 0.16 * (1 - s.phase) : idle * 0.05;
     const downbeat = s.playing && s.bar === 0 && s.beat === 0;
     s.swing = s.playing ? side * (1 - s.phase) : 0;
-    s.shout = downbeat && s.phase < 0.6;
+    s.shout = (downbeat && s.phase < 0.6) || (s.singing && s.phase < 0.55);
 
     // 몸통
     const by = h - 18;
@@ -117,7 +117,10 @@
     c.strokeStyle = a.fur; c.lineCap = 'round'; c.lineWidth = 8;
     const scratch = s.playing ? Math.sin(s.phase * Math.PI * 2) * 6 : 0;
     c.beginPath(); c.moveTo(cx - 16, by - 18 + nod * 0.4); c.lineTo(cx - 34 + scratch, by - 6); c.stroke();
-    if (downbeat) {
+    if (s.singing) {
+      // 리드 보컬이 노래하는 동안 마이크를 입에 댄다
+      c.beginPath(); c.moveTo(cx + 16, by - 20 + nod * 0.4); c.lineTo(cx + 20, by - 30 + nod); c.stroke();
+    } else if (downbeat) {
       c.beginPath(); c.moveTo(cx + 16, by - 20 + nod * 0.4); c.lineTo(cx + 30, by - 46); c.stroke();
     } else {
       c.beginPath(); c.moveTo(cx + 16, by - 18 + nod * 0.4); c.lineTo(cx + 34, by - 6); c.stroke();
@@ -149,6 +152,16 @@
     c.rotate(tilt);
     head(c, a, s);
     c.restore();
+
+    if (s.singing) {
+      // 마이크는 머리 앞에 그린다
+      c.save();
+      c.translate(cx + 13, by - 31 + nod);
+      c.rotate(-0.6);
+      c.fillStyle = '#2b2b33'; c.fillRect(-2, 0, 4, 12);
+      c.fillStyle = '#c9c9d4'; c.beginPath(); c.arc(0, -1, 4.5, 0, Math.PI * 2); c.fill();
+      c.restore();
+    }
 
     // 첫 박 반짝이
     if (downbeat) {
