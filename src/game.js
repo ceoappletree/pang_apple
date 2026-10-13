@@ -1,14 +1,14 @@
-/* 합주팡 — 게임 진행(물리, 입력, 그리기) */
+/* 합주팡 — 게임 진행(물리, 입력, 세트, 그리기) */
 (function () {
   'use strict';
 
   const { Engine, Bodies, Composite, Events, Body } = Matter;
-  const INST = Instruments.list;
   const W = 400, H = 640;            // 게임 판의 논리 크기
   const DROP_Y = 46;                 // 악기를 드는 높이
   const LINE_Y = 92;                 // 이 선 위로 악기가 머무르면 끝
   const DROP_COOLDOWN = 520;
   const SPAWN_TIERS = 5;             // 떨어뜨릴 수 있는 건 작은 악기 5종
+  const N = 11;
 
   const $ = (id) => document.getElementById(id);
   const canvas = $('board');
@@ -16,17 +16,26 @@
   const nextCanvas = $('next');
   const nc = nextCanvas.getContext('2d');
 
+  let setIdx = 0, SET = SETS[0], INST = SET.instruments;
+  let pickIdx = 0;                   // 시작 화면에서 고른 세트
   let engine, scale = 1, dpr = 1;
   let current, next, aimX = W / 2, canDropAt = 0;
-  let score = 0, best = 0, over = false, started = false;
+  let score = 0, over = false, playing = false, inGame = false;
   let dangerMs = 0, lastTime = 0, acc = 0;
   const mergeQueue = [];
   const particles = [];
-  const pulse = new Array(INST.length).fill(-10);
+  const pulse = new Array(N).fill(-10);
   const pendingHits = [];
-  const lastNote = new Array(INST.length).fill(0);
+  const lastNote = new Array(N).fill(0);
 
-  try { best = parseInt(localStorage.getItem('hapjupang.best') || '0', 10) || 0; } catch (e) { best = 0; }
+  /* ---------- 저장(해금, 최고 점수) ---------- */
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('hapjupang.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('hapjupang.' + k, JSON.stringify(v)); } catch (e) { /* 저장 불가 */ } },
+  };
+  let unlocked = Math.max(0, Math.min(SETS.length - 1, store.get('unlocked', 0) | 0));
+  const bests = store.get('bests', {}) || {};
 
   /* ---------- 준비 ---------- */
 
@@ -72,6 +81,15 @@
     return b;
   }
 
+  function useSet(i) {
+    setIdx = i;
+    SET = SETS[i];
+    INST = SET.instruments;
+    document.documentElement.dataset.set = SET.id;
+    Music.setSong(SET);
+    buildChain();
+  }
+
   function newGame() {
     if (engine) {
       Events.off(engine);
@@ -80,7 +98,7 @@
     }
     setupWorld();
     score = 0; over = false; dangerMs = 0;
-    particles.length = 0; mergeQueue.length = 0;
+    particles.length = 0; mergeQueue.length = 0; pendingHits.length = 0;
     current = randomTier(); next = randomTier();
     canDropAt = performance.now() + 300;
     Music.stopAll();
@@ -103,21 +121,20 @@
   canvas.addEventListener('pointerdown', (e) => { aimX = toWorldX(e.clientX); });
   canvas.addEventListener('pointerup', (e) => { aimX = toWorldX(e.clientX); drop(); });
   window.addEventListener('keydown', (e) => {
-    if (!started || over) return;
+    if (!playing || over) return;
     if (e.key === 'ArrowLeft') aimX -= 18;
     else if (e.key === 'ArrowRight') aimX += 18;
     else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); drop(); }
   });
 
   function drop() {
-    if (!started || over || current === null) return;
+    if (!playing || over || current === null) return;
     const now = performance.now();
     if (now < canDropAt) return;
     const x = clampAim(aimX, current);
     const b = makeBody(current, x, DROP_Y);
     Body.setVelocity(b, { x: 0, y: 2 });
     Composite.add(engine.world, b);
-    Music.trigger(current, INST[current].secs);
     current = next;
     next = randomTier();
     canDropAt = now + DROP_COOLDOWN;
@@ -134,25 +151,35 @@
       const x = (a.position.x + b.position.x) / 2;
       const y = (a.position.y + b.position.y) / 2;
       const tier = a.tier;
-      if (tier < INST.length - 1) {
+      if (tier < N - 1) {
         const nt = tier + 1;
         const nb = makeBody(nt, x, y);
         nb.pop = 0.6;
         Body.setVelocity(nb, { x: (a.velocity.x + b.velocity.x) / 2, y: Math.min(0, (a.velocity.y + b.velocity.y) / 2) });
         Composite.add(engine.world, nb);
         score += INST[nt].points;
-        const wait = Music.trigger(nt, INST[nt].secs);
         burst(x, y, INST[nt].color, 10 + nt * 2);
-        toast(INST[nt].name + (wait > 0.3 ? ' 등장 · 다음 첫 박에 합류' : ' 합류!'));
+        const same = bodies().filter((o) => o.tier === nt).length;
+        const st = Music.status(nt);
+        if (same > 1) toast(`${INST[nt].name} ${same}개 · ${same}배 긴 연주`);
+        else toast(INST[nt].name + (st && st.playing ? '!' : ' 등장 · 다음 첫 박에 합류'));
+        checkUnlock(nt);
       } else {
-        // 피아노 두 대가 만나면 사라지면서 모든 악기의 대합주
+        // 가장 큰 악기 두 개가 만나면 박수와 함께 사라진다
         score += 100;
         burst(x, y, '#ffd36b', 60);
-        for (let i = 0; i < INST.length; i++) Music.trigger(i, 16);
-        toast('대합주 준비! +100');
+        toast('앙코르! +100');
       }
       updateHud();
     }
+  }
+
+  function checkUnlock(tier) {
+    if (tier < SET_RULES.UNLOCK_TIER || setIdx + 1 >= SETS.length || unlocked > setIdx) return;
+    unlocked = setIdx + 1;
+    store.set('unlocked', unlocked);
+    setTimeout(() => toast(`새 세트 해금: ${SETS[unlocked].name}`), 1400);
+    buildSetPicker();
   }
 
   /* ---------- 효과 ---------- */
@@ -186,14 +213,13 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 1300);
   }
 
-  Music.onHit((tier, t) => { pendingHits.push([tier, t]); });
+  Music.onHit((tier, t, slot) => { pendingHits.push([tier, t, slot]); });
 
   /* ---------- 화면 ---------- */
 
   function resize() {
     const wrap = $('stage');
-    const availW = wrap.clientWidth, availH = wrap.clientHeight;
-    scale = Math.min(availW / W, availH / H);
+    scale = Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
     dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     canvas.style.width = W * scale + 'px';
     canvas.style.height = H * scale + 'px';
@@ -202,25 +228,37 @@
   }
 
   function bodies() {
-    return Composite.allBodies(engine.world).filter((b) => b.tier !== undefined);
+    return engine ? Composite.allBodies(engine.world).filter((b) => b.tier !== undefined) : [];
+  }
+
+  // 같은 악기 중 지금 차례인 것(먼저 온 순서대로 돌아간다)
+  function soloist(list, tier) {
+    const st = Music.status(tier);
+    if (!st || !st.playing) return null;
+    const same = list.filter((b) => b.tier === tier).sort((a, b) => a.born - b.born);
+    return same.length ? same[st.slot % same.length] : null;
+  }
+
+  let accent = '#ffc65c';
+  function readAccent() {
+    accent = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#ffc65c';
   }
 
   function drawBoard(now, audioNow) {
     c.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     c.clearRect(0, 0, W, H);
 
-    // 무대 바닥 조명: 박자에 맞춰 살짝 밝아진다
-    // 지휘 박자에 맞춰 바닥 조명이 밝아지고, 4마디 묶음의 첫 박에는 크게 번쩍인다
+    // 지휘 박자에 맞춰 바닥 조명이 밝아지고, 소절 묶음의 첫 박에는 크게 번쩍인다
     const cond = Music.conductor();
     let light = 0;
     if (cond) {
-      const inBeat = 1 - ((cond.toNext % (Music.STEP * 4)) / (Music.STEP * 4));
+      const inBeat = 1 - ((cond.toNext % cond.beatLen) / cond.beatLen);
       const k = Math.max(0, 1 - inBeat * 2.2);
       light = (cond.bar === 0 && cond.beat === 0 ? 0.35 : 0.12) * k;
     }
     const glow = c.createRadialGradient(W / 2, H + 40, 20, W / 2, H + 40, H * 0.9);
-    glow.addColorStop(0, `rgba(255,196,110,${0.16 + light})`);
-    glow.addColorStop(1, 'rgba(255,196,110,0)');
+    glow.addColorStop(0, `rgba(${SET.light},${0.16 + light})`);
+    glow.addColorStop(1, `rgba(${SET.light},0)`);
     c.fillStyle = glow;
     c.fillRect(0, 0, W, H);
 
@@ -234,40 +272,50 @@
     c.restore();
 
     // 들고 있는 악기와 조준선
-    if (started && !over && current !== null) {
+    if (playing && !over && current !== null) {
       const x = clampAim(aimX, current);
-      const ready = now >= canDropAt;
       c.strokeStyle = 'rgba(255,240,220,.18)';
       c.lineWidth = 2;
       c.beginPath(); c.moveTo(x, DROP_Y); c.lineTo(x, H); c.stroke();
       c.save();
-      c.globalAlpha = ready ? 1 : 0.45;
+      c.globalAlpha = now >= canDropAt ? 1 : 0.45;
       c.translate(x, DROP_Y);
-      Instruments.drawBall(c, current, INST[current].r);
+      Icons.drawBall(c, INST[current], INST[current].r);
       c.restore();
     }
 
     // 판 위의 악기들
-    for (const b of bodies()) {
+    const list = bodies();
+    const solo = [];
+    for (let i = 0; i < N; i++) solo[i] = soloist(list, i);
+    for (const b of list) {
       const r = b.circleRadius;
       b.pop = Math.min(1, b.pop + 0.08);
       const st = Music.status(b.tier);
-      const playing = !!(st && st.playing);
+      const isSolo = solo[b.tier] === b;
       const hitAge = audioNow - pulse[b.tier];
-      const bump = playing && hitAge >= 0 ? Math.exp(-hitAge * 14) : 0;
-      const s = easeBack(b.pop) * (1 + bump * 0.07);
+      const bump = isSolo && hitAge >= 0 ? Math.exp(-hitAge * 14) : 0;
+      const s = easeBack(b.pop) * (1 + bump * 0.08);
       c.save();
       c.translate(b.position.x, b.position.y);
       c.scale(s, s);
-      Instruments.drawBall(c, b.tier, r, { angle: b.angle, glow: playing ? 0.5 + bump : 0 });
+      const glowAmt = isSolo ? 0.6 + bump : st && st.playing ? 0.18 : 0;
+      Icons.drawBall(c, INST[b.tier], r, { angle: b.angle, glow: glowAmt });
       if (st && st.waiting) {
         // 합류 대기: 다음 첫 박까지 남은 시간을 테두리 호로 보여준다
-        const left = Math.min(1, st.wait / Music.CYCLE);
+        const left = Math.min(1, st.wait / Music.cycle());
         c.lineWidth = 3;
         c.strokeStyle = 'rgba(255,231,199,.25)';
         c.beginPath(); c.arc(0, 0, r + 4, 0, Math.PI * 2); c.stroke();
-        c.strokeStyle = '#ffc65c';
+        c.strokeStyle = accent;
         c.beginPath(); c.arc(0, 0, r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - left)); c.stroke();
+      } else if (isSolo && st.k > 1) {
+        // 차례 표시: 같은 악기 중 지금 연주하는 것
+        c.lineWidth = 2.5;
+        c.strokeStyle = 'rgba(255,255,255,.85)';
+        c.setLineDash([5, 5]);
+        c.lineDashOffset = -now / 40;
+        c.beginPath(); c.arc(0, 0, r + 4, 0, Math.PI * 2); c.stroke();
       }
       c.restore();
     }
@@ -280,13 +328,12 @@
       p.life -= p.decay;
       if (p.life <= 0) { particles.splice(i, 1); continue; }
       c.globalAlpha = Math.min(1, p.life * 1.4);
+      c.fillStyle = p.color;
       if (p.kind === 'note') {
-        c.fillStyle = p.color;
         c.font = `${p.size}px "Jua", sans-serif`;
         c.textAlign = 'center';
         c.fillText(p.ch, p.x + Math.sin(p.life * 8) * 3, p.y);
       } else {
-        c.fillStyle = p.color;
         c.beginPath(); c.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); c.fill();
       }
     }
@@ -300,61 +347,100 @@
 
   /* ---------- HUD ---------- */
 
-  const chips = [];
+  function ballCanvas(it, size) {
+    const cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const cc = cv.getContext('2d');
+    cc.translate(size / 2, size / 2);
+    Icons.drawBall(cc, it, size / 2 - 3);
+    return cv;
+  }
+
+  let chips = [];
   function buildChain() {
     const chain = $('chain');
-    INST.forEach((it, i) => {
+    chain.textContent = '';
+    chips = INST.map((it) => {
       const li = document.createElement('li');
       li.className = 'chip';
       li.title = it.name;
-      const cv = document.createElement('canvas');
-      const size = 64;
-      cv.width = size; cv.height = size;
-      const cc = cv.getContext('2d');
-      cc.translate(size / 2, size / 2);
-      Instruments.drawBall(cc, i, size / 2 - 3);
-      li.appendChild(cv);
+      li.appendChild(ballCanvas(it, 64));
+      const badge = document.createElement('b');
+      badge.className = 'badge';
+      li.appendChild(badge);
       const bar = document.createElement('span');
       bar.className = 'bar';
       li.appendChild(bar);
       chain.appendChild(li);
-      chips.push({ li, bar });
+      return { li, bar, badge, k: -1 };
     });
+    lastPlaying = '';
+  }
 
-    // 시작 화면의 악기 목록
+  function buildRoster(set) {
     const roster = $('roster');
-    INST.forEach((it, i) => {
+    roster.textContent = '';
+    set.instruments.forEach((it) => {
       const li = document.createElement('li');
-      const cv = document.createElement('canvas');
-      cv.width = 72; cv.height = 72;
-      const cc = cv.getContext('2d');
-      cc.translate(36, 36);
-      Instruments.drawBall(cc, i, 33);
       const name = document.createElement('span');
       name.textContent = it.name;
-      li.append(cv, name);
+      li.append(ballCanvas(it, 72), name);
       roster.appendChild(li);
+    });
+  }
+
+  function buildSetPicker() {
+    const box = $('sets');
+    box.textContent = '';
+    SETS.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'set' + (i === pickIdx ? ' picked' : '');
+      btn.id = 'set-' + s.id;
+      const locked = i > unlocked;
+      btn.disabled = locked;
+      btn.setAttribute('aria-pressed', String(i === pickIdx));
+      const num = document.createElement('span');
+      num.className = 'set-no';
+      num.textContent = i + 1 + '세트' + (locked ? ' · 잠김' : '');
+      const nm = document.createElement('span');
+      nm.className = 'set-name';
+      nm.textContent = s.name;
+      const sub = document.createElement('span');
+      sub.className = 'set-sub';
+      const best = bests[s.id] || 0;
+      sub.textContent = locked
+        ? `${SETS[i - 1].name}에서 ${SETS[i - 1].instruments[SET_RULES.UNLOCK_TIER].name} 만들면 열려요`
+        : best ? `최고 ${best.toLocaleString('ko-KR')}점` : s.blurb;
+      btn.append(num, nm, sub);
+      btn.addEventListener('click', () => {
+        if (locked) return;
+        pickIdx = i;
+        buildSetPicker();
+        buildRoster(SETS[i]);
+        document.documentElement.dataset.set = SETS[i].id;
+        $('resumeBtn').hidden = !(inGame && !over && pickIdx === setIdx);
+      });
+      box.appendChild(btn);
     });
   }
 
   function updateHud() {
     $('score').textContent = score.toLocaleString('ko-KR');
-    if (score > best) {
-      best = score;
-      try { localStorage.setItem('hapjupang.best', String(best)); } catch (e) { /* 저장 불가 */ }
-    }
-    $('best').textContent = best.toLocaleString('ko-KR');
+    const prev = bests[SET.id] || 0;
+    if (score > prev) { bests[SET.id] = score; store.set('bests', bests); }
+    $('best').textContent = (bests[SET.id] || 0).toLocaleString('ko-KR');
+    $('setName').textContent = SET.name;
     nc.setTransform(1, 0, 0, 1, 0, 0);
     nc.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
     if (next !== undefined && next !== null) {
       nc.translate(nextCanvas.width / 2, nextCanvas.height / 2);
-      Instruments.drawBall(nc, next, nextCanvas.width / 2 - 4);
+      Icons.drawBall(nc, INST[next], nextCanvas.width / 2 - 4);
     }
   }
 
   let lastPlaying = '', lastBeat = -2;
-  const wasWaiting = new Array(INST.length).fill(false);
-  const joined = [];
+  const wasWaiting = new Array(N).fill(false);
   const beats = [];
   function buildBaton() {
     const baton = $('baton');
@@ -370,26 +456,30 @@
       baton.appendChild(g);
     }
   }
-  function updateChain() {
-    const names = [];
-    const waiting = [];
+
+  function updateChain(counts) {
+    const names = [], waiting = [], joined = [];
     let waitSec = 0;
     chips.forEach((ch, i) => {
       const st = Music.status(i);
       const on = !!(st && st.playing), wait = !!(st && st.waiting);
       ch.li.classList.toggle('on', on);
       ch.li.classList.toggle('wait', wait);
-      ch.bar.style.transform = `scaleX(${on ? st.rem : 0})`;
-      if (on) names.push(INST[i].name);
-      if (wait) { waiting.push(i); waitSec = st.wait; }
-      // 대기하던 악기가 첫 박에 들어오는 순간
+      if (ch.k !== counts[i]) {
+        ch.k = counts[i];
+        ch.badge.textContent = counts[i] > 1 ? '×' + counts[i] : '';
+      }
+      // 같은 악기가 여러 개면 막대가 지금 몇 번째 차례인지 보여준다
+      ch.bar.style.transform = `scaleX(${on ? (st.slot + 1) / Math.max(1, counts[i], st.slot + 1) : 0})`;
+      if (on) names.push(INST[i].name + (counts[i] > 1 ? `×${counts[i]}` : ''));
+      if (wait) { waiting.push(INST[i].name); waitSec = st.wait; }
       if (on && wasWaiting[i]) joined.push(INST[i].name);
       wasWaiting[i] = wait;
     });
-    if (joined.length) { toast(joined.join(' · ') + ' 합류!'); joined.length = 0; }
+    if (joined.length) toast(joined.join(' · ') + ' 합류!');
 
     let text = names.length ? names.join(' · ') : '악기를 떨어뜨리면 첫 박부터 연주가 시작돼요';
-    if (waiting.length) text = `다음 첫 박까지 ${Math.ceil(waitSec)}초 · ` + waiting.map((i) => INST[i].name).join(' · ') + ' 대기';
+    if (waiting.length) text = `다음 첫 박까지 ${Math.ceil(waitSec)}초 · ${waiting.join(' · ')} 대기`;
     if (text !== lastPlaying) {
       $('playing').textContent = text;
       $('playing').classList.toggle('idle', !names.length && !waiting.length);
@@ -397,7 +487,6 @@
       lastPlaying = text;
     }
 
-    // 지휘 표시: 4마디 × 4박
     const cond = Music.conductor();
     const cur = cond ? cond.bar * 4 + cond.beat : -1;
     if (cur !== lastBeat) {
@@ -413,7 +502,7 @@
     const dt = Math.min(50, now - (lastTime || now));
     lastTime = now;
 
-    if (started && !over) {
+    if (playing && !over) {
       acc += dt;
       let n = 0;
       while (acc >= 1000 / 60 && n < 4) {
@@ -423,7 +512,6 @@
       }
       if (n === 4) acc = 0;
 
-      // 경계선 위에 오래 머물면 게임 끝
       let above = false;
       for (const b of bodies()) {
         if (now - b.born > 1200 && b.position.y - b.circleRadius < LINE_Y) { above = true; break; }
@@ -432,7 +520,13 @@
       if (dangerMs > 2600) endGame();
     }
 
-    // 스케줄된 타격이 실제로 울리는 순간에 맞춰 효과를 낸다
+    // 판 위의 악기는 판에 있는 동안 계속 연주한다
+    const list = bodies();
+    const counts = new Array(N).fill(0);
+    if (inGame) for (const b of list) counts[b.tier]++;
+    Music.sync(counts);
+
+    // 예약된 타격이 실제로 울리는 순간에 맞춰 효과를 낸다
     const audioNow = Music.now();
     for (let i = pendingHits.length - 1; i >= 0; i--) {
       const [tier, t] = pendingHits[i];
@@ -440,46 +534,55 @@
       pendingHits.splice(i, 1);
       pulse[tier] = t;
       if (now - lastNote[tier] > 380) {
-        const list = bodies().filter((b) => b.tier === tier);
-        if (list.length) { noteFrom(list[(Math.random() * list.length) | 0]); lastNote[tier] = now; }
+        const b = soloist(list, tier);
+        if (b) { noteFrom(b); lastNote[tier] = now; }
       }
     }
 
     if (engine) drawBoard(now, audioNow);
-    updateChain();
+    updateChain(counts);
   }
 
   function endGame() {
     over = true;
-    // 판에 남은 모든 악기가 마지막으로 함께 연주한다
     const tiers = new Set(bodies().map((b) => b.tier));
-    tiers.forEach((t) => Music.trigger(t, 8));
-    wasWaiting.fill(false);
     $('final').textContent = score.toLocaleString('ko-KR');
     $('finalCount').textContent = tiers.size;
     $('over').hidden = false;
     updateHud();
   }
 
-  function ensemble() {
-    if (!started) return;
-    const tiers = new Set(bodies().map((b) => b.tier));
-    if (!tiers.size) { toast('판에 악기가 없어요'); return; }
-    let wait = 0;
-    tiers.forEach((t) => { wait = Music.trigger(t, INST[t].secs); });
-    toast(tiers.size + '중주 ' + (wait > 0.3 ? '· 다음 첫 박에 다 함께' : '합주!'));
-  }
+  /* ---------- 시작 화면 ---------- */
 
-  /* ---------- 시작 ---------- */
+  function openIntro() {
+    pickIdx = setIdx;
+    playing = false;
+    buildSetPicker();
+    buildRoster(SETS[pickIdx]);
+    $('resumeBtn').hidden = !(inGame && !over);
+    $('intro').hidden = false;
+    $('over').hidden = true;
+  }
 
   $('startBtn').addEventListener('click', () => {
     Music.init();
-    started = true;
+    useSet(pickIdx);
+    readAccent();
     $('intro').hidden = true;
+    inGame = true;
+    playing = true;
     newGame();
   });
-  $('againBtn').addEventListener('click', () => { Music.init(); newGame(); });
-  $('ensembleBtn').addEventListener('click', () => { Music.init(); ensemble(); });
+  $('resumeBtn').addEventListener('click', () => {
+    Music.init();
+    $('intro').hidden = true;
+    document.documentElement.dataset.set = SET.id;
+    readAccent();
+    playing = true;
+  });
+  $('againBtn').addEventListener('click', () => { Music.init(); playing = true; newGame(); });
+  $('overSetBtn').addEventListener('click', openIntro);
+  $('setBtn').addEventListener('click', openIntro);
   $('muteBtn').addEventListener('click', () => {
     Music.init();
     const m = !Music.isMuted();
@@ -488,13 +591,23 @@
     $('muteBtn').textContent = m ? '소리 켜기' : '소리 끄기';
   });
   document.addEventListener('visibilitychange', () => { lastTime = 0; });
-
   window.addEventListener('resize', resize);
-  buildChain();
+
+  pickIdx = unlocked;
+  useSet(pickIdx);
+  readAccent();
   buildBaton();
+  buildSetPicker();
+  buildRoster(SET);
   setupWorld();
   current = randomTier(); next = randomTier();
   updateHud();
   resize();
   requestAnimationFrame(step);
+
+  // 테스트용
+  window.__game = {
+    unlockAll() { unlocked = SETS.length - 1; store.set('unlocked', unlocked); buildSetPicker(); },
+    spawn(tier, x) { if (engine) Composite.add(engine.world, makeBody(tier, x || W / 2, 140)); },
+  };
 })();

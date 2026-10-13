@@ -20,6 +20,7 @@
       <span class="label">최고</span>
       <span class="value small" id="best">0</span>
     </div>
+    <span class="set-pill" id="setName">오케스트라</span>
     <div class="next">
       <span class="label">다음</span>
       <canvas id="next" width="88" height="88" aria-label="다음 악기"></canvas>
@@ -33,9 +34,13 @@
     <section id="intro" class="overlay">
       <div class="card">
         <h1>합주팡</h1>
-        <p>같은 악기 둘이 만나면 더 큰 악기가 돼요.<br>새 악기는 다음 첫 박을 기다렸다가 모두와 같은 순간에 들어가요. 8초 동안 자기 가락을 연주하고, 피아노는 16초 멜로디를 들려줘요. 악기가 모일수록 하나의 오케스트라가 돼요.</p>
+        <p>같은 악기 둘이 만나면 더 큰 악기가 돼요. 판 위 악기는 모두 같은 첫 박에 맞춰 계속 연주하고, 같은 악기가 여럿이면 차례로 이어서 더 긴 가락을 들려줘요.</p>
+        <div id="sets" class="sets" role="group" aria-label="세트 고르기"></div>
         <ol id="roster" class="roster"></ol>
-        <button id="startBtn" class="btn primary" type="button">연주 시작</button>
+        <div class="row">
+          <button id="resumeBtn" class="btn" type="button" hidden>이어서 연주</button>
+          <button id="startBtn" class="btn primary" type="button">새로 연주</button>
+        </div>
         <p class="hint">판을 눌러 위치를 정하고, 손을 떼면 떨어져요.</p>
       </div>
     </section>
@@ -45,7 +50,10 @@
         <h2>커튼콜</h2>
         <p>판에 남은 <b id="finalCount">0</b>종의 악기가 마지막 합주를 하고 있어요.</p>
         <p class="final"><span id="final">0</span>점</p>
-        <button id="againBtn" class="btn primary" type="button">다시 연주</button>
+        <div class="row">
+          <button id="overSetBtn" class="btn" type="button">세트 바꾸기</button>
+          <button id="againBtn" class="btn primary" type="button">다시 연주</button>
+        </div>
       </div>
     </section>
   </main>
@@ -58,13 +66,14 @@
     <div id="baton" class="baton" aria-label="지휘 박자: 4마디, 마디마다 4박"></div>
     <ol id="chain" class="chain" aria-label="악기 진화 순서"></ol>
     <div class="actions">
-      <button id="ensembleBtn" class="btn" type="button">판 위 악기 모두 연주</button>
+      <button id="setBtn" class="btn" type="button">세트 바꾸기</button>
       <button id="muteBtn" class="btn ghost" type="button" aria-pressed="false">소리 끄기</button>
     </div>
   </footer>
 </div>
 <script src="lib/matter.min.js"></script>
-<script src="src/instruments.js"></script>
+<script src="src/sets.js"></script>
+<script src="src/icons.js"></script>
 <script src="src/music.js"></script>
 <script src="src/game.js"></script>
 </body>

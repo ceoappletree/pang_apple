@@ -7,16 +7,38 @@
   --muted: #b9a8b8;        /* 보조 글자 */
   --gold: #ffc65c;         /* 점수와 강조 */
   --danger: #ff6b6b;
+  --glow: #33223d;         /* 객석 위 조명 번짐 */
   --display: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   color-scheme: dark;
+}
+
+/* 세트마다 무대 조명이 바뀐다 */
+:root[data-set="electro"] {
+  --night: #070b18;
+  --velvet: #0f1a33;
+  --floor: #1d2b4f;
+  --light: #e3f6ff;
+  --muted: #8aa3bf;
+  --gold: #5ff3ff;
+  --glow: #2b1a5c;
+}
+:root[data-set="cats"] {
+  --night: #1d1219;
+  --velvet: #3a2131;
+  --floor: #4d2c3e;
+  --light: #ffeef5;
+  --muted: #c6a3b4;
+  --gold: #ff9ec7;
+  --glow: #4a2340;
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body {
-  background: radial-gradient(120% 70% at 50% 0%, #33223d 0%, var(--night) 60%) var(--night);
+  background: radial-gradient(120% 70% at 50% 0%, var(--glow) 0%, var(--night) 60%) var(--night);
+  transition: background-color 0.4s;
   color: var(--light);
   font-family: var(--body);
   overflow: hidden;
@@ -79,7 +101,7 @@ body {
   touch-action: none;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 30%),
-    linear-gradient(180deg, var(--velvet), #241a2a);
+    linear-gradient(180deg, var(--velvet), var(--night));
   border: 3px solid var(--floor);
   border-top-color: transparent;
   border-radius: 6px 6px 22px 22px;
@@ -197,6 +219,18 @@ body {
   transition: opacity 0.25s, transform 0.25s;
 }
 .chip canvas { width: 100%; max-width: 32px; aspect-ratio: 1; }
+.chip .badge {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  font: 400 11px/1 var(--display);
+  color: var(--night);
+  background: var(--gold);
+  border-radius: 8px;
+  padding: 2px 4px;
+  font-variant-numeric: tabular-nums;
+}
+.chip .badge:empty { display: none; }
 .chip .bar {
   display: block;
   width: 80%;
@@ -229,11 +263,52 @@ body {
   background: rgba(255, 231, 199, 0.12);
   transition: background 0.08s;
 }
-.measure i.one { background: rgba(255, 198, 92, 0.3); }
+.measure i.one { background: var(--gold); opacity: 0.35; }
 .measure i.cur { background: var(--light); }
-.measure i.one.cur { background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+.measure i.one.cur { background: var(--gold); opacity: 1; box-shadow: 0 0 10px var(--gold); }
 
 .actions { display: flex; gap: 8px; }
+.row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+.set-pill {
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--gold);
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+/* 세트 고르기 */
+.sets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+.set {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px;
+  text-align: left;
+  color: var(--light);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: var(--body);
+}
+.set:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.set.picked { border-color: var(--gold); background: rgba(255, 255, 255, 0.1); }
+.set:disabled { cursor: not-allowed; opacity: 0.5; }
+.set-no { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); }
+.set-name { font-family: var(--display); font-size: 15px; color: var(--gold); line-height: 1.15; }
+.set:disabled .set-name { color: var(--light); }
+.set-sub { font-size: 10.5px; line-height: 1.35; color: var(--muted); }
 .btn {
   font-family: var(--display);
   font-size: 15px;
@@ -250,7 +325,7 @@ body {
 .btn.primary {
   flex: none;
   background: var(--gold);
-  color: #2a1a05;
+  color: var(--night);
   border-color: var(--gold);
   font-size: 20px;
   padding: 12px 34px;
