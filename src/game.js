@@ -15,6 +15,8 @@
   const c = canvas.getContext('2d');
   const nextCanvas = $('next');
   const nc = nextCanvas.getContext('2d');
+  const djCanvas = $('dj');
+  const djc = djCanvas.getContext('2d');
 
   let setIdx = 0, SET = SETS[0], INST = SET.instruments;
   let pickIdx = 0;                   // 시작 화면에서 고른 세트
@@ -36,6 +38,40 @@
   };
   let unlocked = Math.max(0, Math.min(SETS.length - 1, store.get('unlocked', 0) | 0));
   const bests = store.get('bests', {}) || {};
+  const cleared = store.get('cleared', {}) || {};   // 가장 큰 악기를 만든 세트
+  let saved = store.get('save', null);              // 진행 중이던 판
+  let lastSave = 0;
+
+  // 진행 중인 판(점수, 다음 악기, 판 위 악기 위치)을 저장한다
+  function saveGame() {
+    if (!inGame || over || !engine) return;
+    saved = {
+      set: SET.id, score, current, next,
+      bodies: bodies().filter((b) => !b.merging).map((b) => [b.tier, Math.round(b.position.x * 10) / 10, Math.round(b.position.y * 10) / 10, Math.round(b.angle * 100) / 100]),
+    };
+    store.set('save', saved);
+  }
+  function dropSave() { saved = null; store.set('save', null); }
+
+  function restoreGame(sv) {
+    const i = SETS.findIndex((x) => x.id === sv.set);
+    if (i < 0 || i > unlocked) return false;
+    useSet(i);
+    newGame();
+    score = sv.score | 0;
+    if (sv.current >= 0 && sv.current < SPAWN_TIERS) current = sv.current;
+    if (sv.next >= 0 && sv.next < SPAWN_TIERS) next = sv.next;
+    const now = performance.now();
+    for (const [tier, x, y, angle] of sv.bodies || []) {
+      if (!(tier >= 0 && tier < N)) continue;
+      const b = makeBody(tier, x, y);
+      Body.setAngle(b, angle || 0);
+      b.born = now - 5000;
+      Composite.add(engine.world, b);
+    }
+    updateHud();
+    return true;
+  }
 
   /* ---------- 준비 ---------- */
 
@@ -164,6 +200,12 @@
         if (same > 1) toast(`${INST[nt].name} ${same}개 · ${same}배 긴 연주`);
         else toast(INST[nt].name + (st && st.playing ? '!' : ' 등장 · 다음 첫 박에 합류'));
         checkUnlock(nt);
+        if (nt === N - 1 && !cleared[SET.id]) {
+          cleared[SET.id] = true;
+          store.set('cleared', cleared);
+          setTimeout(() => toast(`${SET.name} 클리어!`), 1400);
+          burst(x, y, '#ffffff', 40);
+        }
       } else {
         // 가장 큰 악기 두 개가 만나면 박수와 함께 사라진다
         score += 100;
@@ -293,9 +335,10 @@
       b.pop = Math.min(1, b.pop + 0.08);
       const st = Music.status(b.tier);
       const isSolo = solo[b.tier] === b;
+      // 소리가 날 때마다 커졌다가 작아진다. 지금 차례인 악기는 더 크게.
       const hitAge = audioNow - pulse[b.tier];
-      const bump = isSolo && hitAge >= 0 ? Math.exp(-hitAge * 14) : 0;
-      const s = easeBack(b.pop) * (1 + bump * 0.08);
+      const bump = st && st.playing && hitAge >= 0 ? Math.exp(-hitAge * 10) : 0;
+      const s = easeBack(b.pop) * (1 + bump * (isSolo ? 0.16 : 0.09));
       c.save();
       c.translate(b.position.x, b.position.y);
       c.scale(s, s);
@@ -402,7 +445,8 @@
       btn.setAttribute('aria-pressed', String(i === pickIdx));
       const num = document.createElement('span');
       num.className = 'set-no';
-      num.textContent = i + 1 + '세트' + (locked ? ' · 잠김' : '');
+      num.textContent = i + 1 + '세트' + (locked ? ' · 잠김' : cleared[s.id] ? ' · 클리어' : '');
+      if (cleared[s.id]) btn.classList.add('cleared');
       const nm = document.createElement('span');
       nm.className = 'set-name';
       nm.textContent = s.name;
@@ -419,7 +463,7 @@
         buildSetPicker();
         buildRoster(SETS[i]);
         document.documentElement.dataset.set = SETS[i].id;
-        $('resumeBtn').hidden = !(inGame && !over && pickIdx === setIdx);
+        updateResume();
       });
       box.appendChild(btn);
     });
@@ -430,7 +474,7 @@
     const prev = bests[SET.id] || 0;
     if (score > prev) { bests[SET.id] = score; store.set('bests', bests); }
     $('best').textContent = (bests[SET.id] || 0).toLocaleString('ko-KR');
-    $('setName').textContent = SET.name;
+    djCanvas.setAttribute('aria-label', `DJ 부스: ${SET.name}`);
     nc.setTransform(1, 0, 0, 1, 0, 0);
     nc.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
     if (next !== undefined && next !== null) {
@@ -541,10 +585,31 @@
 
     if (engine) drawBoard(now, audioNow);
     updateChain(counts);
+    drawDJ(now);
+
+    if (inGame && !over && now - lastSave > 1500) { saveGame(); lastSave = now; }
+  }
+
+  function drawDJ(now) {
+    const cond = Music.conductor();
+    const phase = cond ? 1 - ((cond.toNext % cond.beatLen) / cond.beatLen) : 0;
+    const dw = djCanvas.width, dh = djCanvas.height;
+    const want = Math.round(djCanvas.clientWidth * dpr);
+    if (want && dw !== want) {
+      djCanvas.width = want;
+      djCanvas.height = Math.round(want * 110 / 160);
+    }
+    const k = djCanvas.width / 160;
+    djc.setTransform(k, 0, 0, k, 0, 0);
+    DJ.draw(djc, 160, 110, {
+      animal: SET.dj, accent, setName: SET.name, phase: phase >= 1 ? 0 : phase,
+      beat: cond ? cond.beat : 0, bar: cond ? cond.bar : 0, playing: !!cond, time: now,
+    });
   }
 
   function endGame() {
     over = true;
+    dropSave();
     const tiers = new Set(bodies().map((b) => b.tier));
     $('final').textContent = score.toLocaleString('ko-KR');
     $('finalCount').textContent = tiers.size;
@@ -554,12 +619,24 @@
 
   /* ---------- 시작 화면 ---------- */
 
+  function updateResume() {
+    const btn = $('resumeBtn');
+    if (inGame && !over && pickIdx === setIdx) {
+      btn.hidden = false;
+      btn.textContent = '이어서 연주';
+    } else if (!inGame && saved && SETS[pickIdx].id === saved.set) {
+      btn.hidden = false;
+      btn.textContent = `저장된 판 이어서 · ${(saved.score | 0).toLocaleString('ko-KR')}점`;
+    } else btn.hidden = true;
+  }
+
   function openIntro() {
+    saveGame();
     pickIdx = setIdx;
     playing = false;
     buildSetPicker();
     buildRoster(SETS[pickIdx]);
-    $('resumeBtn').hidden = !(inGame && !over);
+    updateResume();
     $('intro').hidden = false;
     $('over').hidden = true;
   }
@@ -575,6 +652,11 @@
   });
   $('resumeBtn').addEventListener('click', () => {
     Music.init();
+    if (!inGame) {
+      if (!saved || !restoreGame(saved)) return;
+      inGame = true;
+      toast('저장된 판을 불러왔어요');
+    }
     $('intro').hidden = true;
     document.documentElement.dataset.set = SET.id;
     readAccent();
@@ -590,15 +672,24 @@
     $('muteBtn').setAttribute('aria-pressed', String(m));
     $('muteBtn').textContent = m ? '소리 켜기' : '소리 끄기';
   });
-  document.addEventListener('visibilitychange', () => { lastTime = 0; });
+  document.addEventListener('visibilitychange', () => {
+    lastTime = 0;
+    if (document.hidden) saveGame();
+  });
+  window.addEventListener('pagehide', saveGame);
   window.addEventListener('resize', resize);
 
   pickIdx = unlocked;
+  if (saved) {
+    const si = SETS.findIndex((x) => x.id === saved.set);
+    if (si >= 0 && si <= unlocked) pickIdx = si; else saved = null;
+  }
   useSet(pickIdx);
   readAccent();
   buildBaton();
   buildSetPicker();
   buildRoster(SET);
+  updateResume();
   setupWorld();
   current = randomTier(); next = randomTier();
   updateHud();

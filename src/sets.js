@@ -212,6 +212,7 @@
       bpm: 120,
       chords: [[48, [0, 4, 7]], [45, [9, 0, 4]], [41, [5, 9, 0]], [43, [7, 11, 2]]],   // C Am F G
       light: '255,196,110',
+      dj: 'bear',
       rhythm: ORCH_RHYTHM,
       instruments: [
         { name: '캐스터네츠', color: '#c8693e', ink: '#fff3e6', icon: 'castanets', voice: 'castanets', part: { rhythm: 'r0' }, vol: 0.5, rev: 0.1 },
@@ -250,6 +251,7 @@
       bpm: 124,
       chords: [[45, [9, 0, 4]], [41, [5, 9, 0]], [48, [0, 4, 7]], [43, [7, 11, 2]]],   // Am F C G
       light: '80,230,255',
+      dj: 'rabbit',
       rhythm: ELECTRO_RHYTHM,
       bassStyle: 'electro',
       instruments: [
@@ -285,6 +287,7 @@
       bpm: 100,
       chords: [[41, [5, 9, 0]], [38, [2, 5, 9]], [43, [7, 10, 2]], [48, [0, 4, 7]]],   // F Dm Gm C
       light: '255,150,200',
+      dj: 'cat',
       rhythm: CAT_RHYTHM,
       instruments: [
         { name: '츳츳냥', color: '#f3dcb4', ink: '#5a3a1e', icon: 'cat', cat: { eyes: 'dot', mouth: 'small' }, voice: 'tsk', part: { rhythm: 'r0' }, vol: 0.4, rev: 0.1 },
@@ -319,6 +322,7 @@
       bpm: 96,
       chords: [[43, [7, 9, 2]], [40, [4, 7, 11]], [45, [9, 11, 4]], [38, [2, 4, 9]]],   // 오음계 G - Em - A sus2 - D sus2
       light: '255,90,60',
+      dj: 'panda',
       rhythm: CHINA_RHYTHM,
       instruments: [
         { name: '목어', color: '#b5652e', ink: '#ffe8cc', icon: 'woodfish', voice: 'woodblock', part: { rhythm: 'r0' }, vol: 0.45, rev: 0.2 },
@@ -357,6 +361,7 @@
       bpm: 108,
       chords: [[38, [2, 6, 9]], [36, [0, 4, 7]], [43, [7, 11, 2]], [38, [2, 6, 9]]],   // D - C - G - D (믹솔리디안)
       light: '255,160,40',
+      dj: 'elephant',
       rhythm: INDIA_RHYTHM,
       instruments: [
         { name: '만지라', color: '#d4a017', ink: '#4a3300', icon: 'manjira', voice: 'manjira', part: { rhythm: 'r0' }, vol: 0.22, rev: 0.3 },
