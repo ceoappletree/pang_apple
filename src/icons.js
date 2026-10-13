@@ -381,6 +381,281 @@
       for (const i of [1, 2, 4, 5, 7]) c.fillRect(kx + (kw * i) / n - r * 0.03, ky, r * 0.06, kh * 0.6);
     },
 
+    // ----- 중국풍 -----
+    // 목어: 물고기 모양 나무 통과 채
+    woodfish(c, r, ink, base) {
+      c.fillStyle = ink;
+      ellipse(c, -r * 0.05, r * 0.08, r * 0.5, r * 0.36); c.fill();
+      c.beginPath(); c.moveTo(r * 0.38, r * 0.08); c.lineTo(r * 0.62, -r * 0.1); c.lineTo(r * 0.62, r * 0.26); c.closePath(); c.fill();
+      c.strokeStyle = shade(base, -0.4); c.lineWidth = r * 0.06; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.45, r * 0.1); c.quadraticCurveTo(-r * 0.05, r * 0.24, r * 0.3, r * 0.1); c.stroke();
+      c.fillStyle = shade(base, -0.4);
+      c.beginPath(); c.arc(-r * 0.3, -r * 0.04, r * 0.05, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = ink; c.lineWidth = r * 0.06;
+      c.beginPath(); c.moveTo(-r * 0.1, -r * 0.3); c.lineTo(r * 0.35, -r * 0.62); c.stroke();
+      c.beginPath(); c.arc(-r * 0.12, -r * 0.29, r * 0.08, 0, Math.PI * 2); c.fill();
+    },
+    // 바라: 손잡이 끈이 달린 한 쌍
+    bo(c, r, ink) {
+      c.fillStyle = ink;
+      for (const [x, y, rot] of [[-r * 0.18, -r * 0.08, -0.35], [r * 0.18, r * 0.12, 0.35]]) {
+        ellipse(c, x, y, r * 0.42, r * 0.42 * 0.35, rot); c.fill();
+        ellipse(c, x, y - r * 0.05, r * 0.12, r * 0.08, rot); c.fill();
+      }
+      c.strokeStyle = '#d6304a'; c.lineWidth = r * 0.06; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.18, -r * 0.14); c.quadraticCurveTo(0, -r * 0.6, r * 0.18, r * 0.06); c.stroke();
+    },
+    // 박판: 부채처럼 펼친 나무 판 세 장
+    paiban(c, r, ink, base) {
+      for (const a of [-0.35, 0, 0.35]) {
+        c.save(); c.rotate(a);
+        c.fillStyle = ink;
+        c.beginPath(); c.roundRect(-r * 0.09, -r * 0.6, r * 0.18, r * 0.95, r * 0.05); c.fill();
+        c.strokeStyle = shade(base, -0.3); c.lineWidth = r * 0.02; c.stroke();
+        c.restore();
+      }
+      c.fillStyle = '#d6304a';
+      c.beginPath(); c.arc(0, r * 0.3, r * 0.07, 0, Math.PI * 2); c.fill();
+      c.fillRect(-r * 0.02, r * 0.35, r * 0.04, r * 0.25);
+    },
+    // 판고: 얕고 넓은 북과 가는 채
+    bangu(c, r, ink, base) {
+      c.fillStyle = shade(base, 0.25);
+      c.beginPath(); c.moveTo(-r * 0.5, -r * 0.05); c.lineTo(-r * 0.4, r * 0.4); c.lineTo(r * 0.4, r * 0.4); c.lineTo(r * 0.5, -r * 0.05); c.closePath(); c.fill();
+      c.fillStyle = ink;
+      ellipse(c, 0, -r * 0.05, r * 0.5, r * 0.17); c.fill();
+      c.fillStyle = shade(base, 0.1);
+      ellipse(c, 0, -r * 0.05, r * 0.13, r * 0.05); c.fill();
+      c.strokeStyle = ink; c.lineWidth = r * 0.04; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.6, -r * 0.6); c.lineTo(-r * 0.05, -r * 0.12); c.stroke();
+      c.beginPath(); c.moveTo(r * 0.6, -r * 0.6); c.lineTo(r * 0.05, -r * 0.12); c.stroke();
+    },
+    // 징: 틀에 매단 둥근 징
+    gong(c, r, ink, base) {
+      c.strokeStyle = ink; c.lineWidth = r * 0.07; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.55, r * 0.6); c.lineTo(-r * 0.55, -r * 0.55); c.lineTo(r * 0.55, -r * 0.55); c.lineTo(r * 0.55, r * 0.6); c.stroke();
+      c.lineWidth = r * 0.03;
+      c.beginPath(); c.moveTo(-r * 0.15, -r * 0.55); c.lineTo(-r * 0.12, -r * 0.38); c.moveTo(r * 0.15, -r * 0.55); c.lineTo(r * 0.12, -r * 0.38); c.stroke();
+      c.fillStyle = ink;
+      c.beginPath(); c.arc(0, r * 0.05, r * 0.42, 0, Math.PI * 2); c.fill();
+      c.fillStyle = shade(base, -0.15);
+      c.beginPath(); c.arc(0, r * 0.05, r * 0.14, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = shade(base, -0.15); c.lineWidth = r * 0.025;
+      c.beginPath(); c.arc(0, r * 0.05, r * 0.3, 0, Math.PI * 2); c.stroke();
+    },
+    // 대고: 못이 박힌 통 북
+    barrel(c, r, ink, base) {
+      c.fillStyle = shade(base, -0.25);
+      c.beginPath();
+      c.moveTo(-r * 0.45, -r * 0.3);
+      c.quadraticCurveTo(-r * 0.62, r * 0.12, -r * 0.45, r * 0.52);
+      c.lineTo(r * 0.45, r * 0.52);
+      c.quadraticCurveTo(r * 0.62, r * 0.12, r * 0.45, -r * 0.3);
+      c.closePath(); c.fill();
+      c.fillStyle = ink;
+      ellipse(c, 0, -r * 0.3, r * 0.45, r * 0.15); c.fill();
+      for (const y of [-0.14, 0.4]) for (let i = 0; i < 7; i++) {
+        const x = -0.42 + i * 0.14;
+        c.beginPath(); c.arc(x * r, y * r, r * 0.025, 0, Math.PI * 2); c.fill();
+      }
+      c.strokeStyle = ink; c.lineWidth = r * 0.06; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.2, -r * 0.35); c.lineTo(-r * 0.62, -r * 0.7); c.stroke();
+      c.beginPath(); c.arc(-r * 0.18, -r * 0.34, r * 0.06, 0, Math.PI * 2); c.fill();
+    },
+    // 디즈: 피리에 붉은 술
+    dizi(c, r, ink, base) {
+      ICONS.flute(c, r, ink, base);
+      c.save(); c.rotate(-0.75);
+      c.strokeStyle = '#d6304a'; c.lineWidth = r * 0.05; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r * 0.62, r * 0.12); c.quadraticCurveTo(r * 0.75, r * 0.4, r * 0.62, r * 0.6); c.stroke();
+      c.beginPath(); c.moveTo(r * 0.62, r * 0.12); c.quadraticCurveTo(r * 0.5, r * 0.4, r * 0.55, r * 0.62); c.stroke();
+      c.restore();
+    },
+    // 생황: 그릇 위로 솟은 대나무 관 다발
+    sheng(c, r, ink, base) {
+      const hs = [0.5, 0.62, 0.72, 0.8, 0.72, 0.62, 0.5];
+      c.fillStyle = ink;
+      hs.forEach((h, i) => {
+        const x = -r * 0.36 + i * r * 0.12;
+        c.beginPath(); c.roundRect(x - r * 0.045, r * 0.1 - h * r, r * 0.09, h * r, r * 0.04); c.fill();
+      });
+      c.fillStyle = shade(base, -0.35);
+      c.beginPath(); c.ellipse(0, r * 0.2, r * 0.45, r * 0.2, 0, 0, Math.PI); c.fill();
+      c.fillStyle = ink;
+      ellipse(c, 0, r * 0.12, r * 0.45, r * 0.08); c.fill();
+      c.strokeStyle = ink; c.lineWidth = r * 0.06; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r * 0.4, r * 0.28); c.lineTo(r * 0.62, r * 0.45); c.stroke();
+    },
+    // 구정: 기러기발이 늘어선 긴 판
+    guzheng(c, r, ink, base) {
+      c.save(); c.rotate(-0.45);
+      c.fillStyle = ink;
+      c.beginPath(); c.roundRect(-r * 0.7, -r * 0.2, r * 1.4, r * 0.4, r * 0.15); c.fill();
+      c.strokeStyle = shade(base, -0.3); c.lineWidth = r * 0.015;
+      for (let i = 0; i < 6; i++) {
+        const y = -r * 0.14 + i * r * 0.056;
+        c.beginPath(); c.moveTo(-r * 0.62, y); c.lineTo(r * 0.62, y); c.stroke();
+      }
+      c.fillStyle = shade(base, -0.3);
+      for (let i = 0; i < 6; i++) {
+        const x = -r * 0.15 + (i % 3) * r * 0.2, y = -r * 0.14 + i * r * 0.056;
+        c.beginPath(); c.moveTo(x - r * 0.04, y + r * 0.03); c.lineTo(x, y - r * 0.03); c.lineTo(x + r * 0.04, y + r * 0.03); c.fill();
+      }
+      c.restore();
+    },
+    // 비파: 배 모양 몸통과 꺾인 목
+    pipa(c, r, ink, base) {
+      c.save(); c.rotate(0.35);
+      c.fillStyle = ink;
+      c.beginPath();
+      c.moveTo(0, -r * 0.3);
+      c.bezierCurveTo(r * 0.38, -r * 0.2, r * 0.42, r * 0.55, 0, r * 0.6);
+      c.bezierCurveTo(-r * 0.42, r * 0.55, -r * 0.38, -r * 0.2, 0, -r * 0.3);
+      c.fill();
+      c.fillRect(-r * 0.06, -r * 0.62, r * 0.12, r * 0.36);
+      c.beginPath(); c.moveTo(-r * 0.06, -r * 0.62); c.lineTo(r * 0.14, -r * 0.74); c.lineTo(r * 0.06, -r * 0.6); c.fill();
+      const dark = shade(base, -0.3);
+      c.strokeStyle = dark; c.lineWidth = r * 0.015;
+      for (const x of [-0.05, -0.017, 0.017, 0.05]) { c.beginPath(); c.moveTo(x * r, -r * 0.55); c.lineTo(x * r, r * 0.42); c.stroke(); }
+      c.fillStyle = dark;
+      c.fillRect(-r * 0.12, r * 0.4, r * 0.24, r * 0.04);
+      for (let i = 0; i < 4; i++) c.fillRect(-r * 0.07, -r * 0.5 + i * r * 0.08, r * 0.14, r * 0.015);
+      c.restore();
+    },
+    // 얼후: 긴 대, 작은 육각 울림통, 활
+    erhu(c, r, ink, base) {
+      c.fillStyle = ink;
+      c.fillRect(-r * 0.03, -r * 0.7, r * 0.06, r * 1.0);
+      c.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3;
+        c.lineTo(Math.cos(a) * r * 0.18, r * 0.42 + Math.sin(a) * r * 0.16);
+      }
+      c.closePath(); c.fill();
+      for (const y of [-0.6, -0.48]) { c.fillRect(-r * 0.12, y * r, r * 0.24, r * 0.05); }
+      c.strokeStyle = ink; c.lineWidth = r * 0.035; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.65, r * 0.18); c.quadraticCurveTo(0, r * 0.12, r * 0.62, r * 0.28); c.stroke();
+      c.strokeStyle = shade(base, 0.4); c.lineWidth = r * 0.012;
+      c.beginPath(); c.moveTo(-r * 0.6, r * 0.21); c.lineTo(r * 0.58, r * 0.3); c.stroke();
+    },
+
+    // ----- 인도 -----
+    // 만지라: 끈으로 이은 작은 심벌 두 개
+    manjira(c, r, ink) {
+      c.strokeStyle = '#d6304a'; c.lineWidth = r * 0.05;
+      c.beginPath(); c.moveTo(-r * 0.3, -r * 0.05); c.quadraticCurveTo(0, -r * 0.65, r * 0.3, -r * 0.05); c.stroke();
+      c.fillStyle = ink;
+      for (const x of [-0.3, 0.3]) {
+        c.beginPath(); c.arc(x * r, r * 0.12, r * 0.24, Math.PI, 0); c.closePath(); c.fill();
+        ellipse(c, x * r, r * 0.12, r * 0.28, r * 0.07); c.fill();
+      }
+    },
+    // 가탐: 흙 항아리
+    ghatam(c, r, ink, base) {
+      c.fillStyle = ink;
+      c.beginPath(); c.arc(0, r * 0.12, r * 0.48, 0, Math.PI * 2); c.fill();
+      c.fillStyle = shade(base, -0.35);
+      ellipse(c, 0, -r * 0.34, r * 0.2, r * 0.07); c.fill();
+      c.fillStyle = ink;
+      c.fillRect(-r * 0.16, -r * 0.38, r * 0.32, r * 0.1);
+      c.strokeStyle = shade(base, -0.2); c.lineWidth = r * 0.03;
+      c.beginPath(); c.ellipse(0, r * 0.12, r * 0.44, r * 0.12, 0, 0, Math.PI); c.stroke();
+    },
+    // 타블라: 작은 다얀과 둥근 바얀
+    tabla(c, r, ink, base) {
+      c.fillStyle = shade(base, 0.25);
+      c.beginPath(); c.arc(-r * 0.25, r * 0.15, r * 0.35, 0, Math.PI * 2); c.fill();
+      c.fillStyle = ink;
+      ellipse(c, -r * 0.25, -r * 0.08, r * 0.34, r * 0.12); c.fill();
+      c.fillStyle = '#1a1420';
+      ellipse(c, -r * 0.25, -r * 0.08, r * 0.12, r * 0.045); c.fill();
+      c.fillStyle = shade(base, 0.45);
+      c.fillRect(r * 0.12, -r * 0.2, r * 0.4, r * 0.6);
+      c.fillStyle = ink;
+      ellipse(c, r * 0.32, -r * 0.2, r * 0.2, r * 0.08); c.fill();
+      c.fillStyle = '#1a1420';
+      ellipse(c, r * 0.32, -r * 0.2, r * 0.08, r * 0.03); c.fill();
+      c.strokeStyle = shade(base, -0.2); c.lineWidth = r * 0.02;
+      for (let i = 0; i < 4; i++) { const x = r * (0.15 + i * 0.11); c.beginPath(); c.moveTo(x, -r * 0.14); c.lineTo(x + r * 0.03, r * 0.38); c.stroke(); }
+    },
+    // 간타: 손잡이 달린 사원 종
+    bell(c, r, ink, base) {
+      c.fillStyle = ink;
+      c.beginPath();
+      c.moveTo(-r * 0.12, -r * 0.3);
+      c.quadraticCurveTo(-r * 0.32, -r * 0.25, -r * 0.34, r * 0.25);
+      c.lineTo(-r * 0.45, r * 0.38); c.lineTo(r * 0.45, r * 0.38); c.lineTo(r * 0.34, r * 0.25);
+      c.quadraticCurveTo(r * 0.32, -r * 0.25, r * 0.12, -r * 0.3);
+      c.closePath(); c.fill();
+      c.fillRect(-r * 0.05, -r * 0.62, r * 0.1, r * 0.34);
+      c.beginPath(); c.arc(0, -r * 0.66, r * 0.1, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(0, r * 0.48, r * 0.08, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = shade(base, -0.3); c.lineWidth = r * 0.03;
+      c.beginPath(); c.moveTo(-r * 0.36, r * 0.18); c.lineTo(r * 0.36, r * 0.18); c.stroke();
+    },
+    // 돌: 줄로 조인 옆으로 누운 통 북
+    dhol(c, r, ink, base) {
+      c.fillStyle = shade(base, -0.2);
+      c.fillRect(-r * 0.42, -r * 0.3, r * 0.84, r * 0.6);
+      c.fillStyle = ink;
+      for (const x of [-0.42, 0.42]) { ellipse(c, x * r, 0, r * 0.12, r * 0.32); c.fill(); }
+      c.strokeStyle = ink; c.lineWidth = r * 0.03;
+      c.beginPath();
+      for (let i = 0; i <= 8; i++) c.lineTo(-r * 0.38 + (i / 8) * r * 0.76, i % 2 ? r * 0.28 : -r * 0.28);
+      c.stroke();
+      c.lineWidth = r * 0.05; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.4, -r * 0.32); c.quadraticCurveTo(0, -r * 0.75, r * 0.4, -r * 0.32); c.stroke();
+    },
+    // 하모니움: 건반과 주름 풀무가 있는 상자
+    harmonium(c, r, ink, base) {
+      c.fillStyle = ink;
+      c.beginPath(); c.roundRect(-r * 0.6, -r * 0.4, r * 1.2, r * 0.45, r * 0.05); c.fill();
+      const dark = shade(base, -0.3);
+      c.strokeStyle = dark; c.lineWidth = r * 0.03;
+      for (let i = 0; i < 5; i++) { const y = -r * 0.34 + i * r * 0.08; c.beginPath(); c.moveTo(-r * 0.54, y); c.lineTo(r * 0.54, y); c.stroke(); }
+      const kx = -r * 0.6, ky = r * 0.08, kw = r * 1.2, kh = r * 0.3, n = 10;
+      c.fillStyle = ink; c.fillRect(kx, ky, kw, kh);
+      c.strokeStyle = base; c.lineWidth = r * 0.02;
+      for (let i = 1; i < n; i++) { c.beginPath(); c.moveTo(kx + (kw * i) / n, ky); c.lineTo(kx + (kw * i) / n, ky + kh); c.stroke(); }
+      c.fillStyle = dark;
+      for (const i of [1, 2, 4, 5, 6, 8, 9]) c.fillRect(kx + (kw * i) / n - r * 0.03, ky, r * 0.06, kh * 0.6);
+    },
+    // 탄푸라: 큰 박 울림통과 긴 목
+    tanpura(c, r, ink, base) {
+      c.save(); c.rotate(0.3);
+      c.fillStyle = ink;
+      c.beginPath(); c.arc(0, r * 0.38, r * 0.3, 0, Math.PI * 2); c.fill();
+      c.fillRect(-r * 0.07, -r * 0.72, r * 0.14, r * 0.9);
+      c.strokeStyle = shade(base, -0.35); c.lineWidth = r * 0.012;
+      for (const x of [-0.04, -0.013, 0.013, 0.04]) { c.beginPath(); c.moveTo(x * r, -r * 0.7); c.lineTo(x * r, r * 0.5); c.stroke(); }
+      c.fillStyle = shade(base, -0.35);
+      c.fillRect(-r * 0.12, r * 0.48, r * 0.24, r * 0.04);
+      for (const y of [-0.66, -0.56]) { c.beginPath(); c.arc(-r * 0.11, y * r, r * 0.035, 0, Math.PI * 2); c.fill(); c.beginPath(); c.arc(r * 0.11, y * r, r * 0.035, 0, Math.PI * 2); c.fill(); }
+      c.restore();
+    },
+    // 산투르: 사다리꼴 상자, 줄, 채 두 개
+    santoor(c, r, ink, base) {
+      c.fillStyle = ink;
+      c.beginPath(); c.moveTo(-r * 0.62, r * 0.35); c.lineTo(r * 0.62, r * 0.35); c.lineTo(r * 0.38, -r * 0.2); c.lineTo(-r * 0.38, -r * 0.2); c.closePath(); c.fill();
+      c.strokeStyle = shade(base, -0.3); c.lineWidth = r * 0.015;
+      for (let i = 0; i < 7; i++) { const y = -r * 0.14 + i * r * 0.075; const w = 0.4 + (i / 6) * 0.2; c.beginPath(); c.moveTo(-w * r, y); c.lineTo(w * r, y); c.stroke(); }
+      c.strokeStyle = ink; c.lineWidth = r * 0.04; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.4, -r * 0.65); c.lineTo(-r * 0.15, -r * 0.28); c.moveTo(r * 0.4, -r * 0.65); c.lineTo(r * 0.15, -r * 0.28); c.stroke();
+    },
+    // 시타르: 큰 박, 프렛이 있는 긴 목, 위쪽 작은 박
+    sitar(c, r, ink, base) {
+      c.save(); c.rotate(-0.55);
+      c.fillStyle = ink;
+      c.beginPath(); c.arc(0, r * 0.42, r * 0.28, 0, Math.PI * 2); c.fill();
+      c.fillRect(-r * 0.07, -r * 0.72, r * 0.14, r * 1.0);
+      c.beginPath(); c.arc(0, -r * 0.62, r * 0.12, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = shade(base, -0.4); c.lineWidth = r * 0.02;
+      for (let i = 0; i < 8; i++) { const y = -r * 0.48 + i * r * 0.08; c.beginPath(); c.moveTo(-r * 0.07, y); c.lineTo(r * 0.07, y); c.stroke(); }
+      c.fillStyle = shade(base, -0.4);
+      c.fillRect(-r * 0.12, r * 0.5, r * 0.24, r * 0.04);
+      c.restore();
+    },
+
     // 고양이 얼굴: 공 자체가 얼굴, 옵션으로 표정과 소품이 바뀐다
     cat(c, r, ink, base, o) {
       o = o || {};

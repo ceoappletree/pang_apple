@@ -189,12 +189,22 @@
       const osc = ctx.createOscillator();
       osc.type = type;
       osc.frequency.value = f * mul;
+      if (o.bend) {
+        // 줄을 눌러 음을 밀어 올린다(구정, 시타르의 미끄러짐)
+        osc.frequency.setValueAtTime(f * mul * Math.pow(2, -o.bend / 12), t);
+        osc.frequency.exponentialRampToValueAtTime(f * mul, t + (o.bendTime || 0.1));
+      }
       osc.detune.value = det;
       const og = ctx.createGain();
       og.gain.value = gv;
       osc.connect(og); og.connect(lp);
       osc.start(t); osc.stop(t + d + 0.05);
     }
+  }
+
+  // 여러 사인파 부분음을 겹친 종소리(징, 사원 종, 만지라)
+  function bell(out, t, partials, v, d) {
+    for (const [f, gv, dm] of partials) tone(out, t, { f, v: v * gv, a: 0.003, d: d * (dm || 1) });
   }
 
   // 고양이 목소리: 톱니파를 모음 포먼트 필터 3개에 통과시킨다
@@ -427,6 +437,153 @@
       catVoice(out, t, o.len, { note: o.note, v: 0.85, a: 0.04, r: 0.1, scoop: 0.9, fall: o.len > 0.4 ? 0.93 : 0, vib: 0.014,
         vowels: [[0, 'i'], [0.25, 'a'], [0.8, 'a'], [1, 'u']] });
     },
+
+    // 중국풍
+    woodblock(out, t, o) {
+      tone(out, t, { f: 1150, f2: 980, slide: 0.03, v: o.v * 0.8, d: 0.07 });
+      noise(out, t, { type: 'bandpass', f: 1600, q: 3, v: o.v * 0.25, d: 0.02 });
+    },
+    bo(out, t, o) {
+      metal(out, t, { v: o.v * 0.8, d: o.v > 0.85 ? 0.7 : 0.35, hp: 4500, bp: 7000, base: 52 });
+      bell(out, t, [[1480, 0.25], [2210, 0.15]], o.v, 0.4);
+    },
+    paiban(out, t, o) {
+      noise(out, t, { type: 'bandpass', f: 2300, q: 3, v: o.v * 0.9, d: 0.03 });
+      noise(out, t + 0.012, { type: 'bandpass', f: 1800, q: 3, v: o.v * 0.6, d: 0.03 });
+      tone(out, t, { type: 'triangle', f: 760, v: o.v * 0.3, d: 0.03 });
+    },
+    bangu(out, t, o) {
+      tone(out, t, { type: 'triangle', f: 430, f2: 380, slide: 0.05, v: o.v * 0.7, d: 0.08 });
+      noise(out, t, { type: 'bandpass', f: 3200, q: 1.5, v: o.v * 0.4, d: 0.03 });
+    },
+    gong(out, t, o) {
+      if (o.v > 0.85) {
+        bell(out, t, [[98, 0.6, 1], [147, 0.4, 0.9], [196, 0.3, 0.8], [261, 0.2, 0.6], [339, 0.12, 0.5]], 1, 2.6);
+        noise(out, t, { type: 'lowpass', f: 500, v: 0.25, a: 0.02, d: 0.8 });
+      } else {
+        // 경극의 작은 징: 치고 나서 음이 올라간다
+        tone(out, t, { type: 'triangle', f: 520, f2: 690, slide: 0.25, v: o.v * 0.6, d: 0.6 });
+        metal(out, t, { v: o.v * 0.25, d: 0.3, hp: 3500, bp: 6000, base: 60 });
+      }
+    },
+    dagu(out, t, o) {
+      tone(out, t, { f: 115, f2: 62, slide: 0.15, v: o.v, d: 0.55 });
+      noise(out, t, { type: 'lowpass', f: 700, v: o.v * 0.3, d: 0.06 });
+    },
+    dizi(out, t, o) {
+      sustained(out, t, o.len, {
+        note: o.note, v: 0.9, a: 0.04, r: 0.1, vib: 0.011, vibRate: 6, scoop: true, breath: 0.1,
+        layers: [{ type: 'sine', v: 1 }, { type: 'square', v: 0.05 }, { type: 'sine', mul: 3, v: 0.06 }],
+      });
+      // 디즈 특유의 막 떨림 소리
+      noise(out, t, { type: 'bandpass', f: midi(o.note) * 3, q: 10, v: 0.12, a: 0.05, d: Math.max(0.1, o.len * 0.8) });
+    },
+    sheng(out, t, o) {
+      sustained(out, t, o.len, {
+        note: o.note, v: 0.8, a: Math.min(0.15, o.len * 0.3), r: 0.15, vib: 0.002, vibRate: 4, filter: 4, q: 2,
+        layers: [{ type: 'square', v: 0.5 }, { type: 'sawtooth', mul: 2, v: 0.3 }],
+      });
+    },
+    guzheng(out, t, o) {
+      synthPluck(out, t, { note: o.note + 12, v: 0.75, d: Math.max(0.6, o.len + 0.5), open: 9, close: 2, sweep: 0.4, q: 2,
+        bend: o.len > STEP * 3 ? 2 : 0, bendTime: 0.12,
+        layers: [['triangle', 1, 0, 0.7], ['sawtooth', 1, 4, 0.25], ['sine', 2, 0, 0.15]] });
+    },
+    pipa(out, t, o) {
+      // 긴 음은 빠른 트레몰로로 뜯는다
+      const n = o.len > STEP * 1.5 ? Math.max(2, Math.round(o.len / 0.055)) : 1;
+      for (let i = 0; i < n; i++) {
+        synthPluck(out, t + i * 0.055, { note: o.note, v: 0.7 * (i ? 0.55 : 1), d: 0.2, open: 12, close: 2, sweep: 0.08, q: 3,
+          layers: [['triangle', 1, 0, 0.6], ['sawtooth', 1, 0, 0.35]] });
+      }
+    },
+    erhu(out, t, o) {
+      sustained(out, t, o.len, {
+        note: o.note, v: 0.9, a: 0.07, r: 0.1, vib: 0.016, vibRate: 6.2, scoop: true, filter: 4, q: 4,
+        layers: [{ type: 'sawtooth', v: 0.8 }, { type: 'square', v: 0.15 }],
+      });
+    },
+
+    // 인도
+    manjira(out, t, o) { bell(out, t, [[2380, 0.5], [3620, 0.35], [5210, 0.2, 0.6]], o.v * 0.8, o.v > 0.85 ? 0.7 : 0.35); },
+    ghatam(out, t, o) {
+      if (o.v > 0.6) {
+        tone(out, t, { f: 310, f2: 265, slide: 0.05, v: o.v * 0.8, d: 0.14 });
+        noise(out, t, { type: 'bandpass', f: 1200, q: 2, v: o.v * 0.3, d: 0.04 });
+      } else tone(out, t, { type: 'triangle', f: 900, f2: 820, slide: 0.02, v: o.v * 0.6, d: 0.05 });
+    },
+    kanjira(out, t, o) {
+      tone(out, t, { f: 380, f2: 290, slide: 0.08, v: o.v * 0.7, d: 0.16 });
+      noise(out, t, { type: 'highpass', f: 7000, q: 1, v: o.v * 0.4, d: 0.1 });
+    },
+    tabla(out, t, o) {
+      if (o.v > 0.85) {
+        // 다: 바얀(왼손 큰북)의 음이 밀려 올라가고 다얀이 울린다
+        tone(out, t, { f: 85, f2: 140, slide: 0.25, v: 0.9, d: 0.45 });
+        bell(out, t, [[520, 0.5], [1045, 0.2], [1310, 0.12]], 0.8, 0.45);
+      } else if (o.v > 0.55) {
+        bell(out, t, [[520, 0.55], [1045, 0.25], [1560, 0.1]], o.v, 0.35);
+      } else {
+        noise(out, t, { type: 'bandpass', f: 1500, q: 2, v: o.v * 0.7, d: 0.03 });
+        tone(out, t, { f: 210, v: o.v * 0.4, d: 0.05 });
+      }
+    },
+    ghanta(out, t, o) {
+      if (o.v > 0.85) bell(out, t, [[415, 0.5, 1], [1040, 0.35, 0.8], [1680, 0.2, 0.6], [2600, 0.1, 0.4]], 1, 2.6);
+      else bell(out, t, [[1310, 0.4], [3260, 0.2, 0.6]], o.v, 0.7);
+    },
+    dhol(out, t, o) {
+      if (o.v > 0.85) {
+        tone(out, t, { f: 98, f2: 55, slide: 0.12, v: o.v, d: 0.45 });
+        noise(out, t, { type: 'lowpass', f: 450, v: o.v * 0.3, d: 0.06 });
+      } else {
+        noise(out, t, { type: 'bandpass', f: 2600, q: 1.5, v: o.v * 0.7, d: 0.04 });
+        tone(out, t, { f: 620, f2: 560, slide: 0.03, v: o.v * 0.45, d: 0.06 });
+      }
+    },
+    bansuri(out, t, o) {
+      sustained(out, t, o.len, {
+        note: o.note, v: 0.9, a: 0.07, r: 0.14, vib: 0.009, vibRate: 5, scoop: true, breath: 0.2,
+        layers: [{ type: 'sine', v: 1 }, { type: 'triangle', mul: 2, v: 0.06 }],
+      });
+    },
+    harmonium(out, t, o) {
+      sustained(out, t, o.len, {
+        note: o.note, v: 0.8, a: 0.06, r: 0.1, vib: 0.001, vibRate: 3, filter: 3.5, q: 1.5,
+        layers: [{ type: 'square', v: 0.5 }, { type: 'sawtooth', mul: 1.003, v: 0.4 }],
+      });
+    },
+    tanpura(out, t, o) {
+      // 자와리: 브리지에 닿는 줄 때문에 배음이 천천히 밝아진다
+      const f = midi(o.note);
+      const len = Math.max(0.8, o.len + 1.2);
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = f;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.Q.value = 3;
+      bp.frequency.setValueAtTime(f * 1.5, t);
+      bp.frequency.exponentialRampToValueAtTime(f * 7, t + Math.min(1.2, len * 0.7));
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.9, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      osc.connect(bp); bp.connect(g); g.connect(out);
+      tone(out, t, { f, v: 0.35, a: 0.01, d: len });
+      osc.start(t); osc.stop(t + len + 0.05);
+    },
+    santoor(out, t, o) {
+      synthPluck(out, t, { note: o.note, v: 0.6, d: 0.7, open: 14, close: 3, sweep: 0.3, q: 1,
+        layers: [['triangle', 1, -5, 0.5], ['triangle', 1, 5, 0.5], ['sine', 2, 0, 0.2]] });
+    },
+    sitar(out, t, o) {
+      const long = o.len > STEP * 2.5;
+      synthPluck(out, t, { note: o.note, v: 0.7, d: o.len + 0.45, open: 16, close: 3, sweep: 0.5, q: 6,
+        bend: long ? 1.5 : 0, bendTime: 0.15,
+        layers: [['sawtooth', 1, 0, 0.6], ['square', 1, 3, 0.2]] });
+      // 공명현이 은은하게 따라 울린다
+      tone(out, t + 0.02, { f: midi(o.note + 12), v: 0.06, a: 0.05, d: 1.2 });
+    },
   };
 
   /* ---------- 연주 패턴 ---------- */
@@ -501,6 +658,14 @@
       [[0, 'R', 1], [2, 'R', 1], [3, 'O', 1], [6, 'R', 1], [8, 'R', 1], [10, '5', 1], [11, 'O', 1], [14, 'R', 2]],
     ],
   };
+  // 탄푸라 드론: 빠(낮은 5도) - 사 - 사 - 낮은 사 를 반복해서 뜯는다
+  const DRONE = [
+    [[0, 'P', 4], [4, 'S', 4], [8, 'S', 4], [12, 'L', 4]],
+    [[0, 'P', 8], [8, 'L', 8]],
+    [[0, 'M', 4], [4, 'S', 4], [8, 'S', 4], [12, 'L', 4]],
+    [[0, 'P', 2], [2, 'S', 2], [4, 'S', 2], [6, 'L', 2], [8, 'P', 2], [10, 'S', 2], [12, 'S', 2], [14, 'L', 2]],
+  ];
+
   const ARP = [
     { step: 1, seq: [0, 1, 2, 3] },
     { step: 1, seq: [0, 1, 2, 3, 4, 3, 2, 1] },
@@ -582,6 +747,13 @@
       while (root - nr > 6) nr += 12;
       const note = { R: root, 5: root + 7, 3: third, O: root + 12, A: nr === root ? root + 7 : nr + (nr > root ? -1 : 1) }[e[1]];
       voice(out, t, { note, len: L(e[2]) });
+      return true;
+    }
+    if (part.gen === 'drone') {
+      const e = at(DRONE[v], s);
+      if (!e) return false;
+      const tn = part.tonic;
+      voice(out, t, { note: { P: tn - 5, S: tn, L: tn - 12, M: tn - 7 }[e[1]], len: L(e[2]) });
       return true;
     }
     if (part.gen === 'arp') {

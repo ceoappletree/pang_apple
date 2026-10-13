@@ -124,6 +124,84 @@
     ],
   };
 
+  const CHINA_RHYTHM = {
+    r0: [ // 목어: 또각또각
+      { bar: '9...9...9.9.9...' },
+      { bar: '9.5.9.5.9.5.9.55' },
+      { bar: '9..9..9.9..9..9.' },
+      { bar: '9...9...9.9.9...', fill: '9.9.9.9.99999999' },
+    ],
+    r1: [ // 바라
+      { bar: '9.......5.......' },
+      { bar: '9...5...9...5...' },
+      { bar: '9.....9.....9...' },
+      { bar: '9.......5.......', fill: '9.9.9.9.9.999999' },
+    ],
+    r2: [ // 박판: 박자 머리를 짚는다
+      { bar: '9...5...9...5...' },
+      { bar: '9.5.9...9.5.9...' },
+      { bar: '9...........9.9.' },
+      { bar: '9...5...9...5...', fill: '9...9...9.9.9999' },
+    ],
+    r3: [ // 판고: 경극의 날카로운 작은북
+      { bar: '..5.9.5...5.9.55', fill: '9999999999999999' },
+      { bar: '9.5.5.9.5.5.9.5.', fill: '9.5.9.5.99999999' },
+      { bar: '....9..5....9..5', fill: '....9.9.99999999' },
+      { bar: '..5.9.5...5.9.55', fill: '9.9.9.9.99999999' },
+    ],
+    r4: [ // 징: 9 = 큰 징, 그 아래 = 음이 올라가는 작은 징
+      { first: '9...............', bar: '........5.......' },
+      { first: '9.......5.......', bar: '5.......5.......' },
+      { first: '9...5...5...5...', bar: '5...5...5...5...' },
+      { first: '9...............', bar: '....5.......5...', fill: '5.5.5.5.9.......' },
+    ],
+    r5: [ // 대고
+      { bar: '9.......9.......', fill: '9.9.9.9.99999999' },
+      { bar: '9.....9.9.......' },
+      { bar: '9..9..9.9.......' },
+      { bar: '9.......9.......', fill: '9...9...9.9.9999' },
+    ],
+  };
+
+  const INDIA_RHYTHM = {
+    r0: [ // 만지라
+      { bar: '9...5...9...5...' },
+      { bar: '9.5.9.5.9.5.9.5.' },
+      { bar: '9..5..9.9..5..9.' },
+      { bar: '9...5...9...5...', fill: '9.9.9.9.99999999' },
+    ],
+    r1: [ // 가탐
+      { bar: '9.5..59.9.5..5..' },
+      { bar: '9..5.5..9..5.5..' },
+      { bar: '9.55.5..9.55.5.5' },
+      { bar: '9.5..59.9.5..5..', fill: '9.59.59.9.599999' },
+    ],
+    r2: [ // 칸제라
+      { bar: '....9..5....9.55' },
+      { bar: '..5.9.5...5.9.5.' },
+      { bar: '5.5.9.5.5.5.9.5.' },
+      { bar: '....9..5....9.55', fill: '..5.9.5.9.9.9999' },
+    ],
+    r3: [ // 타블라 케르와: 9 = 다, 6~8 = 나/틴, 그 아래 = 게/카
+      { bar: '9.4.7.5.7.3.9.7.' },
+      { bar: '9.47.57.3.9.77.7' },
+      { bar: '9..9..7.9.7.7...' },
+      { bar: '9.4.7.5.7.3.9.7.', fill: '9.7.9.7.9.7.9999' },
+    ],
+    r4: [ // 간타(사원 종): 9 = 큰 종, 그 아래 = 작은 종
+      { first: '9...............', bar: '........5.......' },
+      { first: '9.......5.......', bar: '5.......5.......' },
+      { first: '9...5...5...5...', bar: '....5.......5...' },
+      { first: '9...............', bar: '........5.......', fill: '5...5...5.5.9...' },
+    ],
+    r5: [ // 돌: 방그라 리듬
+      { bar: '9..7..9...9..7..' },
+      { bar: '9..7..9.9..7..9.' },
+      { bar: '9.7.9.7.9.7.9.7.' },
+      { bar: '9..7..9...9..7..', fill: '9.9.9.9.99999999' },
+    ],
+  };
+
   /* ---------- 세트 ---------- */
 
   const SETS = [
@@ -231,6 +309,84 @@
             'A5:4 C6:4 A5:4 F5:4', 'A5:4 F5:2 D5:2 A4:8', 'G5:4 Bb5:4 D6:4 Bb5:4', 'G5:4 E5:4 C5:4 r:4'],
           ['F5:2 G5:2 A5:4 C6:8', 'D6:2 C6:2 A5:4 F5:8', 'G5:2 A5:2 Bb5:4 D6:8', 'C6:2 Bb5:2 G5:4 E5:8',
             'F5:6 A5:2 C6:8', 'D6:6 C6:2 A5:8', 'Bb5:6 A5:2 G5:4 Bb5:4', 'A5:4 G5:4 F5:8'],
+        ],
+      },
+    },
+    {
+      id: 'china',
+      name: '중국풍',
+      blurb: '목어와 징 위로 얼후가 노래하는 오음계 가락',
+      bpm: 96,
+      chords: [[43, [7, 9, 2]], [40, [4, 7, 11]], [45, [9, 11, 4]], [38, [2, 4, 9]]],   // 오음계 G - Em - A sus2 - D sus2
+      light: '255,90,60',
+      rhythm: CHINA_RHYTHM,
+      instruments: [
+        { name: '목어', color: '#b5652e', ink: '#ffe8cc', icon: 'woodfish', voice: 'woodblock', part: { rhythm: 'r0' }, vol: 0.45, rev: 0.2 },
+        { name: '바라', color: '#d9a62a', ink: '#5a3d00', icon: 'bo', voice: 'bo', part: { rhythm: 'r1' }, vol: 0.2, rev: 0.3 },
+        { name: '박판', color: '#8c5a33', ink: '#ffe3c2', icon: 'paiban', voice: 'paiban', part: { rhythm: 'r2' }, vol: 0.45, rev: 0.25 },
+        { name: '판고', color: '#2c2a2a', ink: '#ff6b5a', icon: 'bangu', voice: 'bangu', part: { rhythm: 'r3' }, vol: 0.4, rev: 0.25 },
+        { name: '징', color: '#c9902a', ink: '#3b2600', icon: 'gong', voice: 'gong', part: { rhythm: 'r4' }, vol: 0.3, rev: 0.35 },
+        { name: '대고', color: '#c8242d', ink: '#ffd76b', icon: 'barrel', voice: 'dagu', part: { rhythm: 'r5' }, vol: 0.85, rev: 0.15 },
+        { name: '디즈', color: '#5c9e3e', ink: '#fff6dc', icon: 'dizi', voice: 'dizi', part: { phrases: 'counter' }, vol: 0.16, rev: 0.45 },
+        { name: '생황', color: '#2f6f5e', ink: '#ffd76b', icon: 'sheng', voice: 'sheng', part: { gen: 'pad', center: 64 }, vol: 0.08, rev: 0.4 },
+        { name: '구정', color: '#7a3b1e', ink: '#ffe0b0', icon: 'guzheng', voice: 'guzheng', part: { gen: 'bass' }, vol: 0.45, rev: 0.35 },
+        { name: '비파', color: '#e06a3a', ink: '#fff1e0', icon: 'pipa', voice: 'pipa', part: { phrases: 'riff' }, vol: 0.28, rev: 0.3 },
+        { name: '얼후', color: '#1e1a2e', ink: '#ffcf4a', icon: 'erhu', voice: 'erhu', part: { main: true, comp: false }, vol: 0.15, rev: 0.4 },
+      ],
+      phrases: {
+        counter: [
+          ['D6:2 E6:2 D6:2 B5:2 A5:8', 'G5:2 A5:2 B5:4 E6:8', 'A5:2 B5:2 D6:4 E6:4 D6:4', 'B5:4 A5:4 E5:8'],
+          ['G6:4 E6:4 D6:8', 'E6:2 D6:2 B5:4 G5:8', 'A5:4 E6:4 D6:2 B5:2 A5:4', 'D6:6 B5:2 A5:8'],
+        ],
+        riff: [
+          ['G4:2 B4:2 D5:2 B4:2 G4:2 B4:2 D5:4', 'E4:2 G4:2 B4:2 G4:2 E4:2 G4:2 B4:4', 'A4:2 B4:2 E5:2 B4:2 A4:2 B4:2 E5:4', 'D5:2 B4:2 A4:2 E4:2 D4:8'],
+          ['r:4 D5:4 r:2 E5:2 D5:4', 'r:4 B4:4 r:2 D5:2 B4:4', 'r:4 E5:4 r:2 G5:2 E5:4', 'r:4 A4:4 r:2 B4:2 A4:4'],
+        ],
+        main: [
+          ['D5:4 E5:2 G5:2 A5:6 G5:2', 'E5:4 G5:4 B5:6 A5:2', 'A5:4 B5:2 A5:2 E5:4 D5:4', 'E5:2 D5:2 B4:4 A4:8',
+            'D6:4 B5:2 A5:2 G5:6 A5:2', 'B5:4 A5:2 G5:2 E5:8', 'A5:2 B5:2 A5:2 G5:2 E5:4 G5:4', 'A5:4 G5:2 E5:2 D5:8'],
+          ['G5:2 A5:2 B5:4 D6:6 B5:2', 'E6:4 D6:2 B5:2 G5:8', 'A5:6 B5:2 A5:2 G5:2 E5:4', 'D5:6 E5:2 A5:8',
+            'B5:3 A5:1 G5:4 E5:3 D5:1 E5:4', 'G5:3 E5:1 D5:4 B4:8', 'E5:2 G5:2 A5:4 B5:2 D6:2 E6:4', 'D6:4 B5:2 A5:2 G5:8'],
+        ],
+      },
+    },
+    {
+      id: 'india',
+      name: '인도',
+      blurb: '타블라와 탄푸라 드론 위에 시타르가 휘어지는 라가',
+      bpm: 108,
+      chords: [[38, [2, 6, 9]], [36, [0, 4, 7]], [43, [7, 11, 2]], [38, [2, 6, 9]]],   // D - C - G - D (믹솔리디안)
+      light: '255,160,40',
+      rhythm: INDIA_RHYTHM,
+      instruments: [
+        { name: '만지라', color: '#d4a017', ink: '#4a3300', icon: 'manjira', voice: 'manjira', part: { rhythm: 'r0' }, vol: 0.22, rev: 0.3 },
+        { name: '가탐', color: '#b4532a', ink: '#ffe2c8', icon: 'ghatam', voice: 'ghatam', part: { rhythm: 'r1' }, vol: 0.5, rev: 0.2 },
+        { name: '칸제라', color: '#e0b97a', ink: '#5a3410', icon: 'tambourine', voice: 'kanjira', part: { rhythm: 'r2' }, vol: 0.4, rev: 0.2 },
+        { name: '타블라', color: '#3d2a5c', ink: '#ffd7a0', icon: 'tabla', voice: 'tabla', part: { rhythm: 'r3' }, vol: 0.5, rev: 0.25 },
+        { name: '간타', color: '#e8b33a', ink: '#5a3a00', icon: 'bell', voice: 'ghanta', part: { rhythm: 'r4' }, vol: 0.22, rev: 0.45 },
+        { name: '돌', color: '#d6402f', ink: '#fff0d6', icon: 'dhol', voice: 'dhol', part: { rhythm: 'r5' }, vol: 0.85, rev: 0.12 },
+        { name: '반수리', color: '#6aa84f', ink: '#fff7e0', icon: 'flute', voice: 'bansuri', part: { phrases: 'counter' }, vol: 0.16, rev: 0.45 },
+        { name: '하모니움', color: '#8a3b5c', ink: '#ffe9f2', icon: 'harmonium', voice: 'harmonium', part: { gen: 'pad', center: 62 }, vol: 0.07, rev: 0.3 },
+        { name: '탄푸라', color: '#a0672e', ink: '#fff0d8', icon: 'tanpura', voice: 'tanpura', part: { gen: 'drone', tonic: 50 }, vol: 0.32, rev: 0.4 },
+        { name: '산투르', color: '#127a7a', ink: '#ffe08a', icon: 'santoor', voice: 'santoor', part: { phrases: 'riff' }, vol: 0.2, rev: 0.4 },
+        { name: '시타르', color: '#1b2a4a', ink: '#ffb347', icon: 'sitar', voice: 'sitar', part: { main: true, comp: false }, vol: 0.3, rev: 0.4 },
+      ],
+      phrases: {
+        counter: [
+          ['F#6:8 E6:4 D6:4', 'E6:8 C6:4 E6:4', 'D6:8 B5:4 D6:4', 'A5:4 C6:4 D6:8'],
+          ['A5:2 D6:2 F#6:4 E6:4 D6:4', 'C6:2 E6:2 G6:4 E6:4 C6:4', 'B5:2 D6:2 G6:4 F#6:4 D6:4', 'E6:4 D6:2 C6:2 D6:8'],
+        ],
+        riff: [
+          ['D5:1 F#5:1 A5:1 D6:1 A5:1 F#5:1 D5:2 r:4 A5:2 F#5:2', 'C5:1 E5:1 G5:1 C6:1 G5:1 E5:1 C5:2 r:4 G5:2 E5:2',
+            'B4:1 D5:1 G5:1 B5:1 G5:1 D5:1 B4:2 r:4 G5:2 D5:2', 'A4:1 D5:1 F#5:1 A5:1 F#5:1 D5:1 A4:2 r:4 F#5:2 D5:2'],
+          ['r:2 A5:1 A5:1 r:2 F#5:1 F#5:1 r:2 D5:1 D5:1 E5:2 F#5:2', 'r:2 G5:1 G5:1 r:2 E5:1 E5:1 r:2 C5:1 C5:1 D5:2 E5:2',
+            'r:2 B5:1 B5:1 r:2 G5:1 G5:1 r:2 D5:1 D5:1 E5:2 G5:2', 'r:2 A5:1 A5:1 r:2 F#5:1 F#5:1 r:2 E5:1 E5:1 D5:4'],
+        ],
+        main: [
+          ['D5:4 E5:2 F#5:2 A5:6 G5:2', 'E5:4 G5:2 E5:2 C5:6 D5:2', 'B4:2 D5:2 G5:4 B5:4 A5:4', 'A5:2 G5:2 F#5:2 E5:2 D5:8',
+            'A5:4 B5:2 C6:2 D6:6 C6:2', 'B5:2 C6:2 B5:2 G5:2 E5:8', 'G5:2 A5:2 B5:2 A5:2 G5:4 E5:4', 'F#5:4 E5:2 C5:2 D5:8'],
+          ['A4:2 D5:2 F#5:4 A5:4 F#5:4', 'G5:2 E5:2 C5:4 E5:4 G5:4', 'D6:4 B5:2 G5:2 A5:4 B5:4', 'A5:6 F#5:2 E5:4 D5:4',
+            'D5:1 E5:1 F#5:2 G5:2 A5:2 B5:2 C6:2 D6:4', 'C6:4 B5:2 A5:2 G5:4 E5:4', 'B5:4 G5:2 D5:2 E5:4 G5:4', 'A5:2 G5:2 F#5:2 E5:2 D5:8'],
         ],
       },
     },
