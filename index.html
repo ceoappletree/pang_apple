@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#2e2a4a">
+  <title>상판리 발굴기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Batang:wght@400;700&display=swap">
+  <link rel="stylesheet" href="lib/leaflet/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <pattern id="rubble" width="10" height="10" patternUnits="userSpaceOnUse">
+        <rect width="10" height="10" fill="#8b7d6b"/>
+        <path d="M0,0 L4,3 L2,7 Z M6,1 L10,4 L7,6 Z M3,8 L7,7 L6,10 Z" fill="#6e6252"/>
+      </pattern>
+    </defs>
+  </svg>
+
+  <!-- 타이틀 -->
+  <section id="title-screen">
+    <div id="title-bg" class="scene"></div>
+    <button id="snd-title" class="hud-btn snd snd-title" aria-label="소리 켜기/끄기"></button>
+    <div class="title-wrap">
+      <div class="logo">
+        <small>상주 모동 · 왕실 분청사기 가마터</small>
+        <h1><span>상판리</span><span>발굴기</span></h1>
+      </div>
+      <div class="title-buttons">
+        <button id="go-story" class="btn primary big">이야기 시작</button>
+        <button id="go-map" class="btn big">바로 지도로</button>
+        <button id="go-book" class="btn ghost-light">출토품 도감</button>
+      </div>
+      <p id="title-note" class="title-note"></p>
+    </div>
+  </section>
+
+  <!-- 이야기 -->
+  <section id="story-screen" class="hidden">
+    <div id="story-bg" class="scene"></div>
+    <button id="story-skip" class="skip">건너뛰기 ▶▶</button>
+    <div id="story-card" class="chapter-card hidden"></div>
+    <div id="story-portrait" class="portrait"></div>
+    <div id="story-dialog" class="dialog hidden">
+      <div id="story-name" class="name-tag"></div>
+      <p id="story-text"></p>
+      <span id="story-next" class="next">▼</span>
+    </div>
+  </section>
+
+  <!-- 지도 -->
+  <section id="map-screen" class="hidden">
+    <header class="hud">
+      <button id="btn-home" class="hud-btn" aria-label="처음 화면"></button>
+      <div class="hud-chips">
+        <span class="hud-chip"><i class="chip-pot"></i><b id="hud-pots">0/10</b></span>
+        <span class="hud-chip"><i class="chip-ins">文</i><b id="hud-ins">0/10</b></span>
+      </div>
+      <button id="btn-story" class="hud-btn" aria-label="강석진 발굴기"></button>
+      <button id="btn-rv" class="hud-btn hidden" aria-label="로드뷰"></button>
+      <button id="btn-book" class="hud-btn" aria-label="도감"></button>
+      <button id="btn-snd" class="hud-btn snd" aria-label="소리 켜기/끄기"></button>
+    </header>
+    <div id="map"></div>
+    <span id="map-kind" class="map-kind"></span>
+    <div id="map-loading" class="map-loading hidden"><span class="spinner"></span>상판리를 찾는 중…</div>
+    <div id="nomap" class="hidden">
+      <div class="panel nomap-card">
+        <b id="nomap-why"></b>
+        <p>아래 목록에서 바로 발굴할 수 있어요.</p>
+      </div>
+    </div>
+    <span id="rv-hint" class="rv-hint hidden">파란 길을 누르면 로드뷰가 열려요</span>
+    <div id="roadview-box" class="hidden">
+      <div id="roadview"></div>
+      <button id="rv-close" class="hud-btn rv-close" aria-label="로드뷰 닫기">✕</button>
+    </div>
+    <div id="sheet" class="panel"></div>
+  </section>
+
+  <!-- 발굴 -->
+  <section id="dig-screen" class="hidden">
+    <div class="trench-bg"></div>
+    <header class="dig-top">
+      <div class="dig-name">
+        <h1 id="dig-title"></h1>
+        <small id="dig-sub"></small>
+      </div>
+      <button id="dig-snd" class="hud-btn snd" aria-label="소리 켜기/끄기"></button>
+      <button id="dig-quit" class="btn small">철수</button>
+    </header>
+    <div class="dig-hud">
+      <span class="hud-label">흙벽</span>
+      <div class="stab"><div id="stab-fill"></div></div>
+      <span id="stab-num"></span>
+      <span id="dig-left" class="left-chip"></span>
+    </div>
+    <div class="board-wrap"><div class="board-frame"><div id="board"></div></div></div>
+    <div id="finds"></div>
+    <nav class="tools">
+      <button class="tool" data-tool="pick"><span class="t-ic"></span><b>곡괭이</b><small>넓게 · 흙벽 -2</small></button>
+      <button class="tool" data-tool="trowel"><span class="t-ic"></span><b>꽃삽</b><small>한 칸 · 흙벽 -1</small></button>
+      <button class="tool" data-tool="probe"><span class="t-ic"></span><b>탐침</b><small>남은 <span id="probe-left">3</span>번</small></button>
+    </nav>
+  </section>
+
+  <!-- 도감 -->
+  <section id="book">
+    <header class="hud book-hud">
+      <h1>출토품 도감</h1>
+      <button id="book-close" class="hud-btn" aria-label="닫기">✕</button>
+    </header>
+    <div class="book-scroll">
+      <p id="book-stats" class="dim center"></p>
+      <h3 class="book-h">그릇 <small id="cnt-pots"></small></h3>
+      <div id="book-grid" class="grid shelf"></div>
+      <h3 class="book-h">명문 조각 <small id="cnt-ins"></small></h3>
+      <p class="dim book-note">그릇에 새긴 글자예요. 모두 가마6유적에서 나왔어요.</p>
+      <div id="ins-grid" class="grid shelf"></div>
+      <h3 class="book-h">강석진 씨 답사품 <small id="cnt-finds"></small></h3>
+      <p class="dim book-note">강석진 씨가 상판저수지 물가와 반계리 수도원 뒷산에서 보았다고 기록한 것들이에요.</p>
+      <div id="find-grid" class="grid shelf"></div>
+      <h3 class="book-h">가마 도구</h3>
+      <div id="tool-grid" class="grid shelf"></div>
+      <h3 class="book-h">자료 출처</h3>
+      <ul id="sources" class="sources"></ul>
+      <button id="book-reset" class="btn small ghost">기록 지우기</button>
+    </div>
+  </section>
+
+  <div id="modal"><div class="modal-card panel"><div id="modal-body"></div><div id="modal-buttons"></div></div></div>
+  <div id="toast"></div>
+
+  <script src="lib/leaflet/leaflet.js"></script>
+  <script src="src/data.js"></script>
+  <script src="src/config.js"></script>
+  <script src="src/art.js"></script>
+  <script src="src/scene.js"></script>
+  <script src="src/store.js"></script>
+  <script src="src/map.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/dig.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
