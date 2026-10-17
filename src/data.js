@@ -9,7 +9,7 @@ G.SANGPAN = {
   kilnAddrs: ['경상북도 상주시 모동면 상판리 산58-1', '경상북도 상주시 모동면 상판리 산69'],
   villageAddr: '경상북도 상주시 모동면 상판리',
   reservoir: '상판저수지',
-  findRadius: 250, // m — 이 안을 찍으면 가마터 발견
+  findRadius: 250, // m — 이 안에서 땅을 살펴야 결정적 증거가 나온다
   clue: '『세종실록』 지리지는 상주의 상품 자기소 한 곳을 "중모현 동쪽 이미외리"라고 적었어요. 오늘날의 상판리로 봐요. 가마터는 상판저수지 서쪽으로 1~1.7km 떨어진 산기슭에 있어요.',
 };
 
@@ -117,19 +117,43 @@ G.SITES = [
   {
     id: 'reservoir', name: '상판저수지 물가', era: '강석진 씨의 답사 기록', need: 0, sea: true, finds: 'reservoir',
     sub: '농사철에 물이 5m쯤 빠졌을 때 · 강석진 씨의 답사',
-    digSub: '물 빠진 바닥 · 펄을 걷어 내세요',
+    digSub: '물 빠진 바닥의 펄을 걷어 내세요',
     story: '저수지가 생기기 전, 학 문양 도자기 편을 보았다는 후배의 기억을 따라 강석진 씨가 찾은 곳이에요. 물이 빠진 물가에서 문양 있는 도자기 편, 청화백자로 추정되는 조각, 작은 요강, 글자가 찍힌 조각, 제기 조각을 보았다고 해요.',
     pots: [],
   },
   {
     id: 'bangye', name: '반계리 수도원 뒷산', era: '강석진 씨와 보존회의 답사', need: 0, finds: 'bangye',
     sub: '반계리 카르투시오 수도원 산 · 지표 답사',
-    digSub: '지표 답사 · 겉흙을 걷어 내세요',
+    digSub: '겉흙을 걷어 내세요',
     story: '백자편만 나온다고 알던 산에서 질 좋은 분청사기편이 나오고, 이어서 세련된 고급 백자편까지 찾은 곳이에요. 강석진 씨는 이곳을 다시 조사해야 한다고 봐요.',
     pots: [],
   },
 ];
 G.SANGPAN.monastery = '카르투시오 수도원';
+
+// 중요 지점: 지표 조사로 찾아내면 정밀 조사(발굴판)가 열린다
+G.POINTS = [
+  { id: 'kiln', name: '가마터', sites: ['kiln1', 'kiln6'], key: 'kilnwall', mix: ['bun', 'bun', 'bun', 'dochim', 'gapbal', 'ong'], ground: 'hill',
+    found: '불에 타 붉게 굳은 가마 벽 조각이에요. 이 근처에서 그릇을 구웠다는 증거예요!' },
+  { id: 'reservoir', name: '상판저수지 물가', sites: ['reservoir'], key: 'pattern', mix: ['bun', 'bae', 'cel', 'ong', 'bun'], ground: 'mud',
+    found: '물가에서 발굴된 상판리 도요지 못지않은 문양의 조각이 나왔어요. 저수지 물가를 자세히 조사해 볼 만해요.' },
+  { id: 'bangye', name: '반계리 수도원 뒷산', sites: ['bangye'], key: 'finebae', mix: ['bae', 'bun', 'bun', 'ong'], ground: 'forest',
+    found: '분청사기 편 사이에서 세련된 백자편이 나왔어요. 이 산을 다시 조사해야겠어요.' },
+];
+G.pointById = (id) => G.POINTS.find((p) => p.id === id);
+
+// 땅 위에서 줍는 조각(지표 수습품)
+G.SURFACE = {
+  bun: { name: '분청사기 조각', fill: '#8d9488', dots: true },
+  bae: { name: '백자 조각', fill: '#f3f1ea' },
+  cel: { name: '청자 조각', fill: '#8fb9a3' },
+  ong: { name: '질그릇 조각', fill: '#9a6a44' },
+  dochim: { name: '도침', fill: '#b08a62', round: true },
+  gapbal: { name: '갑발 조각', fill: '#8a7d6c' },
+  kilnwall: { name: '불탄 가마 벽 조각', fill: '#8a3f2a', key: true, glaze: '#3a4a3a' },
+  pattern: { name: '문양 있는 도자기 편', fill: '#8d9488', key: true, crane: true },
+  finebae: { name: '세련된 백자편', fill: '#fbfaf6', key: true, shine: true },
+};
 
 const BUN = { body: '#8d9488', line: '#4f574d' }; // 분청 회청색 바탕
 G.POTS = {

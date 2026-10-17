@@ -182,5 +182,66 @@
     return `<div class="pin2 pin-${kind}"><svg viewBox="0 0 44 54"><path d="M22,52 Q4,30 4,20 A18,18 0 1 1 40,20 Q40,30 22,52Z" fill="${fill}" stroke="#2a1d14" stroke-width="3"/><g transform="translate(0,0)">${glyph}</g></svg>${label ? `<b>${label}</b>` : ''}</div>`;
   }
 
-  G.scene = { scene, portrait, ICON, pin };
+  // 탐사대(강석진 씨) 표식
+  function walker() {
+    return `<div class="walker"><div class="walker-face">${portrait('kang')}</div><i></i></div>`;
+  }
+
+  // 그림 지도: 지도 서버를 쓸 수 없을 때 까는 상판리 그림(실제 지형과 다를 수 있음)
+  function villageMap(pts, b) {
+    const W = 1000, H = 1000;
+    const X = (lng) => ((lng - b[0][1]) / (b[1][1] - b[0][1])) * W;
+    const Y = (lat) => ((b[1][0] - lat) / (b[1][0] - b[0][0])) * H;
+    const R = pts.reservoir, Kp = pts.kiln, M = pts.monastery;
+    let s = `<rect width="${W}" height="${H}" fill="#c9d6a2"/>`;
+    // 밭 무늬
+    for (let i = 0; i < 26; i++) {
+      const x = (i * 137) % W, y = (i * 241) % H, w = 70 + (i % 4) * 22, h = 46 + (i % 3) * 18;
+      s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${i % 3 ? '#d6dfae' : '#bccb8e'}" stroke="#a8b77a" stroke-width="2" transform="rotate(${(i % 5) * 7 - 14} ${x} ${y})"/>`;
+    }
+    // 산(가마터 서쪽 비탈, 수도원 뒷산, 북쪽 능선)
+    const hill = (cx, cy, r, c1, c2) => {
+      let h = '';
+      for (let k = 4; k >= 1; k--) h += `<ellipse cx="${cx}" cy="${cy}" rx="${r * k / 4 * 1.25}" ry="${r * k / 4}" fill="${k % 2 ? c1 : c2}" stroke="#6f8a52" stroke-width="2" opacity=".95"/>`;
+      return h;
+    };
+    s += hill(X(Kp.lng) - 120, Y(Kp.lat) - 10, 230, '#9db36e', '#8aa65e');
+    s += hill(X(M.lng) + 40, Y(M.lat) + 60, 170, '#9db36e', '#87a35a');
+    s += hill(W * 0.5, 40, 200, '#a9bd78', '#93ad66');
+    // 소나무
+    for (let i = 0; i < 70; i++) {
+      const x = (i * 173 + 31) % W, y = (i * 97 + 57) % H;
+      const near = Math.hypot(x - X(Kp.lng) + 120, y - Y(Kp.lat)) < 260 || Math.hypot(x - X(M.lng) - 40, y - Y(M.lat) - 60) < 190;
+      if (!near) continue;
+      s += `<path d="M${x},${y - 16} l10,18 h-20z" fill="#4f7a3a" stroke="#2f4a22" stroke-width="1.5"/>`;
+    }
+    // 개울과 길
+    s += `<path d="M${X(R.lng) + 60},${Y(R.lat) + 40} C${X(R.lng) + 200},${Y(R.lat) + 160} ${W * 0.85},${H * 0.6} ${W},${H * 0.7}" fill="none" stroke="#7fb2d6" stroke-width="10" stroke-linecap="round"/>`;
+    s += `<path d="M0,${H * 0.62} C${W * 0.3},${H * 0.55} ${W * 0.55},${H * 0.66} ${W},${H * 0.5}" fill="none" stroke="#efe2bf" stroke-width="16" stroke-linecap="round"/>`;
+    s += `<path d="M${X(Kp.lng)},${Y(Kp.lat) + 40} Q${(X(Kp.lng) + X(R.lng)) / 2},${Y(R.lat) + 120} ${X(R.lng) - 40},${Y(R.lat) + 50}" fill="none" stroke="#efe2bf" stroke-width="9" stroke-dasharray="1 0" stroke-linecap="round"/>`;
+    s += `<path d="M${X(M.lng)},${Y(M.lat)} Q${X(M.lng) + 80},${H * 0.62} ${W * 0.62},${H * 0.6}" fill="none" stroke="#efe2bf" stroke-width="8" stroke-linecap="round"/>`;
+    // 저수지
+    const rx = X(R.lng), ry = Y(R.lat);
+    s += `<path d="M${rx - 110},${ry - 20} C${rx - 90},${ry - 90} ${rx + 40},${ry - 100} ${rx + 120},${ry - 50} C${rx + 160},${ry - 10} ${rx + 90},${ry + 60} ${rx + 10},${ry + 50} C${rx - 60},${ry + 70} ${rx - 130},${ry + 30} ${rx - 110},${ry - 20}Z" fill="#6fa7c8" stroke="#3f7396" stroke-width="5"/>`;
+    s += `<path d="M${rx - 60},${ry - 30} h40 M${rx + 20},${ry} h50 M${rx - 20},${ry + 25} h30" stroke="#cfe6f0" stroke-width="4" stroke-linecap="round"/>`;
+    // 포도밭
+    for (let v = 0; v < 6; v++) {
+      const vx = W * 0.58 + (v % 3) * 95, vy = H * 0.7 + Math.floor(v / 3) * 80;
+      s += `<rect x="${vx}" y="${vy}" width="80" height="60" rx="4" fill="#cbd59a" stroke="#8a9a5a" stroke-width="2"/>`;
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) s += `<circle cx="${vx + 8 + c * 13}" cy="${vy + 9 + r * 14}" r="4" fill="#6b3f7a"/>`;
+    }
+    // 마을 집
+    for (let i = 0; i < 12; i++) {
+      const hx = W * 0.3 + (i % 4) * 46 + (i * 13) % 20, hy = H * 0.74 + Math.floor(i / 4) * 44;
+      s += `<path d="M${hx},${hy} l16,-14 l16,14 v16 h-32z" fill="#f3e9d2" stroke="#2a1d14" stroke-width="2"/><path d="M${hx - 3},${hy + 1} l19,-17 l19,17" fill="none" stroke="#8a3f2a" stroke-width="5"/>`;
+    }
+    s += `<text x="${W - 20}" y="${H - 20}" text-anchor="end" font-size="22" fill="#5a4a2a" font-family="sans-serif">그림 지도 · 실제 지형과 다를 수 있어요</text>`;
+    const el = document.createElementNS(NS, 'svg');
+    el.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    el.setAttribute('preserveAspectRatio', 'none');
+    el.innerHTML = s;
+    return el;
+  }
+
+  G.scene = { scene, portrait, ICON, pin, walker, villageMap };
 })();

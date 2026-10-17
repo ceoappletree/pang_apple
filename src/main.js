@@ -8,9 +8,8 @@
   let map = null;
   let mapReady = null;
   const place = { village: null, reservoir: null, monastery: null, kilns: [] };
-  let marks = [], flags = [];
+  let marks = [];
   let rvMode = false;
-  let tries = 0, lastSurvey = null;
   let findRadius = P.findRadius;
 
   // ---------- 공통 UI ----------
@@ -43,9 +42,9 @@
     });
   }
 
-  const SCREENS = ['title-screen', 'map-screen', 'dig-screen', 'story-screen'];
+  const SCREENS = ['title-screen', 'map-screen', 'dig-screen', 'story-screen', 'field-screen'];
   // 배경음악: 브라우저는 사용자가 한 번 누른 뒤에야 소리를 낼 수 있어서, 첫 탭에 시작한다
-  const MOOD = { 'title-screen': 'title', 'map-screen': 'map', 'dig-screen': 'dig', 'story-screen': 'story' };
+  const MOOD = { 'title-screen': 'title', 'map-screen': 'map', 'dig-screen': 'dig', 'story-screen': 'story', 'field-screen': 'map' };
   let mood = null, unlocked = false;
   function setMood(m) { mood = m; if (unlocked) G.audio.music(m); }
   document.addEventListener('pointerdown', () => {
@@ -180,16 +179,19 @@
     });
   }
 
-  // ---------- 지도 ----------
+  // ---------- 지도: 걸어 다니며 땅 살펴보기 ----------
+  const pos = { kiln: [], reservoir: [], bangye: [] }; // 중요 지점 위치
+  let me = null, walker = null, trail = null, walking = false;
+  let lastLook = null;
+
   function ensureMap() {
     if (mapReady) return mapReady;
     mapReady = (async () => {
       $('#map-loading').classList.remove('hidden');
-      renderSheet(); // 지도를 불러오는 동안에도 발굴지 목록은 보여 준다
+      renderSheet();
       const m = await G.createMap($('#map'), onMapClick);
       if (!m) { noMap('지도를 불러오지 못했어요.'); return; }
       map = m;
-      $('#map-kind').textContent = map.kind === 'kakao' ? '카카오 스카이뷰' : '임시 지도 · OpenStreetMap';
       if (map.kind === 'kakao') {
         place.village = await map.geocode(P.villageAddr);
         place.kilns = (await Promise.all(P.kilnAddrs.map(async (a) => {
@@ -202,16 +204,32 @@
         place.village = await map.geocode('상판리, 모동면, 상주시');
         place.reservoir = await map.keyword('상판저수지');
         place.monastery = await map.keyword('카르투시오 수도원 상주');
-        const base = place.reservoir || place.village;
-        // 임시 지도: 기록("상판저수지 서쪽 1~1.7km")에 맞춘 대략 위치
-        if (base) place.kilns = [Object.assign(G.geo.west(base, 1300), { label: '가마터 (대략 위치)', approx: true })];
         findRadius = 450;
+        if (!place.reservoir && !place.village) {
+          // 지도 서버를 쓸 수 없으면 그림 지도로 바꾼다(위치는 기록을 바탕으로 한 그림)
+          const R = { lat: 36.33, lng: 127.95 };
+          place.reservoir = R;
+          place.monastery = G.geo.offset(R, -1300, 500);
+          const b = [[R.lat - 0.022, R.lng - 0.03], [R.lat + 0.016, R.lng + 0.022]];
+          const k = G.geo.west(R, 1300);
+          map.illustrate(G.scene.villageMap({ reservoir: R, kiln: k, monastery: place.monastery }, b), b);
+        }
+        const base = place.reservoir || place.village;
+        // 기록("상판저수지 서쪽 1~1.7km")에 맞춘 대략 위치
+        place.kilns = [Object.assign(G.geo.west(base, 1300), { label: '가마터', approx: true })];
+        if (!place.monastery) place.monastery = G.geo.offset(base, -1300, 500);
       }
       $('#map-loading').classList.add('hidden');
-      if (!place.kilns.length && !place.reservoir && !place.village) { noMap('지도에서 상판리를 찾지 못했어요.'); return; }
+      if (!place.kilns.length && !place.reservoir) { noMap('지도에서 상판리를 찾지 못했어요.'); return; }
+      $('#map-kind').textContent = { kakao: '카카오 스카이뷰', leaflet: '임시 지도 · OpenStreetMap', illustrated: '그림 지도 · 실제 지형과 다를 수 있어요' }[map.kind];
+      pos.kiln = place.kilns;
+      pos.reservoir = place.reservoir ? [place.reservoir] : [];
+      pos.bangye = place.monastery ? [place.monastery] : [];
+      // 탐사대 출발점: 저수지 남동쪽 마을 길
+      me = S.me || G.geo.offset(place.reservoir || place.kilns[0], -500, 650);
+      walker = map.mark(me.lat, me.lng, G.scene.walker(), 'walker');
       drawMarks();
-      if (surveying()) map.center(place.reservoir || place.village || place.kilns[0], 'far');
-      else fitAll();
+      map.center(me, 'far');
       renderHud();
       renderSheet();
     })();
@@ -226,26 +244,27 @@
     renderSheet();
   }
 
-  function surveying() { return !!(map && place.kilns.length && !S.found.kiln); }
+  // 가장 가까운 중요 지점 (unfound: 아직 못 찾은 곳만)
+  function nearest(p, unfound) {
+    let best = null;
+    for (const pt of G.POINTS) {
+      if (unfound && S.found[pt.id]) continue;
+      for (const q of pos[pt.id]) {
+        const d = G.geo.dist(p.lat, p.lng, q.lat, q.lng);
+        if (!best || d < best.d) best = { point: pt, d, at: q };
+      }
+    }
+    return best;
+  }
 
   function drawMarks() {
     marks.forEach((m) => m.remove());
     marks = [];
-    const open = (id) => () => (surveying() ? G.ui.toast('먼저 가마터를 찾아보세요') : openSite(G.siteById(id)));
-    if (place.reservoir) marks.push(map.mark(place.reservoir.lat, place.reservoir.lng, G.scene.pin('water', '상판저수지'), 'site', open('reservoir')));
-    if (place.monastery && !surveying()) marks.push(map.mark(place.monastery.lat, place.monastery.lng, G.scene.pin('hill', '반계리 수도원 뒷산'), 'site', open('bangye')));
-    if (S.found.kiln) {
-      for (const k of place.kilns) marks.push(map.mark(k.lat, k.lng, G.scene.pin('kiln', k.label), 'site', openSites));
-    }
+    const tap = (id, at) => () => (S.found[id] ? openPoint(G.pointById(id)) : walkTo(at));
+    if (place.reservoir) marks.push(map.mark(place.reservoir.lat, place.reservoir.lng, G.scene.pin('water', '상판저수지'), 'site', tap('reservoir', place.reservoir)));
+    if (place.monastery) marks.push(map.mark(place.monastery.lat, place.monastery.lng, G.scene.pin('hill', S.found.bangye ? '반계리 수도원 뒷산' : '수도원'), 'site', tap('bangye', place.monastery)));
+    if (S.found.kiln) for (const k of place.kilns) marks.push(map.mark(k.lat, k.lng, G.scene.pin('kiln', k.label), 'site', () => openPoint(G.pointById('kiln'))));
   }
-
-  function fitAll() {
-    const pts = place.kilns.concat(place.reservoir ? [place.reservoir] : []);
-    if (pts.length) map.fit(pts);
-    else if (place.village) map.center(place.village, 'far');
-  }
-
-  function clearFlags() { flags.forEach((f) => f.remove()); flags = []; }
 
   function onMapClick(lat, lng) {
     if (rvMode) {
@@ -255,40 +274,98 @@
       });
       return;
     }
-    if (!surveying()) return;
-    tries += 1;
-    S.surveys += 1;
-    let best = null;
-    for (const k of place.kilns) {
-      const d = G.geo.dist(lat, lng, k.lat, k.lng);
-      if (!best || d < best.d) best = { d, k };
-    }
-    if (best.d <= findRadius) {
-      S.found.kiln = true;
+    walkTo({ lat, lng });
+  }
+
+  // 탐사대가 걸어간다(발자국을 남기며)
+  function walkTo(dest) {
+    if (walking || !me) return;
+    const from = { ...me };
+    const dist = G.geo.dist(from.lat, from.lng, dest.lat, dest.lng);
+    if (dist < 15) { renderSheet(); return; }
+    walking = true;
+    lastLook = null;
+    if (trail) trail.remove();
+    trail = map.path([from]);
+    const dur = Math.max(500, Math.min(2600, dist * 1.3));
+    const t0 = performance.now();
+    let lastStep = 0, lastDot = 0;
+    $('#walker-status').textContent = '걷는 중…';
+    const tick = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      const p = { lat: from.lat + (dest.lat - from.lat) * e, lng: from.lng + (dest.lng - from.lng) * e };
+      walker.move(p.lat, p.lng);
+      if (now - lastDot > 90) { trail.add(p); lastDot = now; }
+      if (now - lastStep > 260) { G.sfx.step(); lastStep = now; }
+      if (k < 1) { requestAnimationFrame(tick); return; }
+      walking = false;
+      me = dest;
+      S.me = me;
       G.store.save();
-      clearFlags();
-      G.sfx.discover();
+      map.panTo(me);
+      $('#walker-status').textContent = '';
+      renderSheet();
+    };
+    requestAnimationFrame(tick);
+  }
+
+  // 지표 조사 시작
+  function look() {
+    if (!me) return;
+    const n = nearest(me, false);
+    const nu = nearest(me, true);
+    const d = n ? n.d : 9999;
+    const keyR = findRadius;
+    const count = d < keyR ? 7 : d < 600 ? 5 : d < 1200 ? 3 : d < 2500 ? 2 : 1;
+    const key = nu && nu.d <= keyR ? nu.point.key : null;
+    S.surveys += 1;
+    G.store.save();
+    show('field-screen');
+    G.Field.start({
+      count, key,
+      mix: d < 1500 ? n.point.mix : ['ong', 'ong', 'bun', 'bae'],
+      ground: d < 900 ? n.point.ground : 'field',
+      title: '지표 조사',
+      sub: d < 500 ? `${n.point.name} 근처` : '상판리 들판',
+    }, (r) => endLook(r, nu));
+  }
+
+  async function endLook(r, nu) {
+    S.surface = (S.surface || 0) + r.found.length;
+    G.store.save();
+    show('map-screen');
+    if (r.key && nu) {
+      const pt = nu.point;
+      S.found[pt.id] = true;
+      G.store.save();
       drawMarks();
-      fitAll();
-      modal(
-        `<div class="banner">발견!</div><h2>상주 상판리 자기가마터</h2>` +
-        `<p>2010년 지표조사에서 상판리 일대 가마터 7곳이 확인됐어요. 그중 가마1유적(2015)과 가마6유적(2016)을 상주박물관이 발굴했어요.</p>` +
-        (best.k.approx ? '<p class="dim center">임시 지도라서 가마터 위치는 기록에 맞춘 대략 위치예요.</p>' : '') +
-        `<p class="dim center">지표 조사 ${tries}번 만에 찾았어요.</p>`,
-        [['발굴 현장으로', 1, 'primary']], 'celebrate'
-      ).then(openSites);
+      const v = await modal(
+        `<div class="banner">중요 지점 발견!</div><h2>${esc(pt.name)}</h2><p>${esc(pt.found)}</p>` +
+        (map && map.kind !== 'kakao' && pt.id === 'kiln' ? '<p class="dim center">카카오 지도를 연결하기 전에는 가마터 위치가 기록에 맞춘 대략 위치예요.</p>' : '') +
+        '<p class="center">이제 이곳을 <b>정밀 조사</b>할 수 있어요.</p>',
+        [['정밀 조사 시작', 1, 'primary'], ['나중에', 0]], 'celebrate'
+      );
+      if (v) openPoint(pt, true);
+      else renderSheet();
       return;
     }
-    G.store.save();
-    const m = best.d;
-    const heat = m < 600 ? 'hot' : m < 1300 ? 'warm' : 'cold';
-    const txt = m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(1)}km`;
-    const d8 = G.geo.dir(lat, lng, best.k.lat, best.k.lng);
-    flags.push(map.mark(lat, lng, `<span class="flag-txt ${heat}">${d8} ${txt}</span>`, 'flag'));
-    lastSurvey = { d8, txt, heat };
-    G.sfx.flag();
-    if (heat === 'hot') G.sfx.probe(true);
+    lastLook = { total: r.total, found: r.found.length, nu, near: nu && nu.d <= findRadius };
     renderSheet();
+  }
+
+  // 찾은 중요 지점의 정밀 조사 목록
+  function openPoint(pt, go) {
+    const sites = pt.sites.map(G.siteById);
+    if (go && sites.length === 1) { startDig(sites[0]); return; }
+    if (sites.length === 1) { openSite(sites[0]); return; }
+    $('#sheet').innerHTML =
+      `<div class="sheet-head"><button class="back" id="sheet-back">‹</button><span class="quest">정밀 조사</span><h3>${esc(pt.name)}</h3></div>` +
+      `<p class="lead">2010년 지표조사에서 상판리 일대 가마터 7곳이 확인됐어요. 그중 상주박물관이 발굴한 두 곳을 정밀 조사할 수 있어요.</p>` +
+      `<div class="site-list">${sites.map(siteCard).join('')}</div>`;
+    $('#sheet-back').onclick = renderSheet;
+    bindSiteCards();
+    if (map) map.relayout();
   }
 
   function setRvMode(on) {
@@ -306,41 +383,54 @@
   function siteIcon(s) {
     return G.scene.pin(s.finds === 'reservoir' ? 'water' : s.finds === 'bangye' ? 'hill' : 'kiln');
   }
+  function siteCard(s) {
+    let prog;
+    if (s.finds) {
+      const list = G.FINDS.filter((x) => x.place === s.finds);
+      prog = `답사품 ${list.filter((x) => S.extras[x.id]).length}/${list.length}`;
+    } else {
+      prog = `그릇 복원 ${s.pots.filter((p) => S.restored[p]).length}/${s.pots.length}${s.inscriptions ? ' · 명문 조각' : ''}`;
+    }
+    return `<button class="site-card" data-id="${s.id}"><span class="ic">${siteIcon(s)}</span><span class="txt"><b>${esc(s.name)}</b><small>${esc(s.sub)}</small><em>${prog}</em></span><span class="go">▶</span></button>`;
+  }
+  function bindSiteCards() {
+    $('#sheet').querySelectorAll('.site-card').forEach((b) => { b.onclick = () => openSite(G.siteById(b.dataset.id)); });
+  }
+
+  function hintText() {
+    const L = lastLook;
+    if (!L.nu) return '중요한 곳은 다 찾았어! 이제 정밀 조사로 그릇을 되살려 보세.';
+    if (L.near) return '이 근처에 뭔가 있을 거야. 다시 살펴보면서 흙을 더 털어 보세.';
+    const amount = L.total >= 5 ? '조각이 꽤 많네! 거의 다 왔어.' : L.total >= 3 ? '조각이 제법 보이네.' : '조각이 드문드문하네.';
+    const d8 = G.geo.dir(me.lat, me.lng, L.nu.at.lat, L.nu.at.lng);
+    return `${amount} ${d8}쪽으로 가 보면 조각이 더 많을 것 같아.`;
+  }
 
   function renderSheet() {
     const sh = $('#sheet');
-    if (surveying()) {
-      const hint = lastSurvey
-        ? `<p class="survey ${lastSurvey.heat}">가마터는 <b>${lastSurvey.d8}쪽 ${lastSurvey.txt}</b> ${lastSurvey.heat === 'hot' ? '— 아주 가까워요!' : lastSurvey.heat === 'warm' ? '— 가까워지고 있어요' : '— 아직 멀어요'}</p>`
-        : '<p class="survey">지도를 눌러 <b>지표 조사</b>를 하세요. 가마터가 어느 쪽으로 얼마나 떨어져 있는지 알려 줘요.</p>';
-      sh.innerHTML =
-        `<div class="sheet-head"><span class="quest">임무</span><h3>상품 자기소를 찾아라</h3></div>` +
-        `<p class="clue">${esc(P.clue)}</p>${hint}` +
-        `<p class="dim">${tries ? `조사 ${tries}번 · ` : ''}가마터 ${findRadius}m 안을 찍으면 발견해요.${map.roadview ? ' 길 버튼으로 로드뷰도 볼 수 있어요.' : ''}</p>`;
-    } else {
-      const sites = G.SITES.map((s) => {
-        let prog;
-        if (s.finds) {
-          const list = G.FINDS.filter((x) => x.place === s.finds);
-          prog = `답사품 ${list.filter((x) => S.extras[x.id]).length}/${list.length}`;
-        } else {
-          prog = `그릇 복원 ${s.pots.filter((p) => S.restored[p]).length}/${s.pots.length}${s.inscriptions ? ' · 명문 조각' : ''}`;
-        }
-        return `<button class="site-card" data-id="${s.id}"><span class="ic">${siteIcon(s)}</span><span class="txt"><b>${esc(s.name)}</b><small>${esc(s.sub)}</small><em>${prog}</em></span><span class="go">▶</span></button>`;
-      }).join('');
-      sh.innerHTML =
-        `<div class="sheet-head"><span class="quest">발굴지</span><h3>상주 상판리 자기가마터</h3></div>` +
-        `<p class="lead">조선 초(1400~1420년 무렵) 왕실과 중앙 관청에 바칠 분청사기를 굽던 곳으로 봐요. 『세종실록』 지리지의 전국 상품 자기소 4곳 가운데 2곳이 상주에 있었어요.</p>` +
-        `<div class="site-list">${sites}</div>`;
-      sh.querySelectorAll('.site-card').forEach((b) => { b.onclick = () => openSite(G.siteById(b.dataset.id)); });
+    if (!map) {
+      // 지도가 없을 때: 모든 발굴지를 바로 고른다
+      sh.innerHTML = `<div class="sheet-head"><span class="quest">발굴지</span><h3>상주 상판리 자기가마터</h3></div><div class="site-list">${G.SITES.map(siteCard).join('')}</div>`;
+      bindSiteCards();
+      return;
     }
-    if (map) map.relayout();
+    const found = G.POINTS.filter((pt) => S.found[pt.id]);
+    const left = G.POINTS.length - found.length;
+    const talk = lastLook
+      ? `<div class="talk"><span class="talk-face">${G.scene.portrait('kang')}</span><p><b>강석진</b>${esc(hintText())}</p></div>`
+      : `<p class="clue">${esc(found.length ? '조각이 많아지는 쪽으로 걸어가 땅을 살펴보세요. 중요한 곳에서는 결정적인 증거가 나와요.' : P.clue)}</p>`;
+    sh.innerHTML =
+      `<div class="sheet-head"><span class="quest">탐사</span><h3>${left ? '상판리를 걸으며 조각을 찾아라' : '모든 중요 지점을 찾았어요'}</h3><span id="walker-status" class="dim"></span></div>` +
+      talk +
+      `<button class="btn primary wide big" id="go-look">🔍 여기 땅 살펴보기</button>` +
+      `<p class="dim center">지도를 누르면 그곳으로 걸어가요.${map.roadview ? ' 길 버튼으로 로드뷰도 볼 수 있어요.' : ''} 남은 중요 지점 ${left}곳</p>` +
+      (found.length ? `<h4 class="sheet-sub">정밀 조사할 수 있는 곳</h4><div class="site-list">${found.flatMap((pt) => pt.sites).map((id) => siteCard(G.siteById(id))).join('')}</div>` : '');
+    $('#go-look').onclick = look;
+    bindSiteCards();
+    map.relayout();
   }
 
-  function openSites() {
-    clearFlags();
-    renderSheet();
-  }
+  function openSites() { renderSheet(); }
 
   function openSite(site) {
     let rows = site.pots.map((p) => {
@@ -358,8 +448,8 @@
     $('#sheet').innerHTML =
       `<div class="sheet-head"><button class="back" id="sheet-back">‹</button><span class="quest">${site.finds ? '답사지' : '유적'}</span><h3>${esc(site.name)}</h3></div>` +
       `<p class="dim">${esc(site.sub)}</p><p class="lead">${esc(site.story)}</p><div class="pot-grid">${rows}</div>` +
-      `<button class="btn primary wide big" id="go-dig">${site.finds ? '답사하러 가기' : '발굴하러 가기'}</button>`;
-    $('#sheet-back').onclick = openSites;
+      `<button class="btn primary wide big" id="go-dig">정밀 조사 시작</button>`;
+    $('#sheet-back').onclick = renderSheet;
     $('#go-dig').onclick = () => startDig(site);
     if (map) map.relayout();
   }

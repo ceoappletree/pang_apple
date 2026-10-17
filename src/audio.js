@@ -196,6 +196,12 @@
       noise(t, 1.2, 'lowpass', 400, 0.9, sfxBus, 1, 80);
       for (let i = 0; i < 8; i++) tone(t + i * 0.09, 70 + Math.random() * 50, 0.3, 'sine', 0.35, sfxBus, 40);
     }),
+    step: fx((t) => { noise(t, 0.07, 'lowpass', 600, 0.35, sfxBus); }),
+    brush: fx((t) => { noise(t, 0.12, 'bandpass', 2400 + Math.random() * 800, 0.18, sfxBus, 0.6); }),
+    pull: fx((t) => {
+      noise(t, 0.18, 'bandpass', 900, 0.4, sfxBus, 1, 3000); // 뿌리가 뜯기는 소리
+      tone(t + 0.12, 520, 0.12, 'triangle', 0.12, sfxBus, 900);
+    }),
     click: fx((t) => { tone(t, 880, 0.06, 'triangle', 0.12, sfxBus, 660); }),
     blip: fx((t) => { tone(t, 600 + Math.random() * 120, 0.035, 'triangle', 0.035, sfxBus); }),
     unroll: fx((t) => { noise(t, 0.45, 'bandpass', 900, 0.35, sfxBus, 0.7, 2600); janggu(t + 0.35, 'deok', sfxBus, 0.8); }),

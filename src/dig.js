@@ -112,11 +112,14 @@
       const scr = $('#dig-screen');
       scr.classList.toggle('sea', !!site.sea);
       $('#dig-title').textContent = site.name;
-      $('#dig-sub').textContent = site.digSub || '발굴 · 흙을 걷어 내세요';
+      $('#dig-sub').textContent = '정밀 조사 · ' + (site.digSub || '흙을 걷어 내세요');
       const board = $('#board');
-      const avail = Math.min(window.innerWidth - 50, 420);
-      const availH = window.innerHeight - 330;
-      const size = Math.max(28, Math.floor(Math.min(avail / COLS, availH / ROWS)));
+      // 판을 비운 채로 남은 자리를 재서, 그 안에 꼭 맞게 칸 크기를 정한다(틀 두께 26px)
+      board.style.width = board.style.height = '0px';
+      const room = $('.board-wrap').getBoundingClientRect();
+      const availW = Math.min(room.width - 24 - 26, 440);
+      const availH = room.height - 8 - 26;
+      const size = Math.max(22, Math.floor(Math.min(availW / COLS, availH / ROWS)));
       this.size = size;
       board.style.width = COLS * size + 'px';
       board.style.height = ROWS * size + 'px';

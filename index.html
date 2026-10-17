@@ -108,6 +108,36 @@
     </nav>
   </section>
 
+  <!-- 지표 조사(땅 살펴보기) -->
+  <section id="field-screen" class="hidden">
+    <div class="trench-bg"></div>
+    <header class="dig-top">
+      <div class="dig-name">
+        <h1 id="field-title">지표 조사</h1>
+        <small id="field-sub"></small>
+      </div>
+      <button id="field-done" class="btn small">다 봤어요</button>
+    </header>
+    <div class="dig-hud field-hud">
+      <p id="field-tip"></p>
+      <span id="field-count" class="left-chip"></span>
+    </div>
+    <div class="field-wrap">
+      <div id="ground" class="ground">
+        <canvas id="ground-base"></canvas>
+        <div id="ground-shards"></div>
+        <canvas id="ground-dust"></canvas>
+        <div id="ground-grass"></div>
+      </div>
+    </div>
+    <div id="field-tray"></div>
+    <div class="field-legend">
+      <span><b>🌿</b> 풀 누르기 · 뽑기</span>
+      <span><b>👆</b> 문지르기 · 흙 털기</span>
+      <span><b>🔍</b> 조각 누르기 · 줍기</span>
+    </div>
+  </section>
+
   <!-- 도감 -->
   <section id="book">
     <header class="hud book-hud">
@@ -144,6 +174,7 @@
   <script src="src/map.js"></script>
   <script src="src/audio.js"></script>
   <script src="src/dig.js"></script>
+  <script src="src/field.js"></script>
   <script src="src/main.js"></script>
 </body>
 </html>

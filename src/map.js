@@ -34,8 +34,14 @@
       mark(lat, lng, html, cls, onTap) {
         const o = new K.CustomOverlay({ position: new K.LatLng(lat, lng), content: markEl(html, cls, onTap), xAnchor: 0, yAnchor: 0, clickable: !!onTap });
         o.setMap(map);
-        return { remove: () => o.setMap(null) };
+        return { remove: () => o.setMap(null), move: (a, b) => o.setPosition(new K.LatLng(a, b)) };
       },
+      path(pts) {
+        const l = new K.Polyline({ path: pts.map((p) => new K.LatLng(p.lat, p.lng)), strokeWeight: 4, strokeColor: '#fff3d6', strokeOpacity: 0.9, strokeStyle: 'shortdot' });
+        l.setMap(map);
+        return { remove: () => l.setMap(null), add: (p) => { const a = l.getPath(); a.push(new K.LatLng(p.lat, p.lng)); l.setPath(a); } };
+      },
+      panTo(p) { map.panTo(new K.LatLng(p.lat, p.lng)); },
       center(p, zoom) { map.setCenter(new K.LatLng(p.lat, p.lng)); map.setLevel(zoom === 'near' ? 4 : 6); },
       fit(pts) {
         if (!pts.length) return;
@@ -106,7 +112,7 @@
   function leafletMap(el, onClick) {
     const map = L.map(el, { zoomControl: false, minZoom: 7, maxZoom: 18 }).setView([36.3, 127.95], 13);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> (임시 지도)',
     }).addTo(map);
@@ -120,7 +126,22 @@
         const w = m.getElement();
         w.appendChild(markEl(html, cls, onTap));
         L.DomEvent.disableClickPropagation(w);
-        return { remove: () => m.remove() };
+        return { remove: () => m.remove(), move: (a, b) => m.setLatLng([a, b]) };
+      },
+      path(pts) {
+        const l = L.polyline(pts.map((p) => [p.lat, p.lng]), { color: '#fff3d6', weight: 4, opacity: 0.9, dashArray: '2 9', lineCap: 'round', interactive: false }).addTo(map);
+        return { remove: () => l.remove(), add: (p) => l.addLatLng([p.lat, p.lng]) };
+      },
+      panTo(p) { map.panTo([p.lat, p.lng]); },
+      // 지도 서버를 쓸 수 없을 때: 타일을 걷고 상판리를 그린 그림 지도를 깐다
+      illustrate(svg, bounds) {
+        tiles.remove();
+        map.attributionControl.setPrefix(false);
+        const ov = L.svgOverlay(svg, bounds, { interactive: false }).addTo(map);
+        ov.getElement().classList.add('illust');
+        map.setMaxBounds(L.latLngBounds(bounds).pad(0.1));
+        map.setMinZoom(13);
+        this.kind = 'illustrated';
       },
       center(p, zoom) { map.setView([p.lat, p.lng], zoom === 'near' ? 16 : 14); },
       fit(pts) {
@@ -156,6 +177,10 @@
       const x = Math.cos(a * r) * Math.sin(c * r) - Math.sin(a * r) * Math.cos(c * r) * Math.cos((d - b) * r);
       const deg = (Math.atan2(y, x) / r + 360) % 360;
       return ['북', '북동', '동', '남동', '남', '남서', '서', '북서'][Math.round(deg / 45) % 8];
+    },
+    // p에서 북쪽으로 dn미터, 동쪽으로 de미터 옮긴 점
+    offset(p, dn, de) {
+      return { lat: p.lat + dn / 111320, lng: p.lng + de / (111320 * Math.cos(p.lat * Math.PI / 180)) };
     },
     // p에서 서쪽으로 m미터 옮긴 점
     west(p, m) {
