@@ -224,7 +224,7 @@ function heroBlock(loc) {
          <button class="btn sub" data-a="gift" data-v="${k}">🎁 선물</button></div>
          <button class="btn pink" data-a="date" data-v="${k}" style="margin-top:8px">💕 데이트 신청<small>시간 사용</small></button>`;
     return `<div class="card herocard">
-      <div class="row" style="align-items:center"><div class="face" style="flex:0 0 76px">${Portraits.render(k, mood)}</div>
+      <div class="row" style="align-items:center"><div class="face" style="flex:0 0 76px">${Portraits.render(k, mood, 'face')}</div>
       <div><div style="font-weight:900;font-size:18px">${g.met ? d.name : '???'} ${g.bomb ? '💣' : ''}</div>
       <div class="small muted">${d.role} · ${d.age}세</div>
       ${g.met ? `<div style="color:${d.color};font-size:13px">${hearts} ${affLabel(g.aff)}</div>` : '<div class="small muted">처음 보는 사람이다</div>'}</div></div>
@@ -546,10 +546,10 @@ function statusScreen(back) {
   const plain = (label, v, col) => `<span>${label}</span><div class="bar"><i style="width:${v}%;background:${col}"></i></div><span class="num">${v}</span>`;
   const girls = GIRL_KEYS.map(k => {
     const g = C.girls[k], d = GIRLS[k];
-    if (!g.met) return `<div class="girl unknown"><div class="face">${Portraits.render(k)}</div><div class="nm">???</div><div class="lv">${LOCS[d.sched[0]].emoji} 어딘가에…</div></div>`;
+    if (!g.met) return `<div class="girl unknown"><div class="face">${Portraits.render(k, 'normal', 'face')}</div><div class="nm">???</div><div class="lv">${LOCS[d.sched[0]].emoji} 어딘가에…</div></div>`;
     const hearts = '♥'.repeat(Math.round(g.aff / 20)) + '♡'.repeat(5 - Math.round(g.aff / 20));
     const now = C.slot < 3 ? LOCS[d.sched[C.slot]] : null;
-    return `<div class="girl">${g.bomb ? '<span class="bomb">💣</span>' : ''}<div class="face">${Portraits.render(k, g.aff >= 60 ? 'love' : 'smile')}</div>
+    return `<div class="girl">${g.bomb ? '<span class="bomb">💣</span>' : ''}<div class="face">${Portraits.render(k, g.aff >= 60 ? 'love' : 'smile', 'face')}</div>
       <div class="nm">${d.name}</div><div class="hearts" style="color:${d.color}">${hearts}</div><div class="lv">${now ? '지금 ' + now.emoji : '경기 날'}</div></div>`;
   }).join('');
   const inv = GIFTS.filter(g => C.inv[g.id] > 0).map(g => `<span class="pill">${g.name} ×${C.inv[g.id]}</span>`).join('') || '<span class="muted small">없음</span>';

@@ -275,3 +275,6 @@ body.in-world #mute { bottom: auto; top: calc(env(safe-area-inset-top) + 64px); 
 /* ---------- 도루 ---------- */
 .steal .light { width: 110px; height: 110px; margin: 16px auto; border-radius: 50%; background: #e5484d; box-shadow: 0 0 30px #e5484d; transition: background .05s; }
 .steal .light.go { background: #4ade80; box-shadow: 0 0 40px #4ade80; }
+.herocard .face { height: 92px; }
+.girl .face svg { width: 100%; height: 100%; }
+#vn .portrait { width: min(88vw, 380px); bottom: 120px; }
