@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1530">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>홈런왕 ⚾ 루키 시즌</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- 경기 HUD -->
+<div id="hud" class="hidden">
+  <div class="board">
+    <div class="cell"><span class="lbl">이닝</span><span class="val" id="inning">1회</span></div>
+    <div class="sep"></div>
+    <div class="cell"><span class="lbl" id="scoreLbl">득점</span><span class="val" id="score">0</span></div>
+    <div class="sep"></div>
+    <div class="bso">
+      <span>B</span><div class="dots"><i class="dot b"></i><i class="dot b"></i><i class="dot b"></i></div>
+      <span>S</span><div class="dots"><i class="dot s"></i><i class="dot s"></i></div>
+      <span>O</span><div class="dots"><i class="dot o"></i><i class="dot o"></i></div>
+    </div>
+    <div class="sep"></div>
+    <div class="bases"><i class="base" id="b2"></i><i class="base" id="b3"></i><i class="base" id="b1"></i></div>
+  </div>
+</div>
+<div id="msg"></div>
+<div id="timing"></div>
+<div id="pitchInfo"></div>
+<button id="mute" aria-label="소리 켜기/끄기">🔊</button>
+
+<!-- 화면들 (main.js / career.js 가 채움) -->
+<div id="screen" class="screen center hidden"></div>
+
+<!-- 비주얼 노벨 -->
+<div id="vn" class="hidden">
+  <div class="bg"></div>
+  <div class="portrait hide"></div>
+  <div class="choices"></div>
+  <div class="box"><div class="nametag hidden"></div><div class="text"></div><div class="next">▼</div></div>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/portraits.js"></script>
+<script src="js/story.js"></script>
+<script src="js/vn.js"></script>
+<script src="js/career.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
