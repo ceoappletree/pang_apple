@@ -42,10 +42,13 @@
     if (last === '이' && b && !KEEP_I.test(w)) return w.slice(0, -1);
     return w;
   }
+  // "철민이야" -> 철민, "토이야" -> 토이 (받침 없는 글자 뒤의 '이'는 이름의 일부)
   function cleanName(w) {
-    let n = w.replace(COPULA, '');
-    if (!n) n = w;
-    return n.slice(0, 8);
+    const m = w.match(COPULA);
+    if (!m) return w.slice(0, 8);
+    let n = w.slice(0, w.length - m[0].length);
+    if (m[0][0] === '이' && n && !hasBatchim(n[n.length - 1])) n += '이';
+    return (n || w).slice(0, 8);
   }
   function validWord(w) { return w && w.length <= 10 && !STOP_WORDS.has(w); }
 

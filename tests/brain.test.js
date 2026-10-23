@@ -55,6 +55,10 @@ test('의도 분석', () => {
   assert.strictEqual(analyze('내 이름은 철민이야', 'grandma').name, '철민');
   assert.strictEqual(analyze('제 이름은 김지은입니다', 'grandma').name, '김지은');
   assert.strictEqual(analyze('나 사과 좋아해', 'grandma').like, '사과');
+  assert.strictEqual(analyze('내 이름은 토이야', 'grandma').name, '토이');
+  assert.strictEqual(analyze('제 이름은 토이에요', 'grandma').name, '토이');
+  assert.strictEqual(analyze('내 이름은 미나야', 'grandma').name, '미나');
+  assert.strictEqual(analyze('내 이름은 철수다', 'grandma').name, '철수');
 });
 
 test('첫 만남에 이름을 묻고 짧은 대답으로 기억한다', () => {
