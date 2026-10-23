@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>등대의 밤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
+<style>
+  /* Layout: one-screen portrait app — top bar, ship/inventory status, narration log, choices */
+  :root {
+    --bg: #0b1020;
+    --bg-2: #121a33;
+    --fg: #ece6d6;
+    --muted: #8f97b3;
+    --card: rgba(22, 30, 58, .82);
+    --line: #283357;
+    --lamp: #ffd36b;
+    --lamp-soft: rgba(255, 211, 107, .16);
+    --radio: #7fe0a8;
+    --cat: #f4a9c4;
+    --old: #d8b98a;
+    --me: #9cc8ff;
+    --bad: #ff7b7b;
+    --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+    --font-body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+
+  [hidden] { display: none !important; }
+  html { height: 100%; box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    height: 100dvh;
+    background: radial-gradient(120% 70% at 50% 0%, var(--bg-2), var(--bg) 70%);
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+  }
+  /* rain */
+  body::before {
+    content: "";
+    position: fixed; inset: -50%;
+    background: repeating-linear-gradient(105deg, transparent 0 14px, rgba(160, 180, 230, .07) 14px 15px);
+    animation: rain .5s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes rain { to { transform: translate(-12px, 46px); } }
+  @media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
+
+  button { font: inherit; color: inherit; }
+  .app {
+    position: relative;
+    height: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--card);
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .icon-btn svg { width: 20px; height: 20px; }
+  .btn {
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 14px; padding: 10px 14px; cursor: pointer;
+    font-size: 15px;
+  }
+  .btn.primary {
+    background: var(--lamp); color: #2a1e00; border-color: var(--lamp);
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    box-shadow: 0 0 28px var(--lamp-soft);
+  }
+  .btn:disabled { opacity: .45; cursor: default; }
+  :focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+  /* ---------- title ---------- */
+  #title { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; overflow-y: auto; }
+  .lighthouse { width: 150px; height: 190px; overflow: visible; }
+  .lighthouse .beam { transform-origin: 75px 46px; animation: sweep 6s ease-in-out infinite alternate; }
+  @keyframes sweep { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+  @media (prefers-reduced-motion: reduce) { .lighthouse .beam { animation: none; } }
+  #title h1 { font-family: var(--font-display); font-size: 40px; margin: 0; letter-spacing: .04em; }
+  .tagline { margin: -6px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .title-actions { display: flex; flex-direction: column; gap: 10px; width: min(280px, 100%); }
+  .notice { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 340px; }
+  .notice.warn { color: var(--bad); }
+  .endings { width: min(340px, 100%); text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+  .endings h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 400; display: flex; justify-content: space-between; }
+  .endings ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 15px; }
+  .endings li.locked { color: var(--muted); }
+
+  /* ---------- game ---------- */
+  #game { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  .topbar { display: flex; align-items: center; gap: 10px; }
+  .place { flex: 1; min-width: 0; text-align: center; font-family: var(--font-display); font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .place small { display: block; font-family: var(--font-body); font-size: 11px; color: var(--muted); letter-spacing: .08em; }
+
+  .status { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; display: grid; gap: 8px; }
+  .ship-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+  .track { position: relative; flex: 1; height: 22px; border-radius: 11px; background: linear-gradient(90deg, rgba(90, 130, 220, .18), rgba(255, 123, 123, .22)); }
+  .track .ship { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: 16px; transition: left .6s ease; }
+  .track .rock { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 13px; }
+  .ship-label { min-width: 64px; text-align: right; color: var(--fg); }
+  .ship-label.hot { color: var(--bad); }
+  .inv { display: flex; flex-wrap: wrap; gap: 6px; min-height: 26px; }
+  .chip { font-size: 12px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, .04); animation: pop .35s ease; }
+  .chip.empty { color: var(--muted); border-style: dashed; animation: none; }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+
+  .story { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 2px; scroll-behavior: smooth; }
+  .line { font-family: var(--font-display); font-size: 18px; line-height: 1.75; margin: 0 0 10px; transition: opacity .3s, color .3s; animation: fadein .4s ease; word-break: keep-all; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } }
+  .line.past { opacity: .62; }
+  .line.cur { color: #fff; text-shadow: 0 0 18px var(--lamp-soft); }
+  .line.talk { font-family: var(--font-body); font-size: 17px; padding: 8px 12px; border-radius: 12px; border-left: 3px solid currentColor; background: rgba(255, 255, 255, .04); }
+  .line.talk .who { display: block; font-size: 11px; letter-spacing: .1em; opacity: .85; }
+  .line.v-radio { color: var(--radio); }
+  .line.v-cat { color: var(--cat); }
+  .line.v-old { color: var(--old); font-style: italic; }
+  .line.v-me { color: var(--me); }
+  .line.warn { color: var(--bad); font-family: var(--font-body); font-size: 16px; }
+  .line.cur.talk { text-shadow: none; background: rgba(255, 255, 255, .08); }
+
+  .controls { display: flex; gap: 8px; }
+  .controls .btn { flex: 1; font-size: 14px; padding: 8px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .controls svg { width: 16px; height: 16px; }
+
+  .choices { display: grid; gap: 8px; }
+  .choice {
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    border: 1px solid var(--line); background: var(--card); border-radius: 14px;
+    padding: 12px 14px; font-size: 16px; cursor: pointer; animation: fadein .35s ease both;
+    min-height: 48px;
+  }
+  .choice .num { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; background: var(--lamp-soft); color: var(--lamp); }
+  .choice.reading { border-color: var(--lamp); }
+  .choice:active { transform: scale(.98); }
+
+  .ending-card { text-align: center; padding: 16px; border-radius: 18px; border: 1px solid var(--lamp); background: radial-gradient(circle at 50% 0%, var(--lamp-soft), var(--card) 70%); animation: fadein .5s ease; display: grid; gap: 8px; }
+  .ending-card.dark { border-color: var(--bad); background: radial-gradient(circle at 50% 0%, rgba(255, 123, 123, .14), var(--card) 70%); }
+  .ending-card .tag { font-size: 12px; letter-spacing: .3em; color: var(--muted); }
+  .ending-card h2 { font-family: var(--font-display); font-size: 26px; margin: 0; }
+  .ending-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .ending-card .row { display: flex; gap: 8px; margin-top: 6px; }
+  .ending-card .row .btn { flex: 1; }
+
+  /* lamp-on flash */
+  .flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 30%, rgba(255, 230, 160, .55), transparent 60%); animation: flash 2.4s ease forwards; }
+  @keyframes flash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* ---------- settings sheet ---------- */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet { width: min(560px, 100%); background: var(--bg-2); border: 1px solid var(--line); border-bottom: 0; border-radius: 20px 20px 0 0; padding: 18px 16px max(18px, env(safe-area-inset-bottom)); display: grid; gap: 14px; max-height: 90dvh; overflow-y: auto; }
+  .sheet h2 { margin: 0; font-family: var(--font-display); font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
+  .field { display: grid; gap: 6px; font-size: 14px; }
+  .field select, .field input[type=range] { width: 100%; }
+  .field select { font: inherit; padding: 10px; border-radius: 12px; background: var(--card); color: var(--fg); border: 1px solid var(--line); }
+  .field input[type=range] { accent-color: var(--lamp); }
+  .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; padding: 4px 0; }
+  .toggle input { width: 22px; height: 22px; accent-color: var(--lamp); }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 타이틀 -->
+  <section id="title">
+    <svg class="lighthouse" viewBox="0 0 150 190" aria-hidden="true">
+      <defs>
+        <linearGradient id="beamG" x1="0" x2="1">
+          <stop offset="0" stop-color="#ffd36b" stop-opacity=".55"/>
+          <stop offset="1" stop-color="#ffd36b" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <g class="beam">
+        <polygon points="75,46 230,14 230,78" fill="url(#beamG)"/>
+      </g>
+      <path d="M60 60 L90 60 L98 172 L52 172 Z" fill="#e9e3d3"/>
+      <path d="M57 98 L93 98 L94.5 116 L55.5 116 Z M54 136 L96 136 L97.2 152 L52.8 152 Z" fill="#c4473d"/>
+      <rect x="62" y="36" width="26" height="22" rx="3" fill="#2a3358" stroke="#e9e3d3" stroke-width="3"/>
+      <circle cx="75" cy="46" r="7" fill="#ffd36b"/>
+      <path d="M58 36 L75 22 L92 36 Z" fill="#c4473d"/>
+      <rect x="54" y="57" width="42" height="5" rx="2" fill="#e9e3d3"/>
+      <path d="M20 180 Q50 168 75 176 T130 178 L140 190 L10 190 Z" fill="#1b2445"/>
+    </svg>
+    <h1>등대의 밤</h1>
+    <p class="tagline">목소리가 들려주는 이야기 게임<br>폭풍우 치는 밤, 꺼진 등대에 불을 밝히세요.</p>
+    <div class="title-actions">
+      <button class="btn primary" id="startBtn">이야기 시작</button>
+      <button class="btn" id="titleSettingsBtn">목소리 설정</button>
+    </div>
+    <p class="notice" id="voiceNotice">🎧 소리를 켜고, 이어폰을 끼면 더 몰입할 수 있어요.</p>
+    <div class="endings" id="endingList"></div>
+  </section>
+
+  <!-- 게임 -->
+  <section id="game" hidden>
+    <div class="topbar">
+      <button class="icon-btn" id="homeBtn" aria-label="타이틀로">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+      </button>
+      <div class="place" id="place" aria-live="polite"><small>지금 있는 곳</small><span></span></div>
+      <button class="icon-btn" id="settingsBtn" aria-label="설정">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+
+    <div class="status">
+      <div class="ship-row">
+        <span>바다제비호</span>
+        <div class="track" role="img" id="track"><span class="ship">🚢</span><span class="rock">🪨</span></div>
+        <span class="ship-label" id="shipLabel"></span>
+      </div>
+      <div class="inv" id="inv"></div>
+    </div>
+
+    <div class="story" id="story" aria-live="polite"></div>
+
+    <div class="controls">
+      <button class="btn" id="replayBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>다시 듣기</button>
+      <button class="btn" id="skipBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8z"/><path d="M19 5v14"/></svg>건너뛰기</button>
+    </div>
+
+    <div class="choices" id="choices"></div>
+  </section>
+</div>
+
+<!-- 설정 -->
+<div class="sheet-bg" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h2 id="settingsTitle">목소리 설정 <button class="icon-btn" id="closeSettings" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h2>
+    <label class="toggle">목소리로 읽어 주기 <input type="checkbox" id="optVoice"></label>
+    <div class="field">
+      <label for="optVoiceSel">내레이터 목소리</label>
+      <select id="optVoiceSel"></select>
+      <span class="hint" id="voiceHint"></span>
+    </div>
+    <div class="field">
+      <label for="optRate">말하기 속도 <b id="rateVal"></b></label>
+      <input type="range" id="optRate" min="0.7" max="1.6" step="0.1">
+    </div>
+    <label class="toggle">선택지도 읽어 주기 <input type="checkbox" id="optChoices"></label>
+    <label class="toggle">빗소리·효과음 <input type="checkbox" id="optSfx"></label>
+    <button class="btn" id="previewBtn">목소리 미리 듣기</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ================= 저장 ================= */
+  const KEY = 'lighthouse-night:v1';
+  const store = (() => {
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { data = {}; }
+    return {
+      get: (k, d) => (k in data ? data[k] : d),
+      set(k, v) { data[k] = v; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} },
+    };
+  })();
+
+  const settings = Object.assign(
+    { voice: true, voiceURI: '', rate: 1, readChoices: false, sfx: true },
+    store.get('settings', {})
+  );
+  const saveSettings = () => store.set('settings', settings);
+
+  /* ================= 목소리 종류 ================= */
+  // v: 화자. 내레이터 외 인물은 높낮이·속도를 바꾸고, 한국어 음성이 둘 이상이면 다른 음성을 씁니다.
+  const STYLE = {
+    n:     { pitch: 1.0, rate: 1.0 },
+    radio: { pitch: 0.6, rate: 1.12, who: '무전 · 선장', alt: true },
+    old:   { pitch: 0.75, rate: 0.9, who: '일지 · 전임 등대지기', alt: true },
+    me:    { pitch: 1.15, rate: 1.05, who: '나' },
+    cat:   { pitch: 2.0, rate: 0.9, who: '고양이' },
+    sys:   { pitch: 1.0, rate: 1.1 },
+    warn:  { pitch: 0.9, rate: 1.05 },
+  };
+  const R = t => ({ v: 'radio', t });
+  const O = t => ({ v: 'old', t });
+  const M = t => ({ v: 'me', t });
+  const C = t => ({ v: 'cat', t });
+
+  /* ================= 이야기 ================= */
+  const TIME_MAX = 15;
+  const light = s => s.matches || s.power;
+  const dark = s => (light(s) ? 1 : 2); // 불빛 없이 계단을 오르내리면 시간이 더 걸림
+
+  const ENDINGS = {
+    best: { title: '완벽한 첫 근무', good: true, desc: '무전에 응답하고, 고양이를 구하고, 등대의 불을 밝혔습니다.' },
+    good: { title: '빛을 지킨 밤', good: true, desc: '등대의 불을 밝혀 배를 지켰습니다.', hint: '무전에 응답하고, 떨고 있는 누군가도 챙겨 보세요.' },
+    reef: { title: '어둠 속의 굉음', desc: '불을 켜기 전에 배가 도착하고 말았습니다.', hint: '배가 오기 전에 불을 켜야 해요. 꼭 필요한 곳만 들러 보세요.' },
+    wave: { title: '파도 속으로', desc: '부두에서 직접 신호를 보내려다 파도에 휩쓸렸습니다.', hint: '사람의 목소리로는 폭풍을 이길 수 없어요.' },
+    fall: { title: '깁스와 함께', desc: '어두운 계단을 뛰어오르다 굴러떨어졌습니다.', hint: '어둠 속에서는 서두르지 마세요.' },
+  };
+  const ENDING_ORDER = ['best', 'good', 'reef', 'wave', 'fall'];
+
+  const storageChoices = s => [
+    !s.matches && { label: '서랍장을 뒤진다', to: 'drawer' },
+    !s.oil && !s.power && { label: '선반을 더듬는다', to: 'shelf' },
+    !s.cat && { label: '고양이를 안아 든다', to: 'cat' },
+    { label: '홀로 나간다', to: 'hall' },
+  ];
+  const roomChoices = s => [
+    !s.readLog && { label: '책상 위 일지를 살핀다', to: 'log' },
+    !s.key && { label: '벽의 액자를 들춰 본다', to: 'frame' },
+    { label: '계단으로 나간다', to: 'stairs' },
+  ];
+
+  const SCENES = {
+    start: {
+      place: '숙직실',
+      text: () => [
+        '쿠르릉, 쾅!',
+        '천둥소리에 번쩍 눈을 뜹니다.',
+        '당신은 외딴 섬 등대의 새 등대지기. 오늘이 첫 근무 날 밤입니다.',
+        '그런데 사방이 칠흑같이 캄캄합니다. 정전이 된 모양입니다.',
+        '창밖에선 비바람이 몰아치고, 파도가 바위를 사납게 때립니다.',
+        R('치지직… 등대, 등대 응답하라. 여기는 화물선 바다제비호.'),
+        '책상 위 무전기에서 다급한 목소리가 흘러나옵니다.',
+      ],
+      choices: s => [
+        !s.radio && { label: '무전기를 집어 응답한다', to: 'radio' },
+        !s.listened && { label: '숨을 고르고 귀를 기울인다', to: 'listen' },
+        { label: '벽을 더듬어 방을 나선다', to: 'hall' },
+      ],
+    },
+    listen: {
+      place: '숙직실',
+      enter: s => { s.listened = true; },
+      text: () => [
+        '눈을 감고 소리에 집중합니다.',
+        '빗소리, 바람 소리, 파도 소리…',
+        '그 너머로 아주 작게, 야옹, 하는 울음소리가 들립니다. 홀 옆 창고 쪽인 것 같습니다.',
+        '그리고 바깥 어딘가에서, 덜컹덜컹 쇠문이 흔들리는 소리도 들립니다.',
+      ],
+      choices: s => [
+        !s.radio && { label: '무전기를 집어 응답한다', to: 'radio' },
+        { label: '벽을 더듬어 방을 나선다', to: 'hall' },
+      ],
+    },
+    radio: {
+      place: '숙직실',
+      enter: s => { s.radio = true; },
+      text: () => [
+        M('여기는 등대. 들린다, 말하라.'),
+        R('등대! 불빛이 전혀 안 보인다! 이대로 수로에 들어가면 암초에 부딪힌다!'),
+        R('배를 돌릴 시간이 없다. 제발, 불을 켜 달라!'),
+        '치직— 무전이 끊겼습니다.',
+        '배가 섬에 닿기 전에 등대 불을 켜야 합니다.',
+      ],
+      choices: s => [
+        !s.listened && { label: '숨을 고르고 귀를 기울인다', to: 'listen' },
+        { label: '서둘러 방을 나선다', to: 'hall' },
+      ],
+    },
+    hall: {
+      place: '1층 홀',
+      text: s => [
+        s.seen.hall === 1 ? '벽을 더듬으며 숙직실을 나와 1층 홀에 섰습니다.' : '1층 홀입니다.',
+        s.seen.hall === 1 && !light(s) && '어둠에 눈이 조금 익숙해집니다.',
+        '왼쪽엔 창고 문, 정면엔 위로 이어지는 나선 계단이 있습니다.',
+        '오른쪽 철문 너머에선 바깥 바람이 으르렁거립니다.',
+        !s.cat && (s.listened || s.seen.hall === 1) && '창고 쪽에서 희미하게 고양이 울음소리가 들립니다.',
+      ],
+      choices: s => [
+        { label: '창고 문을 연다', to: 'storage' },
+        { label: light(s) ? '나선 계단을 오른다' : '나선 계단을 더듬어 오른다', to: 'stairs', cost: dark },
+        !light(s) && { label: '시간이 없다! 어둠 속 계단을 뛰어오른다', to: 'fall' },
+        { label: '철문을 열고 밖으로 나간다', to: 'outside' },
+        !s.radio && { label: '숙직실로 돌아가 무전기에 응답한다', to: 'radio' },
+      ],
+    },
+    storage: {
+      place: '창고',
+      text: s => [
+        s.seen.storage === 1 ? '창고 문을 엽니다. 기름 냄새와 먼지 냄새가 훅 끼쳐 옵니다.' : '창고 안입니다.',
+        s.matches ? '성냥 불빛에 서랍장과 높은 선반이 어른거립니다.' : '손끝에 서랍장과 높은 선반이 닿습니다.',
+        !s.cat && '구석에서 무언가 바스락거립니다. 작은 고양이 한 마리가 떨고 있습니다.',
+        s.matches && (s.oil || s.power) && s.cat && '더 챙길 것은 없어 보입니다.',
+      ],
+      choices: storageChoices,
+    },
+    drawer: {
+      place: '창고',
+      enter: s => { s.matches = true; },
+      text: () => [
+        '서랍을 하나씩 열어 봅니다.',
+        '맨 아래 서랍에서 작은 종이 상자가 손에 잡힙니다. 흔들자 사각사각 소리가 납니다.',
+        '성냥입니다! 하나를 긋자, 작은 불꽃이 주위를 밝힙니다.',
+      ],
+      choices: storageChoices,
+    },
+    shelf: {
+      place: '창고',
+      enter: s => { s.oil = true; },
+      text: s => s.matches ? [
+        '성냥 불빛 아래, 선반 위의 빨간 통이 보입니다.',
+        '뚜껑을 열자 등유 냄새가 확 풍깁니다.',
+        '등유 한 통을 챙겼습니다.',
+      ] : [
+        '선반을 더듬다가 무언가를 건드립니다. 쨍그랑!',
+        '깨진 건 빈 병이었습니다. 조심스레 다시 손을 뻗자 묵직한 통이 잡힙니다.',
+        '뚜껑을 열자 등유 냄새가 확 풍깁니다.',
+        '등유 한 통을 챙겼습니다.',
+      ],
+      choices: storageChoices,
+    },
+    cat: {
+      place: '창고',
+      enter: s => { s.cat = true; },
+      text: () => [
+        '몸을 낮추고 손을 내밀자, 고양이가 조심스레 다가옵니다.',
+        C('야옹.'),
+        '품에 안으니 작고 따뜻한 몸이 떨림을 멈춥니다.',
+        '어쩐지 혼자가 아닌 것 같아 용기가 납니다.',
+      ],
+      choices: storageChoices,
+    },
+    outside: {
+      place: '등대 바깥',
+      text: s => [
+        s.seen.outside === 1 ? '철문을 열자 비바람이 얼굴을 세차게 때립니다.' : '다시 비바람 속으로 나왔습니다.',
+        s.power ? '발전기 창고에서 부르릉, 힘찬 소리가 납니다.' : '오른쪽 벽에 작은 발전기 창고가 붙어 있습니다. 바람에 쇠문이 덜컹거립니다.',
+        '왼쪽으론 부두로 내려가는 미끄러운 돌계단이 보입니다.',
+        '바다 저 멀리, 배의 불빛이 파도 사이로 흔들립니다.',
+      ],
+      choices: s => [
+        !s.power && { label: '발전기 창고로 간다', to: 'generator' },
+        { label: '부두로 내려가 배에 직접 신호를 보낸다', to: 'dock' },
+        { label: '등대 안으로 돌아간다', to: 'hall' },
+      ],
+    },
+    generator: {
+      place: '발전기 창고',
+      text: s => !s.key ? [
+        '발전기 창고 문에 묵직한 자물쇠가 걸려 있습니다.',
+        '열쇠가 없으면 열 수 없겠습니다.',
+      ] : [
+        '열쇠를 꽂아 돌리자 철컥, 자물쇠가 풀립니다.',
+        '안에는 낡은 발전기가 웅크리고 있습니다.',
+        s.oil ? '연료 계기판이 바닥입니다. 가져온 등유를 넣으면 돌아갈지도 모릅니다.'
+              : '연료 계기판 바늘이 바닥에 붙어 있습니다. 연료가 없으면 돌아가지 않겠습니다.',
+      ],
+      choices: s => [
+        s.key && s.oil && { label: '등유를 붓고 시동 줄을 당긴다', to: 'genOn' },
+        { label: '밖으로 나간다', to: 'outside' },
+        { label: '등대 안으로 돌아간다', to: 'hall' },
+      ],
+    },
+    genOn: {
+      place: '발전기 창고',
+      enter: s => { s.power = true; s.oil = false; },
+      text: () => [
+        '통을 기울여 등유를 콸콸 붓습니다.',
+        '시동 줄을 힘껏 당깁니다. 한 번… 두 번…',
+        '부르르릉! 발전기가 깨어납니다!',
+        '등대 창문마다 비상등이 하나둘 켜집니다.',
+      ],
+      choices: () => [
+        { label: '등실까지 단숨에 뛰어 올라간다', to: 'lamp' },
+      ],
+    },
+    stairs: {
+      place: '나선 계단',
+      text: s => [
+        s.prev === 'hall' && (s.power ? '비상등이 켜진 계단을 성큼성큼 오릅니다.'
+          : s.matches ? '성냥을 하나 그어 들고 나선 계단을 오릅니다.'
+          : '빛 한 점 없는 계단입니다. 난간을 붙잡고 한 칸 한 칸 더듬어 오릅니다. 시간이 꽤 걸립니다.'),
+        s.prev !== 'hall' && '나선 계단으로 나왔습니다.',
+        '중간층에 작은 방문이 보이고, 계단은 꼭대기까지 이어집니다.',
+      ],
+      choices: s => [
+        { label: '중간층 방에 들어간다', to: 'room' },
+        { label: '꼭대기 등실까지 오른다', to: 'lamp' },
+        { label: '1층으로 내려간다', to: 'hall', cost: dark },
+      ],
+    },
+    room: {
+      place: '등대지기 방',
+      text: s => [
+        s.seen.room === 1 ? '전임 등대지기가 쓰던 작은 방입니다.' : '등대지기 방입니다.',
+        light(s) ? '책상 위엔 낡은 일지가 펼쳐져 있고, 벽엔 빛바랜 등대 사진 액자가 걸려 있습니다.'
+                 : '어두워 잘 보이지 않지만, 책상과 벽에 걸린 액자 같은 것이 손에 닿습니다.',
+      ],
+      choices: roomChoices,
+    },
+    log: {
+      place: '등대지기 방',
+      enter: s => { if (light(s)) s.readLog = true; },
+      text: s => light(s) ? [
+        '일지의 마지막 장에 삐뚤빼뚤한 글씨가 적혀 있습니다.',
+        O('정전이 되면 바깥 발전기를 돌릴 것. 열쇠는 늘 그렇듯 액자 뒤에 있다.'),
+        O('연료가 떨어졌으면 창고의 등유를 쓰게.'),
+        O('발전기가 말을 안 들으면 등실의 옛 등유 램프를 켜면 된다. 성냥만 잊지 말게.'),
+      ] : [
+        '종이 감촉은 느껴지지만, 너무 어두워 한 글자도 읽을 수 없습니다.',
+        '빛이 있어야 읽을 수 있겠습니다.',
+      ],
+      choices: roomChoices,
+    },
+    frame: {
+      place: '등대지기 방',
+      enter: s => { s.key = true; },
+      text: () => [
+        '액자를 들추자 뒤에서 무언가 툭 떨어집니다.',
+        '작은 쇠 열쇠입니다. 낡은 꼬리표에 발전기라고 적혀 있습니다.',
+      ],
+      choices: roomChoices,
+    },
+    lamp: {
+      place: '등실 · 꼭대기',
+      text: s => [
+        s.seen.lamp === 1 ? '마침내 등대 꼭대기, 거대한 렌즈가 놓인 등실입니다.' : '등실입니다.',
+        '유리창 너머로 검은 바다가 보입니다. 배의 불빛이 점점 가까워집니다.',
+        ...(s.power ? [
+          '벽의 주 전원 레버에 초록 불이 들어와 있습니다. 이제 전기가 흐릅니다!',
+        ] : [
+          s.seen.lamp === 1 && '벽의 주 전원 레버는 전기가 끊겨 꿈쩍도 하지 않습니다.',
+          '렌즈 곁에 오래된 등유 램프가 놓여 있습니다.',
+          !s.oil ? '램프의 기름통은 바싹 말라 있습니다. 연료가 필요합니다.'
+            : !s.matches ? '등유를 채울 수는 있지만, 불을 붙일 것이 없습니다.'
+            : '등유도 있고, 성냥도 있습니다!',
+        ]),
+      ],
+      choices: s => [
+        s.power && { label: '주 전원 레버를 힘껏 올린다', to: 'lit', cost: 0 },
+        !s.power && s.oil && s.matches && { label: '램프에 등유를 채우고 성냥을 긋는다', to: 'lit', cost: 0 },
+        { label: '계단으로 내려간다', to: 'stairs' },
+      ],
+    },
+
+    /* ---------- 엔딩 ---------- */
+    lit: {
+      place: '등실 · 꼭대기',
+      ending: s => (s.radio && s.cat ? 'best' : 'good'),
+      text: s => [
+        ...(s.power ? [
+          '철컥! 레버를 올리자 거대한 렌즈가 웅웅 울리며 돌기 시작합니다.',
+        ] : [
+          '램프에 등유를 채우고 성냥을 긋습니다.',
+          '화르륵, 불꽃이 피어오르고 렌즈가 그 빛을 몇십 배로 키웁니다.',
+        ]),
+        '한 줄기 하얀 빛이 폭풍우를 가르며 바다로 뻗어 나갑니다.',
+        '배의 불빛이 천천히, 아주 천천히 방향을 틉니다. 그리고 암초를 아슬아슬하게 비껴갑니다.',
+        s.radio ? R('등대! 보인다, 불빛이 보인다! 고맙다, 정말 고맙다!')
+                : '멀리서 길게 울리는 뱃고동 소리가, 꼭 고맙다고 말하는 것 같습니다.',
+        s.cat && '품 안의 고양이가 그르릉 소리를 냅니다.',
+        s.cat && C('야옹.'),
+        s.radio && s.cat ? '폭풍은 아침이 되어서야 잦아들었습니다. 당신의 첫 근무는 누구보다 완벽했습니다.'
+                         : '폭풍은 아침이 되어서야 잦아들었습니다. 길고 긴 첫 근무가 끝났습니다.',
+      ],
+    },
+    reef: {
+      place: '등대',
+      ending: () => 'reef',
+      text: () => [
+        '그때, 바다 쪽에서 끔찍한 굉음이 울려 퍼집니다.',
+        '콰지직… 배가 암초에 부딪히는 소리입니다.',
+        '다행히 선원들은 구명보트를 타고 모두 섬으로 피했습니다.',
+        '하지만 바다제비호는 끝내 파도 아래로 가라앉았습니다.',
+        '조금만 더 서둘렀더라면…',
+      ],
+    },
+    dock: {
+      place: '부두',
+      ending: () => 'wave',
+      text: () => [
+        '미끄러운 돌계단을 조심조심 내려가 부두에 섭니다.',
+        '두 팔을 흔들며 목이 터져라 외칩니다.',
+        M('여기예요! 이쪽은 암초예요!'),
+        '하지만 폭풍 속에서 당신의 목소리는 금세 묻혀 버립니다.',
+        '그때, 산더미 같은 파도가 부두를 덮칩니다.',
+        '…눈을 떠 보니 아침입니다. 바위틈에 걸려 겨우 살아남았지만, 그날 밤 등대의 불은 끝내 켜지지 않았습니다.',
+      ],
+    },
+    fall: {
+      place: '나선 계단',
+      ending: () => 'fall',
+      text: () => [
+        '시간이 없다는 생각에 계단을 두 칸씩 뛰어오릅니다.',
+        '세 바퀴째 도는 순간, 젖은 계단에서 발이 쭉 미끄러집니다.',
+        '쿵, 쿵, 쿵…',
+        '정신을 차렸을 땐 구조대의 손전등이 얼굴을 비추고 있었습니다.',
+        '다행히 배는 근처를 지나던 해경선이 안전한 곳으로 이끌어 주었다고 합니다.',
+        '하지만 당신의 첫 근무는, 깁스와 함께 끝났습니다.',
+      ],
+    },
+  };
+
+  /* ================= 음성 합성 ================= */
+  const tts = {
+    ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+    voices: [],
+    load() {
+      if (!this.ok) return;
+      this.voices = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
+      renderVoiceOptions();
+    },
+    narrator() {
+      return this.voices.find(v => v.voiceURI === settings.voiceURI)
+        || this.voices.find(v => v.localService) || this.voices[0] || null;
+    },
+    voiceFor(kind) {
+      const main = this.narrator();
+      if (STYLE[kind] && STYLE[kind].alt) return this.voices.find(v => v !== main) || main;
+      return main;
+    },
+  };
+  const voiceOn = () => tts.ok && settings.voice;
+
+  let narrToken = 0;
+  const timers = new Set();
+  const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); return id; };
+
+  function stopSpeech() {
+    narrToken++;
+    timers.forEach(clearTimeout); timers.clear();
+    if (tts.ok) speechSynthesis.cancel();
+  }
+
+  function speakOne(line, done) {
+    const st = STYLE[line.v] || STYLE.n;
+    const u = new SpeechSynthesisUtterance(line.t);
+    u.lang = 'ko-KR';
+    const v = tts.voiceFor(line.v);
+    if (v) u.voice = v;
+    u.rate = Math.min(2, Math.max(.5, settings.rate * st.rate));
+    u.pitch = st.pitch;
+    let finished = false;
+    const fin = () => { if (!finished) { finished = true; done(); } };
+    u.onend = fin;
+    u.onerror = fin;
+    // 일부 브라우저는 onend를 빠뜨리므로 예상 시간이 지나면 다음으로 넘어감
+    const est = 1800 + line.t.length * 240 / u.rate;
+    let waited = 0;
+    const watch = ms => later(() => {
+      if (finished) return;
+      if (speechSynthesis.speaking && waited < est) { waited += 1000; watch(1000); } else fin();
+    }, ms);
+    speechSynthesis.resume();
+    speechSynthesis.speak(u);
+    watch(est);
+  }
+
+  // lines를 한 줄씩 읽고, 줄이 바뀔 때 onLine(i), 다 읽으면 onDone()
+  function narrate(lines, onLine, onDone) {
+    stopSpeech();
+    const token = narrToken;
+    let i = 0;
+    const step = () => {
+      if (token !== narrToken) return;
+      if (i >= lines.length) { onDone && onDone(); return; }
+      onLine && onLine(i);
+      speakOne(lines[i], () => {
+        if (token !== narrToken) return;
+        i++;
+        later(step, 260);
+      });
+    };
+    step();
+  }
+
+  /* ================= 효과음 (Web Audio) ================= */
+  const sfx = {
+    ctx: null, master: null,
+    init() {
+      if (this.ctx) { this.ctx.resume(); return; }
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = this.ctx = new AC();
+      this.master = ctx.createGain();
+      this.master.gain.value = settings.sfx ? 1 : 0;
+      this.master.connect(ctx.destination);
+
+      const len = ctx.sampleRate * 2;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this.noise = buf;
+
+      // 빗소리
+      const rain = ctx.createBufferSource(); rain.buffer = buf; rain.loop = true;
+      const rf = ctx.createBiquadFilter(); rf.type = 'lowpass'; rf.frequency.value = 1400;
+      const rg = ctx.createGain(); rg.gain.value = .03;
+      rain.connect(rf).connect(rg).connect(this.master); rain.start();
+
+      // 바람 (천천히 커졌다 작아짐)
+      const wind = ctx.createBufferSource(); wind.buffer = buf; wind.loop = true; wind.playbackRate.value = .7;
+      const wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 380; wf.Q.value = .8;
+      const wg = ctx.createGain(); wg.gain.value = .03;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = .09;
+      const lg = ctx.createGain(); lg.gain.value = .025;
+      lfo.connect(lg).connect(wg.gain); lfo.start();
+      wind.connect(wf).connect(wg).connect(this.master); wind.start();
+    },
+    setOn(on) {
+      if (!this.ctx) return;
+      this.master.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, .2);
+    },
+    thunder() {
+      if (!this.ctx) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const src = ctx.createBufferSource(); src.buffer = this.noise;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.9, t + .05);
+      g.gain.exponentialRampToValueAtTime(.001, t + 3);
+      src.connect(f).connect(g).connect(this.master); src.start(t); src.stop(t + 3.1);
+    },
+    horn() {
+      if (!this.ctx) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.12, t + .4);
+      g.gain.setValueAtTime(.12, t + 1.8); g.gain.linearRampToValueAtTime(0, t + 2.6);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420;
+      f.connect(g).connect(this.master);
+      [92, 138].forEach(hz => {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz;
+        o.connect(f); o.start(t); o.stop(t + 2.7);
+      });
+    },
+    chime() {
+      if (!this.ctx) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      [523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = hz;
+        const g = ctx.createGain(), s = t + i * .12;
+        g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(.08, s + .03);
+        g.gain.exponentialRampToValueAtTime(.001, s + 2.2);
+        o.connect(g).connect(this.master); o.start(s); o.stop(s + 2.3);
+      });
+    },
+  };
+
+  /* ================= 게임 진행 ================= */
+  const $ = id => document.getElementById(id);
+  const el = {
+    title: $('title'), game: $('game'), story: $('story'), choices: $('choices'),
+    place: $('place').querySelector('span'), inv: $('inv'), track: $('track'),
+    ship: $('track').querySelector('.ship'), shipLabel: $('shipLabel'),
+    replay: $('replayBtn'), skip: $('skipBtn'),
+  };
+
+  let state = null;
+  let current = null; // { id, lines, choices, ending }
+
+  const newState = () => ({
+    time: TIME_MAX, matches: false, oil: false, key: false, cat: false,
+    radio: false, power: false, listened: false, readLog: false,
+    seen: {}, prev: null, warned: 0,
+  });
+
+  const toLine = l => (typeof l === 'string' ? { v: 'n', t: l } : l);
+
+  function go(id) {
+    const sc = SCENES[id];
+    state.seen[id] = (state.seen[id] || 0) + 1;
+    if (sc.enter) sc.enter(state);
+    const lines = sc.text(state).filter(Boolean).map(toLine);
+
+    if (!sc.ending) {
+      const level = state.time <= 2 ? 2 : state.time <= 6 ? 1 : 0;
+      if (level > state.warned) {
+        state.warned = level;
+        lines.push({ v: 'warn', t: level === 2
+          ? '뿌우— 뱃고동이 바로 코앞에서 울립니다. 시간이 거의 없습니다!'
+          : '멀리서 뱃고동이 울립니다. 배가 점점 가까워지고 있습니다.' });
+        sfx.horn();
+      }
+    }
+
+    current = {
+      id, lines,
+      choices: sc.choices ? sc.choices(state).filter(Boolean) : [],
+      ending: sc.ending ? sc.ending(state) : null,
+    };
+    state.prev = id;
+
+    el.place.textContent = sc.place;
+    renderStatus();
+    if (current.ending && ENDINGS[current.ending].good) {
+      sfx.chime();
+      const f = document.createElement('div'); f.className = 'flash';
+      document.body.appendChild(f); setTimeout(() => f.remove(), 2500);
+    }
+    play();
+  }
+
+  function choose(c) {
+    stopSpeech();
+    const cost = typeof c.cost === 'function' ? c.cost(state) : (c.cost ?? 1);
+    state.time -= cost;
+    let to = c.to;
+    if (state.time < 0 && !SCENES[to].ending) to = 'reef';
+    go(to);
+  }
+
+  /* ---------- 화면 ---------- */
+  function lineEl(line) {
+    const p = document.createElement('p');
+    p.className = 'line v-' + line.v;
+    const who = STYLE[line.v] && STYLE[line.v].who;
+    if (who) {
+      p.classList.add('talk');
+      const w = document.createElement('span'); w.className = 'who'; w.textContent = who;
+      p.appendChild(w);
+    }
+    if (line.v === 'warn') p.classList.add('warn');
+    p.appendChild(document.createTextNode(line.t));
+    return p;
+  }
+
+  function play() {
+    el.story.textContent = '';
+    el.choices.textContent = '';
+    const nodes = current.lines.map(lineEl);
+
+    if (!voiceOn()) {
+      nodes.forEach(n => el.story.appendChild(n));
+      el.story.scrollTop = 0;
+      el.skip.disabled = true;
+      showChoices(false);
+      return;
+    }
+
+    el.skip.disabled = false;
+    narrate(current.lines, i => {
+      nodes.forEach((n, j) => { n.classList.toggle('cur', j === i); n.classList.toggle('past', j < i); });
+      el.story.appendChild(nodes[i]);
+      nodes[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, () => {
+      nodes.forEach(n => { n.classList.remove('cur'); n.classList.remove('past'); });
+      el.skip.disabled = true;
+      showChoices(true);
+    });
+  }
+
+  function skip() {
+    if (el.skip.disabled) return;
+    stopSpeech();
+    el.story.textContent = '';
+    current.lines.map(lineEl).forEach(n => el.story.appendChild(n));
+    el.story.scrollTop = el.story.scrollHeight;
+    el.skip.disabled = true;
+    showChoices(false);
+  }
+
+  function showChoices(spoken) {
+    el.choices.textContent = '';
+    if (current.ending) return showEnding(spoken);
+
+    const btns = current.choices.map((c, i) => {
+      const b = document.createElement('button');
+      b.className = 'choice';
+      b.style.animationDelay = (i * 60) + 'ms';
+      const n = document.createElement('span'); n.className = 'num'; n.textContent = i + 1;
+      b.append(n, document.createTextNode(c.label));
+      b.addEventListener('click', () => choose(c));
+      el.choices.appendChild(b);
+      return b;
+    });
+
+    if (spoken && settings.readChoices && voiceOn()) {
+      const lines = [{ v: 'sys', t: '선택지.' }, ...current.choices.map((c, i) => ({ v: 'sys', t: `${i + 1}번. ${c.label}.` }))];
+      narrate(lines, i => btns.forEach((b, j) => b.classList.toggle('reading', j === i - 1)),
+        () => btns.forEach(b => b.classList.remove('reading')));
+    }
+  }
+
+  function showEnding(spoken) {
+    const id = current.ending, e = ENDINGS[id];
+    const found = new Set(store.get('endings', []));
+    found.add(id);
+    store.set('endings', [...found]);
+
+    const card = document.createElement('div');
+    card.className = 'ending-card' + (e.good ? '' : ' dark');
+    const tag = document.createElement('div'); tag.className = 'tag'; tag.textContent = 'ENDING';
+    const h = document.createElement('h2'); h.textContent = e.title;
+    const p = document.createElement('p'); p.textContent = e.desc;
+    const cnt = document.createElement('p'); cnt.textContent = `엔딩 ${found.size} / ${ENDING_ORDER.length} 발견`;
+    card.append(tag, h, p, cnt);
+    if (e.hint && found.size < ENDING_ORDER.length) {
+      const hint = document.createElement('p'); hint.textContent = '힌트 · ' + e.hint; card.appendChild(hint);
+    }
+    const row = document.createElement('div'); row.className = 'row';
+    const again = document.createElement('button'); again.className = 'btn primary'; again.textContent = '다시 하기';
+    again.addEventListener('click', startGame);
+    const home = document.createElement('button'); home.className = 'btn'; home.textContent = '타이틀로';
+    home.addEventListener('click', toTitle);
+    row.append(again, home); card.appendChild(row);
+    el.choices.appendChild(card);
+    again.focus({ preventScroll: true });
+
+    if (spoken && voiceOn()) narrate([{ v: 'sys', t: `엔딩. ${e.title}.` }]);
+  }
+
+  function renderStatus() {
+    const t = Math.max(0, state.time);
+    const prog = (TIME_MAX - t) / TIME_MAX;
+    el.ship.style.left = (8 + prog * 76) + '%';
+    const label = t >= 11 ? '아직 멀리' : t >= 7 ? '다가오는 중' : t >= 3 ? '가까워짐' : '코앞!';
+    el.shipLabel.textContent = label;
+    el.shipLabel.classList.toggle('hot', t < 3);
+    el.track.setAttribute('aria-label', '배의 위치: ' + label);
+
+    const items = [
+      state.radio && '📻 무전 응답',
+      state.matches && '🔥 성냥',
+      state.oil && '🛢️ 등유',
+      state.key && '🔑 발전기 열쇠',
+      state.power && '⚡ 전기 복구',
+      state.cat && '🐈 고양이',
+    ].filter(Boolean);
+    el.inv.textContent = '';
+    if (!items.length) {
+      const c = document.createElement('span'); c.className = 'chip empty'; c.textContent = '빈손';
+      el.inv.appendChild(c);
+    }
+    items.forEach(txt => {
+      const c = document.createElement('span'); c.className = 'chip'; c.textContent = txt;
+      el.inv.appendChild(c);
+    });
+  }
+
+  function renderEndingList() {
+    const found = new Set(store.get('endings', []));
+    const box = $('endingList');
+    box.textContent = '';
+    const h = document.createElement('h2');
+    h.append('엔딩 수집', Object.assign(document.createElement('span'), { textContent: `${found.size} / ${ENDING_ORDER.length}` }));
+    const ol = document.createElement('ol');
+    ENDING_ORDER.forEach(id => {
+      const li = document.createElement('li');
+      if (found.has(id)) li.textContent = ENDINGS[id].title;
+      else { li.textContent = '???'; li.className = 'locked'; }
+      ol.appendChild(li);
+    });
+    box.append(h, ol);
+  }
+
+  function startGame() {
+    sfx.init();
+    state = newState();
+    el.title.hidden = true;
+    el.game.hidden = false;
+    sfx.thunder();
+    go('start');
+  }
+
+  function toTitle() {
+    stopSpeech();
+    el.game.hidden = true;
+    el.title.hidden = false;
+    renderEndingList();
+  }
+
+  /* ================= 설정 ================= */
+  const opt = {
+    sheet: $('settings'), voice: $('optVoice'), sel: $('optVoiceSel'), rate: $('optRate'),
+    rateVal: $('rateVal'), choices: $('optChoices'), sfx: $('optSfx'), hint: $('voiceHint'),
+  };
+
+  function renderVoiceOptions() {
+    opt.sel.textContent = '';
+    if (!tts.voices.length) {
+      opt.sel.appendChild(new Option('기기 기본 음성', ''));
+      opt.sel.disabled = true;
+    } else {
+      opt.sel.disabled = false;
+      tts.voices.forEach(v => opt.sel.appendChild(new Option(v.name, v.voiceURI)));
+      const cur = tts.narrator();
+      if (cur) opt.sel.value = cur.voiceURI;
+    }
+    updateVoiceNotice();
+  }
+
+  function updateVoiceNotice() {
+    const n = $('voiceNotice');
+    if (!tts.ok) {
+      n.textContent = '이 브라우저는 음성 읽기를 지원하지 않아요. 글자로 진행됩니다.';
+      n.classList.add('warn');
+      opt.hint.textContent = '음성 합성을 지원하지 않는 브라우저입니다.';
+    } else if (!tts.voices.length) {
+      opt.hint.textContent = '한국어 음성을 찾지 못했어요. 기기 설정에서 한국어 음성(TTS)을 설치하면 더 자연스러워요.';
+    } else {
+      opt.hint.textContent = tts.voices.length > 1
+        ? '무전 속 선장과 일지는 다른 한국어 음성으로 읽어 줘요.'
+        : '인물마다 높낮이를 바꿔 읽어 줘요.';
+    }
+  }
+
+  function syncSettingsUI() {
+    opt.voice.checked = settings.voice && tts.ok;
+    opt.voice.disabled = !tts.ok;
+    opt.rate.value = settings.rate;
+    opt.rateVal.textContent = '×' + Number(settings.rate).toFixed(1);
+    opt.choices.checked = settings.readChoices;
+    opt.sfx.checked = settings.sfx;
+  }
+
+  let lastFocus = null;
+  function openSettings() {
+    lastFocus = document.activeElement;
+    syncSettingsUI();
+    opt.sheet.hidden = false;
+    $('closeSettings').focus();
+  }
+  function closeSettings() {
+    opt.sheet.hidden = true;
+    if (lastFocus) lastFocus.focus({ preventScroll: true });
+  }
+
+  opt.voice.addEventListener('change', () => {
+    settings.voice = opt.voice.checked; saveSettings();
+    if (!settings.voice && !el.game.hidden) skip();
+  });
+  opt.sel.addEventListener('change', () => { settings.voiceURI = opt.sel.value; saveSettings(); });
+  opt.rate.addEventListener('input', () => {
+    settings.rate = Number(opt.rate.value);
+    opt.rateVal.textContent = '×' + settings.rate.toFixed(1);
+    saveSettings();
+  });
+  opt.choices.addEventListener('change', () => { settings.readChoices = opt.choices.checked; saveSettings(); });
+  opt.sfx.addEventListener('change', () => { settings.sfx = opt.sfx.checked; saveSettings(); sfx.setOn(settings.sfx); });
+  $('previewBtn').addEventListener('click', () => {
+    if (!tts.ok) return;
+    const wasPlaying = !el.game.hidden && !el.skip.disabled;
+    if (wasPlaying) skip();
+    narrate([
+      { v: 'n', t: '안녕하세요. 오늘 밤 이야기를 들려드릴 목소리입니다.' },
+      R('여기는 바다제비호. 들리나?'),
+    ]);
+  });
+  $('closeSettings').addEventListener('click', closeSettings);
+  opt.sheet.addEventListener('click', e => { if (e.target === opt.sheet) closeSettings(); });
+
+  /* ================= 이벤트 ================= */
+  $('startBtn').addEventListener('click', startGame);
+  $('titleSettingsBtn').addEventListener('click', openSettings);
+  $('settingsBtn').addEventListener('click', openSettings);
+  $('homeBtn').addEventListener('click', toTitle);
+  el.replay.addEventListener('click', () => { if (current) play(); });
+  el.skip.addEventListener('click', skip);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !opt.sheet.hidden) { closeSettings(); return; }
+    if (el.game.hidden || !opt.sheet.hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^[1-9]$/.test(e.key)) {
+      const b = el.choices.querySelectorAll('.choice')[Number(e.key) - 1];
+      if (b) b.click();
+      else if (!el.skip.disabled) skip();
+    } else if (e.key === 's' || e.key === 'S') skip();
+    else if (e.key === 'r' || e.key === 'R') el.replay.click();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (!el.game.hidden) skip();
+      stopSpeech();
+      if (sfx.ctx) sfx.ctx.suspend();
+    } else if (sfx.ctx) sfx.ctx.resume();
+  });
+
+  if (tts.ok) {
+    tts.load();
+    if ('onvoiceschanged' in speechSynthesis) speechSynthesis.addEventListener('voiceschanged', () => tts.load());
+  } else {
+    settings.voice = false;
+    renderVoiceOptions();
+  }
+  syncSettingsUI();
+  renderEndingList();
+})();
+</script>
+</body>
+</html>
