@@ -273,6 +273,8 @@
   .info dt { color: var(--muted); }
   .info dd { margin: 0; }
 
+  .toast { position: fixed; left: 50%; top: max(14px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 80; background: var(--card-2); border: 1px solid var(--accent); color: var(--fg); border-radius: 999px; padding: 7px 16px; font-size: 13.5px; box-shadow: 0 6px 20px var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s; white-space: nowrap; }
+  .toast.show { opacity: 1; }
   .card-flip .sheet { animation: flipIn .45s; }
   @keyframes flipIn { from { transform: perspective(600px) rotateY(90deg); } }
 
@@ -327,6 +329,7 @@
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 (() => {
@@ -632,19 +635,267 @@
     return better;
   }
 
-  // ---------- Sound ----------
-  let soundOn = true, actx = null;
-  try { soundOn = localStorage.getItem('dice-expedition-sound') !== 'off'; } catch (e) { /* ignore */ }
-  function beep(freq, dur = 0.08, type = 'square', vol = 0.05) {
-    if (!soundOn) return;
+  // ---------- Sound: synthesized music + effects (Web Audio, no audio files) ----------
+  const Sound = (() => {
+    let ctx = null, comp, musicBus, jingleBus, sfxBus, noiseBuf;
+    let musicOn = true, sfxOn = true;
+    let want = null, playing = null, cur = null, trackGain = null, timer = null, step = 0, nextT = 0, duckUntil = 0;
+    const MUSIC_VOL = 0.5;
     try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      const o = actx.createOscillator(), g = actx.createGain();
-      o.type = type; o.frequency.value = freq; g.gain.value = vol;
-      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
-      o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + dur);
-    } catch (e) { /* audio unavailable */ }
-  }
+      const m = localStorage.getItem('dice-expedition-audio') || (localStorage.getItem('dice-expedition-sound') === 'off' ? 'none' : 'all');
+      musicOn = m === 'all'; sfxOn = m !== 'none';
+    } catch (e) { /* ignore */ }
+
+    function freqOf(n) {
+      const m = /^([A-G])([#b]?)(\d)$/.exec(n);
+      const semi = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+      return 440 * Math.pow(2, (semi + (+m[3] + 1) * 12 - 69) / 12);
+    }
+    // One token per step: a note ("A4"), a chord ("A3+C4+E4"), "-" to hold, "." for rest.
+    function parse(str) {
+      const toks = str.trim().split(/\s+/);
+      return toks.map((t, i) => {
+        if (t === '-' || t === '.') return null;
+        let len = 1;
+        while (toks[i + len] === '-') len++;
+        return { f: t.split('+').map(freqOf), len };
+      });
+    }
+    // Drum tokens: any mix of k (kick), s (snare), h (hat), or "." for rest.
+    const parseDrums = (str) => str.trim().split(/\s+/).map((t) => (t === '.' ? null : t));
+
+    function tone(type, f, t, dur, vol, dest, o = {}) {
+      const osc = ctx.createOscillator();
+      osc.type = type; osc.frequency.setValueAtTime(f, t);
+      if (o.detune) osc.detune.value = o.detune;
+      const g = ctx.createGain();
+      const a = o.a ?? 0.01, r = o.r ?? 0.08;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + a);
+      g.gain.setTargetAtTime(vol * (o.s ?? 0.7), t + a, o.d ?? 0.1);
+      g.gain.setTargetAtTime(0.0001, t + Math.max(a, dur), r / 3);
+      let node = osc;
+      if (o.lp) { const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = o.lp; osc.connect(fl); node = fl; }
+      node.connect(g).connect(dest);
+      osc.start(t); osc.stop(t + Math.max(a, dur) + r + 0.1);
+    }
+    const INST = {
+      lead: (f, t, d, v, dst) => tone('square', f, t, d * 0.92, v * 0.5, dst, { lp: 2300, s: 0.6 }),
+      bell: (f, t, d, v, dst) => { tone('sine', f, t, d, v, dst, { a: 0.005, s: 0.3, d: 0.25, r: 0.5 }); tone('sine', f * 2, t, d * 0.5, v * 0.25, dst, { a: 0.005, s: 0.1, d: 0.1, r: 0.2 }); },
+      pluck: (f, t, d, v, dst) => tone('triangle', f, t, Math.min(d, 0.25), v, dst, { a: 0.005, s: 0.25, d: 0.08, r: 0.12 }),
+      bass: (f, t, d, v, dst) => tone('triangle', f, t, d * 0.9, v, dst, { a: 0.01, s: 0.8 }),
+      growl: (f, t, d, v, dst) => tone('sawtooth', f, t, d * 0.85, v * 0.6, dst, { lp: 650, s: 0.7 }),
+      pad: (f, t, d, v, dst) => { tone('triangle', f, t, d, v, dst, { a: 0.25, s: 0.9, r: 0.5 }); tone('sine', f, t, d, v * 0.5, dst, { a: 0.3, s: 0.9, r: 0.5, detune: 6 }); },
+      accordion: (f, t, d, v, dst) => { tone('sawtooth', f, t, d * 0.9, v * 0.35, dst, { lp: 1800, a: 0.03, s: 0.85 }); tone('square', f, t, d * 0.9, v * 0.2, dst, { lp: 1500, a: 0.03, s: 0.85, detune: 8 }); },
+      brass: (f, t, d, v, dst) => tone('sawtooth', f, t, d * 0.95, v * 0.45, dst, { lp: 2000, a: 0.04, s: 0.8 }),
+    };
+    function noise(t, dur, vol, dest, type, freq) {
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+      const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(fl).connect(g).connect(dest);
+      src.start(t); src.stop(t + dur + 0.02);
+    }
+    function drum(kinds, t, v, dest) {
+      if (kinds.includes('k')) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+        g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.connect(g).connect(dest); o.start(t); o.stop(t + 0.25);
+      }
+      if (kinds.includes('s')) { noise(t, 0.14, v * 0.6, dest, 'bandpass', 1800); tone('triangle', 190, t, 0.04, v * 0.3, dest, { a: 0.002, s: 0.2, r: 0.05 }); }
+      if (kinds.includes('h')) noise(t, 0.04, v * 0.35, dest, 'highpass', 7000);
+    }
+
+    // ----- Compositions -----
+    const CH = {
+      Am: { r: 'A2', o: 'A3', arp: 'A3 C4 E4 C4 A3 C4 E4 C4', pad: 'A3+C4+E4' },
+      F: { r: 'F2', o: 'F3', arp: 'F3 A3 C4 A3 F3 A3 C4 A3', pad: 'F3+A3+C4' },
+      C: { r: 'C3', o: 'C4', arp: 'C4 E4 G4 E4 C4 E4 G4 E4', pad: 'G3+C4+E4' },
+      G: { r: 'G2', o: 'G3', arp: 'G3 B3 D4 B3 G3 B3 D4 B3', pad: 'G3+B3+D4' },
+      E: { r: 'E2', o: 'E3', arp: 'E3 G#3 B3 G#3 E3 G#3 B3 G#3', pad: 'E3+G#3+B3' },
+      Em: { r: 'E2', o: 'E3', pad: 'E3+G3+B3' }, Cb: { r: 'C2', o: 'C3', pad: 'C3+E3+G3' },
+      D: { r: 'D2', o: 'D3', pad: 'D3+F#3+A3' }, B: { r: 'B1', o: 'B2', pad: 'B2+D#3+F#3' },
+      Dm: { r: 'D2', o: 'D3', pad: 'D3+F3+A3' }, Bb: { r: 'Bb1', o: 'Bb2', pad: 'Bb2+D3+F3' },
+      A: { r: 'A1', o: 'A2', pad: 'A2+C#3+E3' }, Gm: { r: 'G1', o: 'G2', pad: 'G2+Bb2+D3' },
+    };
+    const hold = (tok, n) => [tok, ...Array(n - 1).fill('-')].join(' ');
+    const per = (prog, fn) => prog.map((k) => fn(CH[k])).join(' ');
+
+    const fieldProg = ['Am', 'F', 'C', 'G', 'Am', 'F', 'G', 'E', 'Am', 'F', 'C', 'G', 'F', 'G', 'E', 'Am'];
+    const titleProg = ['Am', 'F', 'C', 'G', 'Am', 'F', 'G', 'E'];
+    const battleProg = ['Em', 'Em', 'Cb', 'D', 'Em', 'Em', 'Cb', 'B'];
+    const bossProg = ['Dm', 'Dm', 'Bb', 'A', 'Dm', 'Gm', 'A', 'A'];
+    const TAV = { D: ['D3', 'A2', 'D4+F#4+A4'], G: ['G2', 'D3', 'D4+G4+B4'], A: ['A2', 'E3', 'C#4+E4+A4'] };
+    const tavProg = ['D', 'G', 'D', 'A', 'D', 'G', 'A', 'D'];
+
+    const TRACKS = {
+      title: { bpm: 72, spb: 2, voices: [
+        { inst: 'pad', vol: 0.09, seq: per(titleProg, (c) => hold(c.pad, 8)) },
+        { inst: 'pluck', vol: 0.12, seq: per(titleProg, (c) => c.arp) },
+        { inst: 'bell', vol: 0.12, seq: 'E5 - - - C5 - - - A4 - - - C5 - - - G5 - - - E5 - - - D5 - - - B4 - - - A5 - - - G5 - E5 - F5 - - - C5 - - - D5 - - - G4 - B4 - E5 - - - - - - -' },
+      ] },
+      field: { bpm: 96, spb: 2, voices: [
+        { inst: 'bass', vol: 0.22, seq: per(fieldProg, (c) => `${c.r} - - ${c.o} ${c.r} - ${c.o} -`) },
+        { inst: 'pluck', vol: 0.08, seq: per(fieldProg, (c) => c.arp) },
+        { inst: 'lead', vol: 0.16, seq: [
+          'E5 - - D5 C5 - B4 C5', 'A4 - - - . . C5 D5', 'E5 - - G5 F5 - E5 D5', 'D5 - - - B4 - . .',
+          'C5 - E5 - A5 - G5 F5', 'E5 - C5 - A4 - C5 D5', 'D5 - - B4 G4 - B4 D5', 'E5 - - - G#4 - B4 -',
+          'A4 - C5 E5 A5 - - G5', 'F5 - E5 - C5 - A4 -', 'G4 - C5 - E5 - G5 -', 'F5 - E5 - D5 - - -',
+          'C5 - - A4 C5 - F5 -', 'E5 - - D5 B4 - G4 -', 'G#4 - B4 - E5 - D5 -', 'C5 - - - A4 - - -'].join(' ') },
+        { drums: true, vol: 0.22, seq: 'k . h . s . h .' },
+      ] },
+      battle: { bpm: 150, spb: 2, voices: [
+        { inst: 'growl', vol: 0.3, seq: per(battleProg, (c) => `${c.r} ${c.r} ${c.o} ${c.r} ${c.r} ${c.r} ${c.o} ${c.r}`) },
+        { inst: 'pad', vol: 0.06, seq: per(battleProg, (c) => hold(c.pad, 8)) },
+        { inst: 'lead', vol: 0.17, seq: [
+          'E5 . E5 G5 . E5 B4 -', 'E5 . E5 G5 A5 G5 F#5 E5', 'G5 - E5 - C5 - E5 G5', 'F#5 - D5 - A4 - D5 F#5',
+          'B5 - - A5 G5 - F#5 G5', 'E5 - - - B4 - E5 -', 'C6 - B5 - A5 - G5 -', 'F#5 - D#5 - B4 - F#5 -'].join(' ') },
+        { drums: true, vol: 0.42, seq: 'k h s h k k s h' },
+      ] },
+      boss: { bpm: 168, spb: 2, voices: [
+        { inst: 'growl', vol: 0.34, seq: per(bossProg, (c) => `${c.r} ${c.r} ${c.o} ${c.r} ${c.r} ${c.o} ${c.r} ${c.o}`) },
+        { inst: 'pad', vol: 0.09, seq: per(bossProg, (c) => hold(c.pad, 8)) },
+        { inst: 'brass', vol: 0.2, seq: [
+          'D5 - A4 - D5 - E5 F5', 'E5 - D5 - C#5 - D5 -', 'F5 - D5 - Bb4 - D5 F5', 'E5 - C#5 - A4 - - -',
+          'A5 - - G5 F5 - E5 D5', 'G5 - - F5 D5 - Bb4 -', 'A5 - G5 - F5 - E5 -', 'C#5 - E5 - A5 - - -'].join(' ') },
+        { drums: true, vol: 0.5, seq: 'k k s h k k s s' },
+      ] },
+      tavern: { bpm: 110, spb: 3, voices: [
+        { inst: 'bass', vol: 0.26, seq: tavProg.map((k) => `${TAV[k][0]} . . ${TAV[k][1]} . .`).join(' ') },
+        { inst: 'pluck', vol: 0.07, seq: tavProg.map((k) => `. ${TAV[k][2]} ${TAV[k][2]} . ${TAV[k][2]} ${TAV[k][2]}`).join(' ') },
+        { inst: 'accordion', vol: 0.2, seq: [
+          'F#5 E5 D5 A4 - D5', 'B4 - D5 G5 - F#5', 'E5 F#5 E5 D5 - A4', 'C#5 - E5 A4 - -',
+          'A5 - F#5 D5 - F#5', 'G5 - B5 G5 - E5', 'F#5 E5 D5 C#5 - E5', 'D5 - - D5 - .'].join(' ') },
+        { drums: true, vol: 0.26, seq: 'k . h s . h' },
+      ] },
+    };
+    const JINGLES = {
+      win: { bpm: 180, spb: 2, voices: [{ inst: 'bell', vol: 0.2, seq: 'C5 E5 G5 C6 - - - .' }, { inst: 'bass', vol: 0.2, seq: 'C3 - - - - - - .' }] },
+      levelup: { bpm: 200, spb: 2, voices: [{ inst: 'bell', vol: 0.22, seq: 'G4 C5 E5 G5 C6 - - - - -' }, { inst: 'pad', vol: 0.08, seq: 'C4+E4+G4 - - - - - - - - -' }] },
+      love: { bpm: 120, spb: 2, voices: [{ inst: 'bell', vol: 0.2, seq: 'E5 G5 C6 - B5 - C6 - - - - -' }, { inst: 'pad', vol: 0.08, seq: 'C4+E4+G4 - - - - - - - - - - -' }] },
+      wedding: { bpm: 100, spb: 2, voices: [
+        { inst: 'bell', vol: 0.2, seq: 'C5 - E5 - G5 - - - A5 - G5 - E5 - F5 - G5 - - - C6 - - - - - - -' },
+        { inst: 'pad', vol: 0.09, seq: 'C4+E4+G4 - - - - - - - F4+A4+C5 - - - - - - - C4+E4+G4 - - - - - - - - - - -' }] },
+      victory: { bpm: 132, spb: 2, voices: [
+        { inst: 'brass', vol: 0.24, seq: 'G4 G4 G4 C5 - - G4 - C5 - - - E5 - G5 - C6 - - - - - - -' },
+        { inst: 'bass', vol: 0.24, seq: 'C3 - - - - - - - F3 - - - G3 - - - C3 - - - - - - -' },
+        { drums: true, vol: 0.4, seq: 'k . . . s . . . k . . . s . k . k . . . . . . .' }] },
+      sad: { bpm: 70, spb: 2, voices: [{ inst: 'bell', vol: 0.18, seq: 'E4 - D4 - C4 - - - A3 - - - - - - -' }, { inst: 'pad', vol: 0.08, seq: 'A3+C4+E4 - - - - - - - F3+A3+C4 - - - - - - -' }] },
+      gameover: { bpm: 80, spb: 2, voices: [
+        { inst: 'lead', vol: 0.15, seq: 'A4 - G4 - F4 - E4 - - - C4 - - - A3 - - - - - - -' },
+        { inst: 'pad', vol: 0.09, seq: 'A3+C4+E4 - - - - - - - F3+A3+C4 - - - - - - - E3+G#3+B3 - - - - -' }] },
+    };
+    function compile(T) {
+      T.voices.forEach((v) => { v.steps = v.drums ? parseDrums(v.seq) : parse(v.seq); });
+      T.len = Math.max(...T.voices.map((v) => v.steps.length));
+      return T;
+    }
+    Object.values(TRACKS).forEach((T) => {
+      compile(T);
+      // Short patterns (drums) repeat; they must divide the loop evenly or the bars drift.
+      if (T.voices.some((v) => T.len % v.steps.length)) console.error('track voice length does not divide the loop');
+    });
+    Object.values(JINGLES).forEach(compile);
+
+    function playStep(T, v, i, t, dest) {
+      const s = v.steps[i % v.steps.length];
+      if (!s) return;
+      const sd = 60 / T.bpm / T.spb;
+      if (v.drums) drum(s, t, v.vol, dest);
+      else s.f.forEach((f) => INST[v.inst](f, t, s.len * sd, v.vol, dest));
+    }
+    function tick() {
+      if (!cur || !ctx) return;
+      const sd = 60 / cur.bpm / cur.spb;
+      while (nextT < ctx.currentTime + 0.15) {
+        for (const v of cur.voices) playStep(cur, v, step, nextT, trackGain);
+        nextT += sd; step = (step + 1) % cur.len;
+      }
+    }
+    function stopTrack() {
+      if (trackGain) { const g = trackGain; g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.12); setTimeout(() => g.disconnect(), 800); }
+      trackGain = null; cur = null; playing = null;
+    }
+    function startTrack(name) {
+      stopTrack();
+      cur = TRACKS[name]; playing = name; step = 0;
+      trackGain = ctx.createGain(); trackGain.gain.value = 0.0001;
+      trackGain.gain.setTargetAtTime(1, ctx.currentTime, 0.25);
+      trackGain.connect(musicBus);
+      nextT = ctx.currentTime + 0.08;
+      if (!timer) timer = setInterval(tick, 25);
+    }
+    const ready = () => ctx && ctx.state === 'running';
+
+    function init() {
+      if (ctx) { if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
+      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+      comp = ctx.createDynamicsCompressor(); comp.connect(ctx.destination);
+      const bus = (v) => { const g = ctx.createGain(); g.gain.value = v; g.connect(comp); return g; };
+      musicBus = bus(musicOn ? MUSIC_VOL : 0); jingleBus = bus(0.7); sfxBus = bus(1);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      ctx.onstatechange = () => { if (ready() && musicOn && want && playing !== want) startTrack(want); };
+    }
+    function unlock() {
+      init();
+      if (ready() && musicOn && want && playing !== want) startTrack(want);
+    }
+    ['click', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, { capture: true }));
+    document.addEventListener('visibilitychange', () => {
+      if (!ctx) return;
+      if (document.hidden) ctx.suspend(); else ctx.resume();
+    });
+
+    return {
+      play(name) {
+        want = name;
+        if (!ready() || !musicOn || playing === name) return;
+        startTrack(name);
+      },
+      jingle(name) {
+        if (!ready() || !musicOn) return;
+        const T = JINGLES[name], sd = 60 / T.bpm / T.spb, t0 = ctx.currentTime + 0.05, len = T.len * sd;
+        T.voices.forEach((v) => v.steps.forEach((s, i) => { if (s) playStep(T, v, i, t0 + i * sd, jingleBus); }));
+        // Duck the background track while the jingle plays.
+        duckUntil = Math.max(duckUntil, t0 + len);
+        musicBus.gain.cancelScheduledValues(ctx.currentTime);
+        musicBus.gain.setTargetAtTime(MUSIC_VOL * 0.15, ctx.currentTime, 0.05);
+        musicBus.gain.setTargetAtTime(MUSIC_VOL, duckUntil, 0.4);
+      },
+      blip(freq, dur, type, vol) {
+        if (!ready() || !sfxOn) return;
+        const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = freq;
+        g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g).connect(sfxBus); o.start(t); o.stop(t + dur + 0.02);
+      },
+      bell(freq, vol = 0.12) { if (ready() && sfxOn) INST.bell(freq, ctx.currentTime + 0.01, 0.4, vol, sfxBus); },
+      // Cycles 🔊 everything → 🔔 effects only → 🔇 silent.
+      cycle() {
+        if (musicOn) musicOn = false; else if (sfxOn) sfxOn = false; else { musicOn = true; sfxOn = true; }
+        this.apply();
+        return this.mode();
+      },
+      set(music, sfx) { musicOn = music; sfxOn = sfx; this.apply(); },
+      apply() {
+        try { localStorage.setItem('dice-expedition-audio', this.mode()); } catch (e) { /* ignore */ }
+        init();
+        if (!ctx) return;
+        musicBus.gain.cancelScheduledValues(ctx.currentTime);
+        musicBus.gain.setTargetAtTime(musicOn ? MUSIC_VOL : 0, ctx.currentTime, 0.1);
+        if (!musicOn) stopTrack(); else if (want && playing !== want && ready()) startTrack(want);
+      },
+      mode: () => (musicOn ? 'all' : sfxOn ? 'sfx' : 'none'),
+      get musicOn() { return musicOn; },
+      get sfxOn() { return sfxOn; },
+    };
+  })();
+
+  function beep(freq, dur = 0.08, type = 'square', vol = 0.05) { Sound.blip(freq, dur, type, vol); }
   const sfx = {
     tick: () => beep(600 + Math.random() * 300, 0.03, 'square', 0.025),
     step: () => beep(420, 0.05, 'triangle', 0.05),
@@ -654,6 +905,7 @@
     good: () => { [523, 659, 784].forEach((f, i) => setTimeout(() => beep(f, 0.1, 'triangle', 0.06), i * 80)); },
     bad: () => { [330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.16, 'triangle', 0.06), i * 120)); },
     love: () => { [659, 880, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.14, 'sine', 0.07), i * 110)); },
+    year: () => { Sound.bell(784, 0.1); setTimeout(() => Sound.bell(1047, 0.08), 160); },
   };
 
   // ---------- Rendering ----------
@@ -878,7 +1130,7 @@
       c.exp -= expNeed(c.lv); c.lv++;
       c.mhp += 12; c.atk += 2; c.def += 1; c.int += 1; c.mmp += 2; c.mp = c.mmp;
       heal(c, Math.round(eff(c).maxHp * 0.3));
-      renderAll(); sfx.good();
+      renderAll(); Sound.jingle('levelup');
       log(`🎉 ${c.name} 레벨 업! Lv ${c.lv}`);
       await notice(bigPt(c), `🎉 ${c.name} 레벨 업! Lv ${c.lv}`, '최대 HP +12 · 힘 +2 · 방어 +1 · 지력 +1 · 최대 MP +2<br>HP 일부와 MP를 모두 회복했다.');
     }
@@ -968,6 +1220,7 @@
     for (const s of spouses()) await spouseTurn(s);
     await yearTick();
     if (G.over) return;
+    sfx.year();
     if (!heroes().length) {
       if (!kids().length) { await gameOver('가문의 대가 끊겼다'); return; }
       const k = kids().sort((a, b) => b.born - a.born).pop();
@@ -1194,6 +1447,10 @@
   }
 
   async function onTavern(c) {
+    Sound.play('tavern');
+    try { return await tavernVisit(c); } finally { Sound.play('field'); }
+  }
+  async function tavernVisit(c) {
     const s = spouseOf(c);
     const canDate = !s && age(c) >= ROMANCE_AGE;
     const bet = 20 + 2 * G.year;
@@ -1324,7 +1581,7 @@
       return;
     }
     x.aff[c.id] = clamp(a + gain, 0, 100);
-    sfx.love();
+    if (gain >= 20) Sound.jingle('love'); else sfx.love();
     log(`💞 ${c.name} ♥ ${x.name}: 호감 +${gain} (${x.aff[c.id]}/100)`);
     await notice(bigPt(x, { age: age(c) + x.ageOff }), `${x.name} ❤️ ${x.aff[c.id]}/100`, `${msg}<br>호감 +${gain}${x.aff[c.id] >= 100 ? '<br><b>이제 청혼할 수 있다! 💍</b>' : ''}`);
   }
@@ -1338,7 +1595,7 @@
     G.cands = G.cands.filter((z) => z !== x);
     G.stats.marriages++;
     addStress(c, -30);
-    sfx.love(); renderAll();
+    Sound.jingle('wedding'); renderAll();
     log(`💒 ${c.name}와(과) ${s.name}이(가) 결혼했다! (${TRAITS[s.trait].perk})`);
     await notice(bigPt(c, { mood: 'happy' }) + bigPt(s), '💒 결혼!', `${c.name}와(과) ${s.name}이(가) 부부가 되었다.<br>${spouseWord(s)}는 NPC로 보드를 돌아다니며 가문을 돕는다.<br><b>${TRAITS[s.trait].icon} ${TRAITS[s.trait].perk}</b><br>애정이 높을수록 아이가 잘 생긴다. 애정이 0이 되면 떠나버린다!`);
   }
@@ -1384,7 +1641,7 @@
     };
     G.chars[k.id] = k; h.kidIds.push(k.id); G.stats.births++;
     s.aff = clamp(s.aff + 10, 0, 100);
-    sfx.love(); renderAll();
+    Sound.jingle('love'); renderAll();
     log(`🍼 ${h.name}와(과) ${s.name}의 ${childWord(k)} ${k.name}이(가) 태어났다!`);
     await notice(bigPt(k), `🍼 ${childWord(k)} 탄생!`, `${h.name}와(과) ${s.name} 사이에 ${k.name}이(가) 태어났다.<br>🏠 집을 지날 때 공부·훈련·놀아주기로 키울 수 있다.<br>${ADULT_AGE}살이 되면 직접 플레이!`);
   }
@@ -1405,7 +1662,7 @@
     });
     G.chars[k.id] = h;
     G.maxGen = Math.max(G.maxGen, h.gen);
-    sfx.good(); renderAll();
+    Sound.jingle('levelup'); renderAll();
     log(`🎒 ${h.name}이(가) ${C.name}(으)로 모험을 시작한다! 이제 직접 플레이할 수 있다.`);
     await notice(bigPt(h, { mood: 'happy' }), `${C.face} ${h.name} 출전!`, `${h.name}이(가) 집에서 출발한다. 매년 다른 가족과 번갈아 주사위를 굴린다.<br>${inh ? `부모에게 물려받은 재능: 힘·지력 +${inh}<br>` : ''}아직 어려서 힘이 약하지만 16살까지 쑥쑥 자란다.`);
   }
@@ -1438,7 +1695,7 @@
     s.alive = false; s.left = true;
     const p = G.chars[s.partnerId];
     if (p) p.spouseId = null;
-    sfx.bad(); renderAll();
+    Sound.jingle('sad'); renderAll();
     log(`💔 ${spouseWord(s)} ${s.name}이(가) 집을 떠났다… (애정 0)`);
     await notice(bigPt(s, { mood: 'sad' }), `💔 ${s.name}이(가) 떠났다`, `애정이 바닥나 ${spouseWord(s)}가 짐을 싸서 떠났다.<br>${p ? p.name + '은(는) 다시 연애할 수 있다.' : ''}`);
   }
@@ -1448,14 +1705,14 @@
     c.alive = false;
     const p = G.chars[c.partnerId];
     if (p) p.spouseId = null;
-    renderAll(); sfx.bad();
+    renderAll(); Sound.jingle('sad');
     log(`🕯️ ${spouseWord(c)} ${c.name}이(가) ${age(c)}세로 세상을 떠났다.`);
     await notice(bigPt(c), `🕯️ ${c.name} 영면`, `${relation(c)} ${c.name}이(가) ${age(c)}세로 눈을 감았다.`);
   }
 
   async function killHero(c, cause) {
     c.alive = false; c.hp = 0;
-    renderAll(); sfx.bad();
+    renderAll(); Sound.jingle('sad');
     log(`💀 ${c.name}이(가) ${age(c)}세로 쓰러졌다 — ${cause}`);
     const heirs = heroes().length + kids().length;
     await notice(bigPt(c), `💀 ${c.name} 사망`, `${relation(c)} ${c.name}, 향년 ${age(c)}세.<br>${cause}${heirs ? '<br>가문의 다른 이들이 뜻을 잇는다.' : ''}`);
@@ -1539,6 +1796,7 @@
       heal(c, 9999); c.mp = c.mmp; addStress(c, -40);
       desc = '우리 여관에서 공짜로 푹 잤다. HP·MP 완전 회복, 스트레스 -40';
     } else {
+      Sound.play('tavern');
       await party(c, -50);
       desc = '우리 술집에서 공짜 술판! 스트레스 -50';
     }
@@ -1549,6 +1807,7 @@
     if (b.lvl < 3) choices.push({ value: 'up', icon: '🏗️', label: `증축 ★${b.lvl + 1}`, sub: `연 수입 +${B.income}G${b.type === 'fort' ? ', 가문 방어 +1' : ''}`, price: upCost(b), disabled: G.gold < upCost(b) });
     choices.push({ value: null, label: '확인', primary: true });
     const p = await ask({ emoji: B.icon, title: `우리 ${B.name} ${'★'.repeat(b.lvl)}`, desc, choices });
+    Sound.play('field');
     if (p === 'train') { spend(30); c.atk++; c.def++; addStress(c, 5); log(`🏋️ ${c.name}: 요새에서 훈련! 힘 +1, 방어 +1`); }
     else if (p === 'up') {
       const cost = upCost(b);
@@ -1617,6 +1876,7 @@
       let queue = party.filter(up), qi = 0;
       const lines = [];
       sfx.hurt();
+      Sound.play(E.boss ? 'boss' : 'battle');
       log(`⚔️ ${E.name} Lv${E.lv} 출현!`);
 
       openModal(`
@@ -1698,7 +1958,7 @@
             blog(`🏃 도망쳤다! ${m.cls === 'rogue' ? '' : `🎲${r}`}`);
             log(`🏃 ${m.name}이(가) ${E.name}에게서 도망쳤다.`);
             addStress(m, 8);
-            done = true; draw(); await sleep(700); closeModal(); resolve({ r: 'flee' }); return;
+            done = true; draw(); await sleep(700); closeModal(); Sound.play('field'); resolve({ r: 'flee' }); return;
           }
           blog(`🏃 도망 실패… 🎲${r}`); sfx.bad();
         } else {
@@ -1759,8 +2019,8 @@
         survivors.forEach((p) => { p.kills++; addStress(p, 6); });
         G.stats.kills++;
         const g = Math.round(E.gold * (survivors.some((p) => p.cls === 'rogue') ? 1.25 : 1));
-        blog(`🏆 ${E.name}을(를) 쓰러뜨렸다!`); sfx.good();
-        await sleep(600); closeModal();
+        blog(`🏆 ${E.name}을(를) 쓰러뜨렸다!`); Sound.jingle('win');
+        await sleep(600); closeModal(); Sound.play('field');
         gainGold(g);
         for (const p of survivors) {
           const x = await gainExp(p, E.exp);
@@ -1770,7 +2030,7 @@
       }
 
       async function lose() {
-        done = true; draw(); await sleep(700); closeModal();
+        done = true; draw(); await sleep(700); closeModal(); Sound.play('field');
         resolve({ r: 'lose', fallen: party.slice() });
       }
 
@@ -1787,6 +2047,7 @@
   async function bossFight() {
     const party = heroes();
     if (!party.length) { await gameOver('마왕이 깨어났지만 맞설 자가 없었다'); return; }
+    Sound.play('boss');
     log('😈 마왕이 깨어났다! 가문의 모든 모험가가 최후의 결전에 나선다!');
     await notice(party.map((p) => bigPt(p)).join(''), '😈 마왕 부활!', `${BOSS_YEAR}년이 흘러 마왕이 깨어났다.<br>${party.map((p) => `${charFace(p)} ${p.name}(${age(p)}세)`).join(', ')}이(가) 함께 싸운다.<br>도망칠 수 없다!`);
     party.forEach((p) => { p.mp = p.mmp; });
@@ -1809,7 +2070,7 @@
 
   async function victory() {
     const isBest = recordBest(true);
-    sfx.good(); log('👑 마왕을 쓰러뜨렸다! 세계에 평화가 찾아왔다.');
+    Sound.play('field'); Sound.jingle('victory'); log('👑 마왕을 쓰러뜨렸다! 세계에 평화가 찾아왔다.');
     const p = await new Promise((resolve) => {
       openModal(`<div class="big-emoji">👑</div><h2>세계를 구했다!</h2>
         <p class="desc">가문의 이름이 전설로 남는다.${isBest ? '<br>🏅 최고 기록!' : ''}</p>${statsHtml()}
@@ -1825,7 +2086,7 @@
   async function gameOver(reason) {
     G.over = true; busy = false; clearSave(); renderControls();
     const isBest = recordBest(false);
-    sfx.bad(); log(`💀 ${reason}`);
+    Sound.play('title'); Sound.jingle('gameover'); log(`💀 ${reason}`);
     await new Promise((resolve) => {
       openModal(`<div class="big-emoji">${G.bossDone ? '🕯️' : '💀'}</div><h2>${G.bossDone ? '가문의 이야기가 끝났다' : '원정 실패…'}</h2>
         <p class="desc">${reason}.${isBest ? '<br>🏅 최고 기록!' : ''}</p>${statsHtml()}
@@ -1876,6 +2137,7 @@
   const previewPt = (cls, g) => `<span class="pt-mini">${drawBust({ gender: g, age: START_AGE, look: makeLook(g, 'title' + cls), outfit: cls, mood: 'happy', frame: 'full' })}</span>`;
 
   function showTitle() {
+    Sound.play('title');
     const saved = loadSave();
     const best = loadBest();
     let gender = 'm';
@@ -1922,17 +2184,25 @@
     tokenEls.clear();
     drawDie($('die1'), 1); drawDie($('die2'), 1);
     renderAll(); idleHint();
+    Sound.play('field');
   }
 
   async function openMenu() {
     if (busy || picking || !G || G.over) return;
     const p = await ask({ emoji: '📜', title: '메뉴', choices: [
+      { value: 'music', icon: '🎵', label: `배경음악: ${Sound.musicOn ? '켜짐' : '꺼짐'}`, sub: '누르면 전환' },
+      { value: 'sfx', icon: '🔔', label: `효과음: ${Sound.sfxOn ? '켜짐' : '꺼짐'}`, sub: '누르면 전환' },
       { value: 'resume', label: '계속하기', primary: true },
       { value: 'rules', label: '규칙 보기', ghost: true },
       { value: 'title', label: '타이틀로 (진행 상황은 저장됨)', ghost: true },
     ] });
     if (p === 'rules') { await ask({ emoji: '📖', title: '규칙', desc: RULES_HTML, choices: [{ label: '닫기', primary: true, value: true }] }); }
     if (p === 'title') { save(); showTitle(); }
+    if (p === 'music' || p === 'sfx') {
+      Sound.set(p === 'music' ? !Sound.musicOn : Sound.musicOn, p === 'sfx' ? !Sound.sfxOn : Sound.sfxOn);
+      syncSoundBtn();
+      return openMenu();
+    }
   }
 
   // ---------- Wiring ----------
@@ -1965,12 +2235,15 @@
   });
   $('cancelPickBtn').addEventListener('click', () => { if (pickResolve) pickResolve(null); });
   $('menuBtn').addEventListener('click', openMenu);
-  $('soundBtn').addEventListener('click', () => {
-    soundOn = !soundOn;
-    $('soundBtn').textContent = soundOn ? '🔊' : '🔇';
-    try { localStorage.setItem('dice-expedition-sound', soundOn ? 'on' : 'off'); } catch (e) { /* ignore */ }
-  });
-  $('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+  const AUDIO_LABEL = { all: ['🔊', '🎵 배경음악 + 효과음 켜짐'], sfx: ['🔔', '🔔 효과음만 켜짐'], none: ['🔇', '🔇 소리 꺼짐'] };
+  let toastTimer = null;
+  function toast(msg) {
+    const el = $('toast'); el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+  const syncSoundBtn = () => { $('soundBtn').textContent = AUDIO_LABEL[Sound.mode()][0]; };
+  $('soundBtn').addEventListener('click', () => { const m = Sound.cycle(); syncSoundBtn(); toast(AUDIO_LABEL[m][1]); });
+  syncSoundBtn();
 
   buildBoard();
   drawDie($('die1'), 1); drawDie($('die2'), 1);
