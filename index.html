@@ -68,7 +68,15 @@
   /* HUD */
   .hud { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; display: grid; gap: 6px; box-shadow: 0 2px 10px var(--shadow); }
   .hud-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .hud-face { font-size: 26px; line-height: 1; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--accent); flex: none; }
+  .hud-face { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent); flex: none; background: #2b2219; }
+
+  /* Portraits: procedural SVG busts */
+  .pt { display: block; width: 100%; height: 100%; }
+  .pt-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 4px; }
+  .big-pt { width: 112px; height: 136px; border-radius: 18px; overflow: hidden; border: 2px solid var(--line); background: radial-gradient(circle at 50% 30%, #4a3826, #1c1611 75%); }
+  .pt-row:has(.big-pt + .big-pt) .big-pt { width: 88px; height: 107px; }
+  .pt-mini { display: block; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 30%, #4a3826, #1c1611 75%); border: 1px solid var(--line); }
+  .dead .pt { filter: grayscale(1) brightness(.65); }
   .hud-who { min-width: 0; }
   .hud-name { font-family: var(--font-display); font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hud-lv { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -93,7 +101,7 @@
     flex: none; display: flex; align-items: center; gap: 5px; background: var(--card); border: 1px solid var(--line);
     border-radius: 999px; padding: 3px 10px 3px 4px; text-align: left;
   }
-  .chip .cf { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; background: var(--card-2); border: 2px solid transparent; }
+  .chip .cf { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: #2b2219; border: 2px solid transparent; flex: none; }
   .chip .cn { font-size: 12px; line-height: 1.15; white-space: nowrap; }
   .chip .cn small { display: block; font-size: 10.5px; color: var(--muted); }
   .chip.active { border-color: var(--accent); background: #2a1d12; }
@@ -169,10 +177,10 @@
   .token.active { z-index: 7; }
   .token .off { width: 100%; height: 100%; display: grid; place-items: center; transform: translate(var(--dx, 0%), var(--dy, -12%)); transition: transform .2s; }
   .token span {
-    width: 64%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
-    font-size: clamp(12px, 3.7vw, 19px); box-shadow: 0 3px 6px var(--shadow); border: 2px solid #fff;
+    width: 72%; aspect-ratio: 1; border-radius: 50%; display: block; overflow: hidden;
+    box-shadow: 0 3px 6px var(--shadow); border: 2px solid #fff;
   }
-  .token.npc span { width: 54%; background: #2a1f26; border: 2px dashed var(--love); font-size: clamp(10px, 3.1vw, 16px); }
+  .token.npc span { width: 60%; background: #3a2430; border: 2px dashed var(--love); }
   .token.active span { box-shadow: 0 0 0 2px var(--bg), 0 0 12px 3px var(--accent); }
   .token.hop span { animation: hop .15s; }
   @keyframes hop { 50% { transform: translateY(-40%); } }
@@ -216,7 +224,8 @@
   .pm { text-align: center; border-radius: 10px; padding: 3px; border: 1px solid transparent; }
   .pm.cur { border-color: var(--accent); background: #2a1d12; }
   .pm.down { opacity: .35; }
-  .party.many .fe { font-size: 26px; }
+  .pf { margin: 0 auto; width: 72px; height: 88px; border-radius: 14px; overflow: hidden; border: 2px solid var(--line); background: radial-gradient(circle at 50% 30%, #4a3826, #1c1611 75%); }
+  .party.many .pf { width: 46px; height: 56px; }
   .fighter { text-align: center; position: relative; }
   .fe { font-size: 48px; line-height: 1.15; display: inline-block; }
   .fn, .pn { font-family: var(--font-display); font-size: 14px; }
@@ -249,7 +258,8 @@
   .name-in { width: 100%; border: 1px solid var(--line); background: var(--card-2); border-radius: 10px; padding: 9px 12px; font-size: 15px; margin-bottom: 8px; user-select: text; -webkit-user-select: text; }
   .classes { display: grid; gap: 7px; }
   .cls { display: flex; gap: 10px; align-items: center; text-align: left; width: 100%; border: 2px solid var(--line); background: var(--card-2); border-radius: 14px; padding: 9px 12px; }
-  .cls .ce { font-size: 32px; }
+  .cls .ce { flex: none; }
+  .cls .ce .pt-mini { width: 56px; height: 68px; border-radius: 12px; }
   .cls b { font-family: var(--font-display); font-weight: 400; font-size: 17px; }
   .cls small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
   .rules { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; text-align: left; }
@@ -454,6 +464,110 @@
     return '가문의 시조';
   }
 
+  // ---------- Portraits (procedural SVG upper-body busts) ----------
+  const SKINS = ['#f6d7bd', '#eec39f', '#d9a47c', '#b97f57', '#8d5a3b'];
+  const HAIRS = ['#2b1d14', '#4a2e1a', '#7a4a24', '#b9803a', '#e0bf74', '#8a2e1f', '#22222c'];
+  const STYLES = { m: ['short', 'spiky', 'side'], f: ['long', 'bob', 'pony'] };
+  function hashStr(s) {
+    let h = 2166136261;
+    for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function makeLook(gender, seed) {
+    const h = hashStr(seed);
+    return { skin: h % 5, hair: (h >>> 3) % 7, style: STYLES[gender][(h >>> 6) % 3], beard: ((h >>> 9) & 3) === 0 };
+  }
+  function lookOf(c) { return c.look || (c.look = makeLook(c.gender, c.name + c.id)); }
+  function mix(a, b, t) {
+    const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const A = p(a), B = p(b);
+    return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
+  }
+
+  // Clothing per class (heroes), per job (spouses/suitors), and for children.
+  const OUTFITS = {
+    warrior: (s) => `<path d="${s.torso}" fill="#6f7a87"/><path d="M50 76 V120 M30 104 H70" stroke="#4d5560" stroke-width="2"/>`
+      + `<ellipse cx="19" cy="88" rx="15" ry="10" fill="#a9b3bf" stroke="#5b636e" stroke-width="1.5"/><ellipse cx="81" cy="88" rx="15" ry="10" fill="#a9b3bf" stroke="#5b636e" stroke-width="1.5"/>`
+      + `<path d="M37 74 Q50 83 63 74" stroke="#c9d1da" stroke-width="4" fill="none"/>`,
+    mage: (s) => `<path d="${s.torso}" fill="#4b2f7a"/><path d="M39 73 L50 91 L61 73" stroke="#e2b84a" stroke-width="2.5" fill="none"/><circle cx="50" cy="93" r="3.2" fill="#5fd0ff" stroke="#e2b84a"/><path d="M14 108 H86" stroke="#e2b84a" stroke-width="2"/>`,
+    rogue: (s) => `<path d="${s.torso}" fill="#2f4a35"/><path d="M24 84 L80 118 M10 108 H90" stroke="#3b2a1a" stroke-width="4"/><rect x="45" y="104" width="10" height="8" rx="1" fill="#c9a24a"/><path d="M35 72 Q50 84 65 72 L63 81 Q50 91 37 81 Z" fill="#6a2d2d"/>`,
+    healer: (s) => `<path d="${s.torso}" fill="#d9739a"/><path d="M14 104 Q50 112 86 104" stroke="#fff4f7" stroke-width="3" fill="none"/><path d="M37 74 Q50 87 63 74" stroke="#fff4f7" stroke-width="2.2" stroke-dasharray="2 2" fill="none"/>`,
+    knight: (s) => `<path d="${s.torso}" fill="#9aa6b5"/><rect x="39" y="76" width="22" height="44" fill="#3a5fb0"/><path d="M50 84 V104 M42 92 H58" stroke="#f2c14e" stroke-width="2.5"/>`,
+    scholar: (s) => `<path d="${s.torso}" fill="#ece6d8"/><path d="M4 120 L6 100 C8 82 26 74 41 73 L46 120 Z M96 120 L94 100 C92 82 74 74 59 73 L54 120 Z" fill="#7a5a3a"/><circle cx="44" cy="100" r="1.4" fill="#e2c27a"/><circle cx="44" cy="110" r="1.4" fill="#e2c27a"/><path d="M50 76 L48 92 L50 96 L52 92 Z" fill="#7a2e2e"/>`,
+    merchant: (s) => `<path d="${s.torso}" fill="#2f6b5e"/><path d="M37 75 Q50 91 63 75" stroke="#f2c14e" stroke-width="2" fill="none"/><circle cx="50" cy="88" r="3" fill="#f2c14e"/><circle cx="50" cy="100" r="1.6" fill="#f2c14e"/><circle cx="50" cy="110" r="1.6" fill="#f2c14e"/>`,
+    kidm: (s) => `<path d="${s.torso}" fill="#4f86c6"/><path d="M40 81 Q50 88 60 81" stroke="#fff" stroke-width="2" fill="none"/>`,
+    kidf: (s) => `<path d="${s.torso}" fill="#e08aa0"/><path d="M40 81 Q50 88 60 81" stroke="#fff" stroke-width="2" fill="none"/>`,
+  };
+
+  function drawBust({ gender, age: a, look, outfit, mood, frame }) {
+    const kid = a < 13, baby = a < 4, f = gender === 'f';
+    const skin = SKINS[look.skin], shade = mix(skin, '#000000', 0.2);
+    let hair = HAIRS[look.hair];
+    if (a >= 65) hair = '#e4e1da'; else if (a >= 52) hair = '#a8a39a'; else if (a >= 45) hair = mix(hair, '#a8a39a', 0.45);
+    const torso = kid ? 'M16 120 L18 100 C20 85 33 80 50 80 C67 80 80 85 82 100 L84 120 Z' : 'M3 120 L5 100 C7 81 27 72 50 72 C73 72 93 81 95 100 L97 120 Z';
+    const arms = kid ? 'M27 96 Q28 108 29 120 M73 96 Q72 108 71 120' : 'M21 92 Q23 106 24 120 M79 92 Q77 106 76 120';
+    const headT = kid ? 'translate(50 49) scale(1.12) translate(-50 -42)' : '';
+    const back = [], front = [];
+    // Behind the head
+    if (outfit === 'rogue') back.push('<ellipse cx="50" cy="42" rx="26" ry="31" fill="#24382a"/>');
+    if (f && !baby) {
+      if (look.style === 'long') back.push(`<path d="M31 38 C29 4 71 4 69 38 L72 70 C62 76 38 76 28 70 Z" fill="${hair}"/>`);
+      else if (look.style === 'bob') back.push(`<path d="M31 38 C29 4 71 4 69 38 L71 60 C63 64 37 64 29 60 Z" fill="${hair}"/>`);
+      else back.push(`<ellipse cx="71" cy="47" rx="6" ry="14" transform="rotate(18 71 47)" fill="${hair}"/>`);
+    }
+    // Face
+    front.push(`<ellipse cx="32" cy="44" rx="3" ry="5" fill="${shade}"/><ellipse cx="68" cy="44" rx="3" ry="5" fill="${shade}"/>`);
+    front.push(`<ellipse cx="50" cy="42" rx="18" ry="21" fill="${skin}"/>`);
+    if (f || kid) front.push('<circle cx="41" cy="51" r="3.6" fill="#ff8a8a" opacity=".35"/><circle cx="59" cy="51" r="3.6" fill="#ff8a8a" opacity=".35"/>');
+    const brow = mix(hair, '#000000', 0.3);
+    front.push(mood === 'sad'
+      ? `<path d="M39 37 Q43 37.5 46.5 39.5 M53.5 39.5 Q57 37.5 61 37" stroke="${brow}" stroke-width="1.7" fill="none" stroke-linecap="round"/>`
+      : `<path d="M39 38.5 Q43 36.3 46.5 38 M53.5 38 Q57 36.3 61 38.5" stroke="${brow}" stroke-width="1.7" fill="none" stroke-linecap="round"/>`);
+    front.push('<ellipse cx="43" cy="44" rx="2.1" ry="2.7" fill="#2a1d14"/><ellipse cx="57" cy="44" rx="2.1" ry="2.7" fill="#2a1d14"/><circle cx="43.7" cy="43" r=".7" fill="#fff"/><circle cx="57.7" cy="43" r=".7" fill="#fff"/>');
+    if (f && !kid) front.push('<path d="M40.5 41.6 L39 40.4 M59.5 41.6 L61 40.4" stroke="#2a1d14" stroke-width="1"/>');
+    front.push(`<path d="M50 46 Q51.8 49 50 50.3" stroke="${shade}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`);
+    if (!f && !kid && a >= 28 && look.beard) {
+      front.push(`<path d="M33 48 C34 62 42 66 50 66 C58 66 66 62 67 48 C64 56 58 58 50 58 C42 58 36 56 33 48 Z" fill="${hair}"/>`);
+      front.push(`<path d="M44 53.5 Q50 50.5 56 53.5 Q50 52.5 44 53.5 Z" fill="${hair}" stroke="${hair}" stroke-width="1.5"/>`);
+    }
+    const lip = f && !kid ? '#c2475a' : '#8a3b2e';
+    front.push(mood === 'happy' ? `<path d="M44.5 54.2 Q50 59.5 55.5 54.2 Q50 56.5 44.5 54.2 Z" fill="${lip}" stroke="${lip}" stroke-width="1.2" stroke-linejoin="round"/>`
+      : mood === 'sad' ? `<path d="M45.5 57 Q50 53.8 54.5 57" stroke="${lip}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`
+        : `<path d="M46 55 Q50 57.3 54 55" stroke="${lip}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`);
+    if (a >= 55) front.push('<path d="M42 31.5 Q50 29.5 58 31.5 M40 50 Q38.8 54 41 57.5 M60 50 Q61.2 54 59 57.5" stroke="#000" stroke-opacity=".2" stroke-width="1" fill="none"/>');
+    // Hair in front
+    if (baby) front.push(`<path d="M45 23 Q48 15 50 22 Q53 15 55 23" stroke="${hair}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`);
+    else if (f) {
+      front.push(`<path d="M31 42 C30 6 70 6 69 42 C65 33 58 29 51 33 C46 29 37 32 31 42 Z" fill="${hair}"/>`);
+      if (look.style === 'long') front.push(`<path d="M31 40 C28 54 30 66 34 74 L38 72 C35 62 34 52 35 42 Z M69 40 C72 54 70 66 66 74 L62 72 C65 62 66 52 65 42 Z" fill="${hair}"/>`);
+      else if (look.style === 'bob') front.push(`<path d="M31 40 C29 50 30 57 32 61 L36 60 C34 54 34 48 35 42 Z M69 40 C71 50 70 57 68 61 L64 60 C66 54 66 48 65 42 Z" fill="${hair}"/>`);
+    } else if (look.style === 'spiky') front.push(`<path d="M31 40 L31 22 L39 25 L43 12 L50 21 L57 11 L61 24 L69 19 L69 40 C66 33 58 30 50 31.5 C42 30 34 33 31 40 Z" fill="${hair}"/>`);
+    else if (look.style === 'side') front.push(`<path d="M31 44 C29 6 71 4 69 40 C64 29 52 33 41 28 C37 33 33 37 31 44 Z" fill="${hair}"/>`);
+    else front.push(`<path d="M30 42 C28 4 72 4 70 42 C67 34 60 30 50 31.5 C40 30 33 34 30 42 Z" fill="${hair}"/>`);
+    // Accessories / headwear
+    if (outfit === 'scholar') front.push('<circle cx="43" cy="44" r="5" fill="#fff" fill-opacity=".12" stroke="#3a2a1a" stroke-width="1.3"/><circle cx="57" cy="44" r="5" fill="#fff" fill-opacity=".12" stroke="#3a2a1a" stroke-width="1.3"/><path d="M48 44 H52" stroke="#3a2a1a" stroke-width="1.3"/>');
+    if (outfit === 'warrior' || outfit === 'knight') front.push('<path d="M32 32 Q50 25 68 32" stroke="#c9d1da" stroke-width="3" fill="none"/><circle cx="50" cy="27.6" r="2" fill="#e05050"/>');
+    if (outfit === 'healer') front.push('<g transform="translate(64 26)"><circle r="3" cx="-3" fill="#ff9ec3"/><circle r="3" cx="3" fill="#ff9ec3"/><circle r="3" cy="-3" fill="#ff9ec3"/><circle r="3" cy="3" fill="#ff9ec3"/><circle r="2" fill="#ffd34d"/></g>');
+    if (outfit === 'rogue') front.push('<path d="M27 47 C21 -2 79 -2 73 47 C70 26 62 19 50 19 C38 19 30 26 27 47 Z" fill="#2f4a35"/>');
+    if (outfit === 'mage') front.push('<path d="M26 31 Q50 36 74 31 L54 -6 L47 4 Z" fill="#3d2566"/><ellipse cx="50" cy="31" rx="28" ry="5" fill="#4b2f7a"/><path d="M52 14 l1.2 2.6 2.8.3-2.1 1.9.6 2.8-2.5-1.4-2.5 1.4.6-2.8-2.1-1.9 2.8-.3z" fill="#f2c14e"/>');
+    const T = headT ? ` transform="${headT}"` : '';
+    return `<svg class="pt" viewBox="${frame === 'full' ? '0 -4 100 124' : '12 10 76 76'}" preserveAspectRatio="xMidYMin slice" aria-hidden="true"><g${T}>${back.join('')}</g>`
+      + `<rect x="43.5" y="${kid ? 68 : 58}" width="13" height="16" fill="${shade}"/>`
+      + OUTFITS[outfit]({ torso })
+      + `<path d="${arms}" stroke="#000" stroke-opacity=".25" stroke-width="1.5" fill="none"/>`
+      + `<g${T}>${front.join('')}</g></svg>`;
+  }
+
+  function portraitOf(c, o = {}) {
+    const a = o.age ?? (c.born != null ? age(c) : 24);
+    const outfit = o.outfit || (c.role === 'hero' ? c.cls : c.role === 'kid' ? (c.gender === 'm' ? 'kidm' : 'kidf') : c.trait);
+    const mood = o.mood || (c.role === 'hero' ? (c.stress >= 70 ? 'sad' : c.stress <= 20 ? 'happy' : 'ok') : 'happy');
+    return drawBust({ gender: c.gender, age: a, look: lookOf(c), outfit, mood, frame: o.frame });
+  }
+  const isDead = (c) => c.alive === false && !c.left;
+  const bigPt = (c, o) => `<div class="big-pt${isDead(c) ? ' dead' : ''}">${portraitOf(c, { frame: 'full', ...o })}</div>`;
+  const miniPt = (c, o) => `<span class="pt-mini">${portraitOf(c, o)}</span>`;
+
   function usedNames() { return new Set([...all().map((c) => c.name), ...G.cands.map((c) => c.name)]); }
   function newName(g) {
     const used = usedNames();
@@ -610,7 +724,8 @@
       el.classList.toggle('npc', e.role === 'spouse');
       el.classList.toggle('active', !!cur && e.id === cur.id);
       const span = el.querySelector('span');
-      span.textContent = charFace(e);
+      const key = `${age(e)}|${e.role}|${e.cls || e.trait}|${e.stress >= 70 ? 2 : e.stress <= 20 ? 0 : 1}`;
+      if (el.dataset.key !== key) { el.dataset.key = key; span.innerHTML = portraitOf(e); }
       if (e.role === 'hero') span.style.background = e.color;
       if (hopId === e.id) { el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop'); }
     });
@@ -622,7 +737,7 @@
     $('hGold').textContent = G.gold; $('hPot').textContent = G.potions;
     if (!c) return;
     const C = CLASSES[c.cls], e = eff(c), a = age(c);
-    $('hFace').textContent = C.face; $('hFace').style.borderColor = c.color;
+    $('hFace').innerHTML = portraitOf(c); $('hFace').style.borderColor = c.color;
     $('hName').textContent = `${c.name} · ${C.name}`;
     $('hLv').textContent = `Lv ${c.lv} · ${a}세 ${stage(c)} · ${C.skill}`;
     c.hp = Math.min(c.hp, e.maxHp);
@@ -650,7 +765,7 @@
       else if (c.role === 'spouse') sub = `${age(c)}세 · ${spouseWord(c)} ❤️${c.aff}`;
       else sub = `${age(c)}세 · ${childWord(c)}`;
       const ring = c.role === 'hero' ? `style="border-color:${c.color}"` : '';
-      return `<button class="chip ${c.role === 'spouse' ? 'npc' : ''} ${cur && cur.id === c.id ? 'active' : ''}" data-id="${c.id}"><span class="cf" ${ring}>${charFace(c)}</span><span class="cn">${c.name}<small>${sub}</small></span></button>`;
+      return `<button class="chip ${c.role === 'spouse' ? 'npc' : ''} ${cur && cur.id === c.id ? 'active' : ''}" data-id="${c.id}"><span class="cf" ${ring}>${portraitOf(c)}</span><span class="cn">${c.name}<small>${sub}</small></span></button>`;
     }).join('');
     $('family').querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => { if (!busy && !picking) showInfo(G.chars[b.dataset.id]); }));
   }
@@ -730,7 +845,7 @@
         : c.ghost
           ? `<button class="ghost" data-i="${i}">${c.label}</button>`
           : `<button class="choice" data-i="${i}" ${c.disabled ? 'disabled' : ''}><span class="ce">${c.icon || ''}</span><span class="ct">${c.label}${c.sub ? `<small>${c.sub}</small>` : ''}</span>${c.price != null ? `<span class="cp">${c.price}G</span>` : ''}</button>`).join('');
-      openModal(`${emoji ? `<div class="big-emoji">${emoji}</div>` : ''}<h2>${title}</h2>${desc ? `<div class="desc">${desc}</div>` : ''}<div class="choices">${items}</div>`, cls);
+      openModal(`${emoji ? (emoji.startsWith('<') ? `<div class="pt-row">${emoji}</div>` : `<div class="big-emoji">${emoji}</div>`) : ''}<h2>${title}</h2>${desc ? `<div class="desc">${desc}</div>` : ''}<div class="choices">${items}</div>`, cls);
       sheet.querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => {
         const c = choices[+b.dataset.i];
         closeModal(); resolve(c.value);
@@ -765,7 +880,7 @@
       heal(c, Math.round(eff(c).maxHp * 0.3));
       renderAll(); sfx.good();
       log(`🎉 ${c.name} 레벨 업! Lv ${c.lv}`);
-      await notice('🎉', `${c.name} 레벨 업! Lv ${c.lv}`, '최대 HP +12 · 힘 +2 · 방어 +1 · 지력 +1 · 최대 MP +2<br>HP 일부와 MP를 모두 회복했다.');
+      await notice(bigPt(c), `🎉 ${c.name} 레벨 업! Lv ${c.lv}`, '최대 HP +12 · 힘 +2 · 방어 +1 · 지력 +1 · 최대 MP +2<br>HP 일부와 MP를 모두 회복했다.');
     }
     renderAll();
     return n;
@@ -1101,7 +1216,7 @@
       if (s && Math.random() < 0.4) {
         s.aff = clamp(s.aff - 20, 0, 100); sfx.bad();
         log(`🎶 ${c.name}의 술판이 ${spouseWord(s)} ${s.name}에게 들켰다! 애정 -20`);
-        await notice('😠', '들켰다!', `${spouseWord(s)} ${s.name}이(가) 단단히 화가 났다. (애정 -20 → ${s.aff})`);
+        await notice(bigPt(s, { mood: 'sad' }), '😠 들켰다!', `${spouseWord(s)} ${s.name}이(가) 단단히 화가 났다. (애정 -20 → ${s.aff})`);
       } else if (!s && age(c) >= ROMANCE_AGE && Math.random() < 0.5) {
         const x = pick(candsFor(c)); x.aff[c.id] = clamp((x.aff[c.id] || 0) + 15, 0, 100);
         log(`🎶 무대 뒤에서 ${x.name}와(과) 눈이 맞았다! 호감 +15`); sfx.love();
@@ -1169,7 +1284,7 @@
     const who = await ask({
       emoji: '💞', title: '누구를 만날까?', desc: `${c.name} (${age(c)}세) · 💰${G.gold}G`,
       choices: [...list.map((x) => ({
-        value: x.id, icon: TRAITS[x.trait].icon, label: `${x.name} · ${TRAITS[x.trait].job[x.gender]}`,
+        value: x.id, icon: miniPt(x, { age: age(c) + x.ageOff }), label: `${x.name} · ${TRAITS[x.trait].job[x.gender]}`,
         sub: `❤️ ${x.aff[c.id] || 0}/100 · ${TRAITS[x.trait].likeText}`,
       })), { value: null, label: '그냥 지나가기', ghost: true }],
     });
@@ -1179,7 +1294,7 @@
     const a = x.aff[c.id] || 0;
     const giftGain = T.likes === 'gift' ? 30 : 20;
     const act = await ask({
-      emoji: T.icon, title: `${x.name}와(과) 함께`, desc: `❤️ 호감 ${a}/100 · ${T.likeText}<br>결혼하면: ${T.perk}`,
+      emoji: bigPt(x, { age: age(c) + x.ageOff }), title: `${T.icon} ${x.name}와(과) 함께`, desc: `❤️ 호감 ${a}/100 · ${T.likeText}<br>결혼하면: ${T.perk}`,
       choices: [
         { value: 'talk', icon: '💬', label: '대화하기', sub: '무료 · 🎲 + 상대가 좋아하는 능력치로 판정' },
         { value: 'gift', icon: '🎁', label: '선물하기', sub: `호감 +${giftGain}`, price: 25, disabled: G.gold < 25 },
@@ -1205,19 +1320,19 @@
       if (r >= 2) return marry(c, x);
       x.aff[c.id] = clamp(a - 25, 0, 100); sfx.bad();
       log(`💔 ${c.name}의 청혼… 🎲${r} 실패. ${x.name}: "아직은 마음의 준비가…"`);
-      await notice('💔', '청혼 실패', `🎲${r} — ${x.name}이(가) 조금 더 시간을 달라고 한다. (호감 -25)`);
+      await notice(bigPt(x, { age: age(c) + x.ageOff, mood: 'sad' }), '💔 청혼 실패', `🎲${r} — ${x.name}이(가) 조금 더 시간을 달라고 한다. (호감 -25)`);
       return;
     }
     x.aff[c.id] = clamp(a + gain, 0, 100);
     sfx.love();
     log(`💞 ${c.name} ♥ ${x.name}: 호감 +${gain} (${x.aff[c.id]}/100)`);
-    await notice(T.icon, `${x.name} ❤️ ${x.aff[c.id]}/100`, `${msg}<br>호감 +${gain}${x.aff[c.id] >= 100 ? '<br><b>이제 청혼할 수 있다! 💍</b>' : ''}`);
+    await notice(bigPt(x, { age: age(c) + x.ageOff }), `${x.name} ❤️ ${x.aff[c.id]}/100`, `${msg}<br>호감 +${gain}${x.aff[c.id] >= 100 ? '<br><b>이제 청혼할 수 있다! 💍</b>' : ''}`);
   }
 
   async function marry(c, x) {
     const s = {
       id: G.nextId++, name: x.name, gender: x.gender, role: 'spouse', trait: x.trait,
-      born: G.year - Math.max(ROMANCE_AGE, age(c) + x.ageOff), pos: c.pos, aff: 80, partnerId: c.id, alive: true,
+      born: G.year - Math.max(ROMANCE_AGE, age(c) + x.ageOff), pos: c.pos, aff: 80, partnerId: c.id, alive: true, look: lookOf(x),
     };
     G.chars[s.id] = s; c.spouseId = s.id;
     G.cands = G.cands.filter((z) => z !== x);
@@ -1225,12 +1340,12 @@
     addStress(c, -30);
     sfx.love(); renderAll();
     log(`💒 ${c.name}와(과) ${s.name}이(가) 결혼했다! (${TRAITS[s.trait].perk})`);
-    await notice('💒', '결혼!', `${c.name}와(과) ${s.name}이(가) 부부가 되었다.<br>${spouseWord(s)}는 NPC로 보드를 돌아다니며 가문을 돕는다.<br><b>${TRAITS[s.trait].icon} ${TRAITS[s.trait].perk}</b><br>애정이 높을수록 아이가 잘 생긴다. 애정이 0이 되면 떠나버린다!`);
+    await notice(bigPt(c, { mood: 'happy' }) + bigPt(s), '💒 결혼!', `${c.name}와(과) ${s.name}이(가) 부부가 되었다.<br>${spouseWord(s)}는 NPC로 보드를 돌아다니며 가문을 돕는다.<br><b>${TRAITS[s.trait].icon} ${TRAITS[s.trait].perk}</b><br>애정이 높을수록 아이가 잘 생긴다. 애정이 0이 되면 떠나버린다!`);
   }
 
   async function outing(c, s) {
     const p = await ask({
-      emoji: '👪', title: '가족과 함께', desc: `${spouseWord(s)} ${s.name} · ❤️ 애정 ${s.aff}/100`,
+      emoji: bigPt(c) + bigPt(s), title: '👪 가족과 함께', desc: `${spouseWord(s)} ${s.name} · ❤️ 애정 ${s.aff}/100`,
       choices: [
         { value: 'outing', icon: '🧺', label: '가족 나들이', sub: '스트레스 -25, 애정 +15', price: 20, disabled: G.gold < 20 },
         { value: 'gift', icon: '💐', label: '선물하기', sub: '애정 +25', price: 30, disabled: G.gold < 30 },
@@ -1246,7 +1361,7 @@
 
   async function raiseKid(c, k) {
     const p = await ask({
-      emoji: charFace(k), title: `${k.name} (${age(k)}세) 돌보기`,
+      emoji: bigPt(k), title: `${k.name} (${age(k)}세) 돌보기`,
       desc: `${relation(k)} · 교육 ${k.edu} · 훈련 ${k.train} · 유대 ${k.bond}<br>${ADULT_AGE}살이 되면 직접 플레이할 수 있다.`,
       choices: [
         { value: 'edu', icon: '📚', label: '공부시키기', sub: '성인 시 지력 +2', price: 30, disabled: G.gold < 30 },
@@ -1265,19 +1380,20 @@
     const k = {
       id: G.nextId++, name: newName(gender), gender, role: 'kid', born: G.year, parentId: h.id, otherParentId: s.id,
       edu: 0, train: 0, bond: 0, xInt: 0, alive: true, gen: h.gen + 1,
+      look: { skin: lookOf(pick([h, s])).skin, hair: lookOf(pick([h, s])).hair, style: pick(STYLES[gender]), beard: Math.random() < 0.3 },
     };
     G.chars[k.id] = k; h.kidIds.push(k.id); G.stats.births++;
     s.aff = clamp(s.aff + 10, 0, 100);
     sfx.love(); renderAll();
     log(`🍼 ${h.name}와(과) ${s.name}의 ${childWord(k)} ${k.name}이(가) 태어났다!`);
-    await notice('🍼', `${childWord(k)} 탄생!`, `${h.name}와(과) ${s.name} 사이에 ${k.name}이(가) 태어났다.<br>🏠 집을 지날 때 공부·훈련·놀아주기로 키울 수 있다.<br>${ADULT_AGE}살이 되면 직접 플레이!`);
+    await notice(bigPt(k), `🍼 ${childWord(k)} 탄생!`, `${h.name}와(과) ${s.name} 사이에 ${k.name}이(가) 태어났다.<br>🏠 집을 지날 때 공부·훈련·놀아주기로 키울 수 있다.<br>${ADULT_AGE}살이 되면 직접 플레이!`);
   }
 
   async function comingOfAge(k) {
     const cls = await ask({
-      emoji: charFace(k), title: `${k.name}, ${ADULT_AGE}살!`,
+      emoji: bigPt(k), title: `${k.name}, ${ADULT_AGE}살!`,
       desc: `${relation(k)}이(가) 모험을 떠날 나이가 되었다. 직업을 골라주세요.<br>교육 ${k.edu} · 훈련 ${k.train} · 유대 ${k.bond}${k.xInt ? ` · 학자 부모 지력 +${k.xInt}` : ''}`,
-      choices: Object.entries(CLASSES).map(([key, C]) => ({ value: key, icon: C.face, label: C.name, sub: `${C.blurb} 스킬 ${C.skill}` })),
+      choices: Object.entries(CLASSES).map(([key, C]) => ({ value: key, icon: miniPt(k, { outfit: key }), label: C.name, sub: `${C.blurb} 스킬 ${C.skill}` })),
     });
     const parent = G.chars[k.parentId];
     const inh = parent ? Math.floor(parent.lv / 3) : 0;
@@ -1285,13 +1401,13 @@
     const h = makeHero({
       id: k.id, name: k.name, gender: k.gender, cls, born: k.born, gen: k.gen, parentId: k.parentId,
       mhp: C.hp + k.train * 8 + k.bond * 5, atk: C.atk + k.train + k.bond + inh, def: C.def + k.bond,
-      int: C.int + k.edu * 2 + k.bond + inh + (k.xInt || 0), stress: 0,
+      int: C.int + k.edu * 2 + k.bond + inh + (k.xInt || 0), stress: 0, look: lookOf(k),
     });
     G.chars[k.id] = h;
     G.maxGen = Math.max(G.maxGen, h.gen);
     sfx.good(); renderAll();
     log(`🎒 ${h.name}이(가) ${C.name}(으)로 모험을 시작한다! 이제 직접 플레이할 수 있다.`);
-    await notice(C.face, `${h.name} 출전!`, `${h.name}이(가) 집에서 출발한다. 매년 다른 가족과 번갈아 주사위를 굴린다.<br>${inh ? `부모에게 물려받은 재능: 힘·지력 +${inh}<br>` : ''}아직 어려서 힘이 약하지만 16살까지 쑥쑥 자란다.`);
+    await notice(bigPt(h, { mood: 'happy' }), `${C.face} ${h.name} 출전!`, `${h.name}이(가) 집에서 출발한다. 매년 다른 가족과 번갈아 주사위를 굴린다.<br>${inh ? `부모에게 물려받은 재능: 힘·지력 +${inh}<br>` : ''}아직 어려서 힘이 약하지만 16살까지 쑥쑥 자란다.`);
   }
 
   async function spouseTurn(s) {
@@ -1324,7 +1440,7 @@
     if (p) p.spouseId = null;
     sfx.bad(); renderAll();
     log(`💔 ${spouseWord(s)} ${s.name}이(가) 집을 떠났다… (애정 0)`);
-    await notice('💔', `${s.name}이(가) 떠났다`, `애정이 바닥나 ${spouseWord(s)}가 짐을 싸서 떠났다.<br>${p ? p.name + '은(는) 다시 연애할 수 있다.' : ''}`);
+    await notice(bigPt(s, { mood: 'sad' }), `💔 ${s.name}이(가) 떠났다`, `애정이 바닥나 ${spouseWord(s)}가 짐을 싸서 떠났다.<br>${p ? p.name + '은(는) 다시 연애할 수 있다.' : ''}`);
   }
 
   async function naturalDeath(c) {
@@ -1334,7 +1450,7 @@
     if (p) p.spouseId = null;
     renderAll(); sfx.bad();
     log(`🕯️ ${spouseWord(c)} ${c.name}이(가) ${age(c)}세로 세상을 떠났다.`);
-    await notice('🕯️', `${c.name} 영면`, `${relation(c)} ${c.name}이(가) ${age(c)}세로 눈을 감았다.`);
+    await notice(bigPt(c), `🕯️ ${c.name} 영면`, `${relation(c)} ${c.name}이(가) ${age(c)}세로 눈을 감았다.`);
   }
 
   async function killHero(c, cause) {
@@ -1342,7 +1458,7 @@
     renderAll(); sfx.bad();
     log(`💀 ${c.name}이(가) ${age(c)}세로 쓰러졌다 — ${cause}`);
     const heirs = heroes().length + kids().length;
-    await notice('💀', `${c.name} 사망`, `${relation(c)} ${c.name}, 향년 ${age(c)}세.<br>${cause}${heirs ? '<br>가문의 다른 이들이 뜻을 잇는다.' : ''}`);
+    await notice(bigPt(c), `💀 ${c.name} 사망`, `${relation(c)} ${c.name}, 향년 ${age(c)}세.<br>${cause}${heirs ? '<br>가문의 다른 이들이 뜻을 잇는다.' : ''}`);
   }
 
   // ---------- Remaining tiles ----------
@@ -1506,7 +1622,7 @@
       openModal(`
         <h2>${E.boss ? '최후의 결전' : '전투!'}</h2>
         <div class="battle-field">
-          <div class="party ${single ? '' : 'many'}">${party.map((p) => `<div class="pm" data-id="${p.id}"><span class="fe">${charFace(p)}</span><div class="pn">${p.name} Lv${p.lv}</div><div class="bar hp"><i></i><b></b></div><div class="bar mp thin"><i></i></div></div>`).join('')}</div>
+          <div class="party ${single ? '' : 'many'}">${party.map((p) => `<div class="pm" data-id="${p.id}"><div class="fe pf">${portraitOf(p, { frame: 'full' })}</div><div class="pn">${p.name} Lv${p.lv}</div><div class="bar hp"><i></i><b></b></div><div class="bar mp thin"><i></i></div></div>`).join('')}</div>
           <div class="vs">VS</div>
           <div class="fighter"><div class="fe" id="bEn">${E.icon}</div><div class="fn">${E.name} Lv${E.lv}</div>
             <div class="bar hp"><i id="bEnBar"></i><b id="bEnHp"></b></div><div class="fs" id="bEnStat"></div></div>
@@ -1672,7 +1788,7 @@
     const party = heroes();
     if (!party.length) { await gameOver('마왕이 깨어났지만 맞설 자가 없었다'); return; }
     log('😈 마왕이 깨어났다! 가문의 모든 모험가가 최후의 결전에 나선다!');
-    await notice('😈', '마왕 부활!', `${BOSS_YEAR}년이 흘러 마왕이 깨어났다.<br>${party.map((p) => `${charFace(p)} ${p.name}(${age(p)}세)`).join(', ')}이(가) 함께 싸운다.<br>도망칠 수 없다!`);
+    await notice(party.map((p) => bigPt(p)).join(''), '😈 마왕 부활!', `${BOSS_YEAR}년이 흘러 마왕이 깨어났다.<br>${party.map((p) => `${charFace(p)} ${p.name}(${age(p)}세)`).join(', ')}이(가) 함께 싸운다.<br>도망칠 수 없다!`);
     party.forEach((p) => { p.mp = p.mmp; });
     const res = await battle(party, bossFor(party.length));
     for (const p of res.fallen) if (p.alive) await killHero(p, '마왕과의 결전');
@@ -1736,7 +1852,7 @@
     } else {
       rows = [['관계', relation(c)], ['나이', `${age(c)}세 (${ADULT_AGE}세에 출전)`], ['교육', c.edu], ['훈련', c.train], ['유대', c.bond]];
     }
-    openModal(`<div class="big-emoji">${charFace(c)}</div><h2>${c.name}</h2>
+    openModal(`<div class="pt-row">${bigPt(c)}</div><h2>${c.name}</h2>
       <dl class="info">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
       <button class="primary" id="closeInfo">닫기</button>`);
     sheet.querySelector('#closeInfo').addEventListener('click', closeModal);
@@ -1757,6 +1873,8 @@
     return `<div class="result-stats"><div>최고 기록<b>${best.won ? '마왕 토벌 👑' : `${best.year}년 생존`}</b></div><div>가문<b>${best.gen}대 · ${best.family}명</b></div></div>`;
   }
 
+  const previewPt = (cls, g) => `<span class="pt-mini">${drawBust({ gender: g, age: START_AGE, look: makeLook(g, 'title' + cls), outfit: cls, mood: 'happy', frame: 'full' })}</span>`;
+
   function showTitle() {
     const saved = loadSave();
     const best = loadBest();
@@ -1770,7 +1888,7 @@
       <div class="seg"><button data-g="m" class="on">🙋‍♂️ 남자</button><button data-g="f">🙋‍♀️ 여자</button></div>
       <input class="name-in" id="nameIn" maxlength="6" placeholder="이름 (비우면 자동)" autocomplete="off">
       <div class="classes">
-        ${Object.entries(CLASSES).map(([k, c]) => `<button class="cls" data-cls="${k}"><span class="ce">${c.face}</span><span><b>${c.name}</b><small>HP ${c.hp} · 힘 ${c.atk} · 방어 ${c.def} · 지력 ${c.int}<br>${c.blurb}<br>스킬 ${c.skill}: ${c.skillDesc}</small></span></button>`).join('')}
+        ${Object.entries(CLASSES).map(([k, c]) => `<button class="cls" data-cls="${k}"><span class="ce" data-pt="${k}">${previewPt(k, 'm')}</span><span><b>${c.name}</b><small>HP ${c.hp} · 힘 ${c.atk} · 방어 ${c.def} · 지력 ${c.int}<br>${c.blurb}<br>스킬 ${c.skill}: ${c.skillDesc}</small></span></button>`).join('')}
       </div>
       ${RULES_HTML}`);
     const cont = sheet.querySelector('#contBtn');
@@ -1778,6 +1896,7 @@
     sheet.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => {
       gender = b.dataset.g;
       sheet.querySelectorAll('[data-g]').forEach((x) => x.classList.toggle('on', x === b));
+      sheet.querySelectorAll('[data-pt]').forEach((x) => { x.innerHTML = previewPt(x.dataset.pt, gender); });
     }));
     sheet.querySelectorAll('[data-cls]').forEach((b) => b.addEventListener('click', async () => {
       const typed = sheet.querySelector('#nameIn').value.trim().slice(0, 6);
