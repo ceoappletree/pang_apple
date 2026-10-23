@@ -199,6 +199,7 @@ button { cursor: pointer; }
 .radio { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; cursor: pointer; }
 .radio input { margin-top: 4px; accent-color: var(--leaf); }
 .radio small { color: var(--muted); line-height: 1.5; }
+.radio .note { color: var(--leaf); }
 .llm-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--panel-2); border-radius: 12px; }
 .llm-box select { padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
 .llm-box progress { width: 100%; accent-color: var(--leaf); }

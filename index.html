@@ -59,8 +59,10 @@
     <div class="panel-head"><h2>설정</h2><button type="button" class="close" data-close aria-label="닫기">✕</button></div>
     <div class="panel-body">
       <h3>주민들의 두뇌</h3>
+      <label class="radio"><input type="radio" name="aiMode" id="aiClaude" value="claude">
+        <span><b>Claude AI</b> (추천)<br><small>주민들이 Claude로 생각하고 말해요. 무슨 말이든 알아듣고 매번 새로 대답해요. API 키 없이 claude.ai에서 열었을 때 쓸 수 있고, 처음 한 번 허용을 묻고 내 Claude 사용량을 써요.</small><br><small id="claudeNote" class="note"></small></span></label>
       <label class="radio"><input type="radio" name="aiMode" id="aiRules" value="rules">
-        <span><b>규칙 기반 AI</b> (기본)<br><small>의도 분석, 기억, 호감도, 소문을 전부 기기 안에서 계산해요. 내려받을 것 없이 바로 동작해요.</small></span></label>
+        <span><b>규칙 기반 AI</b><br><small>정해 둔 낱말 패턴으로 말을 알아듣고 미리 써 둔 대사로 대답해요. 인터넷 없이도 바로 동작하지만, 패턴에 없는 말은 잘 못 알아들어요.</small></span></label>
       <label class="radio"><input type="radio" name="aiMode" id="aiLlm" value="llm">
         <span><b>기기 속 LLM</b> (실험)<br><small>작은 언어 모델을 브라우저로 한 번 내려받아 휴대폰·PC 안에서 돌려요. API 키나 서버는 필요 없어요. 게임 규칙은 그대로 두고 말투만 더 자연스러워져요.</small></span></label>
       <div id="llmBox" class="llm-box" hidden>
@@ -85,6 +87,7 @@
       <p class="eyebrow">AI 주민이 사는 마을</p>
       <h1>사과나무 마을</h1>
       <p>주민 넷이 저마다의 성격과 하루 일정을 가지고 살아요. 말을 걸면 당신의 이름과 좋아하는 것을 기억하고, 당신이 한 일을 다른 주민에게 소문내기도 해요.</p>
+      <p class="muted">claude.ai에서 열면 주민들이 Claude로 자유롭게 대화해요. 처음 말을 걸 때 Claude 사용을 허용할지 물어요.</p>
       <ul class="howto">
         <li><b>이동</b> 땅을 누르세요. 키보드는 방향키나 WASD.</li>
         <li><b>대화</b> 주민을 누르거나 옆에서 스페이스. 아무 말이나 자유롭게 입력해 보세요.</li>
@@ -100,6 +103,7 @@
 <script src="js/world.js"></script>
 <script src="js/brain.js"></script>
 <script src="js/llm.js"></script>
+<script src="js/claude-ai.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

@@ -5,6 +5,7 @@
   const World = window.World;
   const { NpcBrain, converse, josa } = window.NpcBrain;
   const LLM = window.NpcLLM;
+  const ClaudeAI = window.NpcClaude;
 
   const TILE = 32;
   const SAVE_KEY = 'appletree-village-save-v1';
@@ -38,7 +39,7 @@
 
   let S = load(SAVE_KEY);
   if (!S || S.version !== 1) S = newState();
-  const prefs = Object.assign({ ai: 'rules', model: 'small' }, load(PREF_KEY) || {});
+  const prefs = Object.assign({ ai: 'claude', model: 'small' }, load(PREF_KEY) || {});
 
   const player = { x: S.player.x, y: S.player.y, path: [], dir: 1, moving: false, talkTo: null };
   const brains = {};
@@ -698,6 +699,48 @@
     renderChips();
   }
 
+  // 지금 실제로 쓰는 두뇌: 고른 방식을 쓸 수 없으면 규칙 기반으로 돌아간다
+  function aiMode() {
+    if (prefs.ai === 'claude' && ClaudeAI.available()) return 'claude';
+    if (prefs.ai === 'llm' && LLM.status === 'ready') return 'llm';
+    return 'rules';
+  }
+
+  // Claude가 대사와 게임 행동을 함께 정한다. 실패하면 규칙 기반 AI가 대신 대답한다.
+  async function claudeSay(n, userText, note) {
+    const token = ++chatToken;
+    busy = true;
+    const el = addMsg('npc typing', '');
+    el.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
+    const ctx = ctxFor(n);
+    let res;
+    try {
+      res = await ClaudeAI.talk({ brain: n.brain, text: userText, ctx, note }, partial => {
+        if (token === chatToken && partial) { el.classList.remove('typing'); el.textContent = partial; log.scrollTop = log.scrollHeight; }
+      });
+    } catch (e) {
+      if (token !== chatToken) return;
+      const why = ClaudeAI.explain(e);
+      if (note) res = { reply: note };
+      else { const r = n.brain.talk(userText, ctx); res = { reply: r.reply, openGift: r.openGift, bye: r.intent === 'bye' }; }
+      if (!res.reply) res.reply = '...';
+      if (why) addMsg('sys', why);
+    }
+    if (token !== chatToken) return;
+    el.classList.remove('typing');
+    el.textContent = res.reply;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    n.bubble = { text: res.reply, until: performance.now() / 1000 + 4 };
+    n.brain.addHistory(userText, res.reply);
+    busy = false;
+    renderChatHead();
+    renderChips();
+    if (res.openGift) openGiftBar();
+    if (res.bye) setTimeout(() => { if (chatNpc === n && !busy) closeChat(); }, 1400);
+    save();
+  }
+
   function send(text) {
     text = String(text || '').trim();
     const n = chatNpc;
@@ -705,6 +748,7 @@
     $('giftBar').hidden = true;
     addMsg('me', text);
     $('chatInput').value = '';
+    if (aiMode() === 'claude' && n.state !== 'sleep') { claudeSay(n, text); return; }
     const res = n.brain.talk(text, ctxFor(n));
     if (res.openGift) {
       openGiftBar();
@@ -748,7 +792,9 @@
     const said = josa('(' + ITEMS[k].emoji + ' ' + name + '[을/를] 건넸다)');
     addMsg('me', said);
     const res = n.brain.receiveGift(k, ctxFor(n));
-    npcSay(n, res.reply, josa(name + '[을/를] 선물로 건넸다'));
+    const what = josa(name + '[을/를] 선물로 건넸다');
+    if (aiMode() === 'claude' && n.state !== 'sleep') claudeSay(n, '(' + what + ')', '플레이어가 ' + what + '. 게임 처리 결과로 정해진 반응: "' + res.reply + '" 이 반응의 뜻대로 네 말투로 대답해라.');
+    else npcSay(n, res.reply, what);
   }
 
   function renderChatHead() {
@@ -771,7 +817,7 @@
     if (mem.playerLikes.length) known.push('좋아하는 것 ' + mem.playerLikes.slice(-2).join('·'));
     if (b.s.heard.length) known.push('들은 소문 ' + b.s.heard.length + '건');
     $('chatMemory').textContent = '기억: ' + known.join(' / ');
-    $('chatAiBadge').textContent = prefs.ai === 'llm' && LLM.status === 'ready' ? '기기 속 LLM' : '규칙 기반 AI';
+    $('chatAiBadge').textContent = { claude: 'Claude AI', llm: '기기 속 LLM', rules: '규칙 기반 AI' }[aiMode()];
   }
 
   function renderChips() {
@@ -867,6 +913,9 @@
     const sup = LLM.supported();
     document.querySelectorAll('input[name="aiMode"]').forEach(r => { r.checked = r.value === prefs.ai; });
     $('llmBox').hidden = prefs.ai !== 'llm';
+    $('claudeNote').textContent = ClaudeAI.available() ? '지금 쓸 수 있어요.'
+      : ClaudeAI.disabled ? 'Claude 사용이 허용되지 않아 지금은 규칙 기반 AI로 대화해요.'
+        : 'claude.ai에서 열었을 때만 쓸 수 있어요. 지금은 규칙 기반 AI로 대화해요.';
     $('modelSelect').value = prefs.model;
     $('llmSupport').textContent = sup ? '이 브라우저는 WebGPU를 지원해요.' : '이 브라우저는 WebGPU를 지원하지 않아 LLM을 쓸 수 없어요. 규칙 기반 AI로 계속 플레이할 수 있어요.';
     $('btnLoadModel').disabled = !sup || LLM.status === 'loading';
@@ -923,6 +972,7 @@
     // 이미 내려받은 모델은 캐시에서 빠르게 불러온다
     LLM.load(prefs.model).then(() => toast('🧠 기기 속 LLM 준비 완료')).catch(() => { /* 설정에서 다시 시도 */ });
   }
+  ClaudeAI.init().then(ok => { if (ok) { renderChatHead(); if (!$('settings').hidden) renderSettings(); } });
   requestAnimationFrame(loop);
 
   // 테스트와 디버깅용
