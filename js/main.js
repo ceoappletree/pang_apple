@@ -6,6 +6,7 @@
   const { NpcBrain, converse, josa } = window.NpcBrain;
   const LLM = window.NpcLLM;
   const ClaudeAI = window.NpcClaude;
+  const Snd = window.GameAudio;
 
   const TILE = 32;
   const SAVE_KEY = 'appletree-village-save-v1';
@@ -39,7 +40,7 @@
 
   let S = load(SAVE_KEY);
   if (!S || S.version !== 1) S = newState();
-  const prefs = Object.assign({ ai: 'claude', model: 'small' }, load(PREF_KEY) || {});
+  const prefs = Object.assign({ ai: 'claude', model: 'small', muted: false, music: 0.5, sfx: 0.7 }, load(PREF_KEY) || {});
 
   const player = { x: S.player.x, y: S.player.y, path: [], dir: 1, moving: false, talkTo: null };
   const brains = {};
@@ -75,10 +76,10 @@
   // ---------- 인벤토리 ----------
   const inv = {
     count: k => S.inv[k] || 0,
-    add(k, n) { S.inv[k] = (S.inv[k] || 0) + n; toast(ITEMS[k].emoji + ' ' + ITEMS[k].name + ' +' + n); renderInv(); },
+    add(k, n) { S.inv[k] = (S.inv[k] || 0) + n; toast(ITEMS[k].emoji + ' ' + ITEMS[k].name + ' +' + n); Snd.play('pickup'); renderInv(); },
     remove(k, n) { S.inv[k] = Math.max(0, (S.inv[k] || 0) - n); toast(ITEMS[k].emoji + ' ' + ITEMS[k].name + ' −' + n); renderInv(); },
     coins: () => S.coins,
-    addCoins(n) { S.coins += n; toast('🪙 ' + (n > 0 ? '+' : '−') + Math.abs(n) + '전'); renderInv(); },
+    addCoins(n) { S.coins += n; toast('🪙 ' + (n > 0 ? '+' : '−') + Math.abs(n) + '전'); Snd.play(n > 0 ? 'coin' : 'pay'); renderInv(); },
   };
 
   function placeName(x, y) {
@@ -102,8 +103,8 @@
     return {
       day: S.day, now: S.playTime, period: per, periodName: PERIOD_NAME[per], clock: clockText(), weather: weather(),
       sleeping: !!n && n.state === 'sleep', flags: S.flags, news: n ? rumorFor(n.id) : null, brains, inv,
-      notify: toast,
-      setFollow: id => { S.follow = id; toast('🐱 모모가 당신을 따라다니기 시작했다!'); },
+      notify,
+      setFollow: id => { S.follow = id; toast('🐱 모모가 당신을 따라다니기 시작했다!'); Snd.play('meow'); },
     };
   }
 
@@ -461,6 +462,7 @@
     if (res.gossip) {
       toast('👂 ' + josa(name(res.lines[0][0]) + '[이/가] ' + name(res.lines[1][0]) + '에게 당신 이야기를 했어요'));
       $('btnJournal').classList.add('ping');
+      Snd.play('whisper');
     }
   }
   function endConvo(c) {
@@ -499,6 +501,7 @@
 
   // ---------- 메인 루프 ----------
   const keys = new Set();
+  let lastStep = { x: Math.round(player.x), y: Math.round(player.y) };
   let saveT = 0;
   function update(dt, t) {
     if (!chatNpc) {
@@ -506,7 +509,7 @@
       const speed = period() === 'night' && allAsleep ? 20 : 4; // 게임 분 / 실제 초
       const before = S.time;
       S.time += dt * speed;
-      if (S.time >= 1440) { S.time -= 1440; S.day++; toast('🌅 ' + S.day + '일차 아침이 밝았어요'); }
+      if (S.time >= 1440) { S.time -= 1440; S.day++; toast('🌅 ' + S.day + '일차 아침이 밝았어요'); Snd.play('chime'); }
       spawnClock += S.time - before + (S.time < before ? 1440 : 0);
       if (spawnClock >= 30) { spawnClock = 0; spawnItems(false); }
       S.playTime += dt;
@@ -522,6 +525,8 @@
     }
     const wasMoving = player.path.length > 0;
     moveAlong(player, dt, 4.5);
+    const stepTile = tileOf(player);
+    if (stepTile.x !== lastStep.x || stepTile.y !== lastStep.y) { lastStep = stepTile; Snd.play('step'); }
     pickup();
     if (wasMoving && !player.path.length && player.talkTo) {
       const n = player.talkTo;
@@ -609,6 +614,7 @@
     if (txt === lastClock) return;
     lastClock = txt;
     $('clockIcon').textContent = PERIOD_ICON[period()];
+    Snd.setPeriod(period());
     $('dayLabel').textContent = S.day + '일차';
     $('clockLabel').textContent = clockText();
   }
@@ -618,6 +624,12 @@
       .map(k => '<span class="inv-item' + (S.inv[k] ? '' : ' empty') + '" title="' + ITEMS[k].name + '">' + ITEMS[k].emoji + '<b>' + (S.inv[k] || 0) + '</b></span>');
     parts.push('<span class="inv-item coin" title="동전">🪙<b>' + S.coins + '</b></span>');
     el.innerHTML = parts.join('');
+  }
+
+  // 부탁 관련 알림은 소리와 함께
+  function notify(text) {
+    toast(text);
+    Snd.play(text.startsWith('✅') ? 'fanfare' : 'quest');
   }
 
   function toast(text) {
@@ -631,7 +643,7 @@
   }
 
   // ---------- 대화 ----------
-  let chatNpc = null, busy = false, chatToken = 0;
+  let chatNpc = null, busy = false, chatToken = 0, shownAff = 0;
   const log = $('chatLog');
 
   function openChat(n) {
@@ -646,6 +658,8 @@
     log.innerHTML = '';
     $('giftBar').hidden = true;
     $('chat').hidden = false;
+    Snd.play(n.id === 'momo' && n.state !== 'sleep' ? 'meow' : 'open');
+    shownAff = n.brain.s.affinity;
     renderChatHead();
     const res = n.brain.greet(ctxFor(n));
     npcSay(n, res.reply, null);
@@ -660,6 +674,7 @@
     n.chatCd = Math.max(n.chatCd, 10);
     $('chat').hidden = true;
     $('chatInput').blur();
+    Snd.play('close');
     save();
   }
 
@@ -692,6 +707,7 @@
     el.classList.remove('typing');
     el.textContent = text;
     log.scrollTop = log.scrollHeight;
+    Snd.voice(n.id, text);
     n.bubble = { text, until: performance.now() / 1000 + 4 };
     if (userText) n.brain.addHistory(userText, text);
     busy = false;
@@ -713,10 +729,13 @@
     const el = addMsg('npc typing', '');
     el.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
     const ctx = ctxFor(n);
-    let res;
+    let res, spoke = false;
     try {
       res = await ClaudeAI.talk({ brain: n.brain, text: userText, ctx, note }, partial => {
-        if (token === chatToken && partial) { el.classList.remove('typing'); el.textContent = partial; log.scrollTop = log.scrollHeight; }
+        if (token === chatToken && partial) {
+          el.classList.remove('typing'); el.textContent = partial; log.scrollTop = log.scrollHeight;
+          if (!spoke && partial.length > 6) { spoke = true; Snd.voice(n.id, partial + partial); }
+        }
       });
     } catch (e) {
       if (token !== chatToken) return;
@@ -730,6 +749,7 @@
     el.classList.remove('typing');
     el.textContent = res.reply;
     log.appendChild(el);
+    if (!spoke) Snd.voice(n.id, res.reply);
     log.scrollTop = log.scrollHeight;
     n.bubble = { text: res.reply, until: performance.now() / 1000 + 4 };
     n.brain.addHistory(userText, res.reply);
@@ -748,6 +768,7 @@
     $('giftBar').hidden = true;
     addMsg('me', text);
     $('chatInput').value = '';
+    Snd.play('send');
     if (aiMode() === 'claude' && n.state !== 'sleep') { claudeSay(n, text); return; }
     const res = n.brain.talk(text, ctxFor(n));
     if (res.openGift) {
@@ -807,6 +828,9 @@
     $('chatTier').textContent = b.tierLabel();
     $('chatMood').textContent = b.moodEmoji();
     const aff = b.s.affinity;
+    if (aff - shownAff >= 3) Snd.play('up');
+    else if (aff - shownAff <= -3) Snd.play('down');
+    shownAff = aff;
     const bar = $('chatAff');
     bar.style.left = (aff >= 0 ? 50 : 50 + aff / 2) + '%';
     bar.style.width = Math.abs(aff) / 2 + '%';
@@ -867,8 +891,30 @@
     if (!el.hidden && id === 'journal') { $('btnJournal').classList.remove('ping'); renderJournal(); }
     if (!el.hidden && id === 'settings') renderSettings();
   }
-  $('btnJournal').addEventListener('click', () => togglePanel('journal'));
-  $('btnSettings').addEventListener('click', () => togglePanel('settings'));
+  $('btnJournal').addEventListener('click', () => { Snd.play('click'); togglePanel('journal'); });
+  $('btnSettings').addEventListener('click', () => { Snd.play('click'); togglePanel('settings'); });
+
+  // ---------- 소리 ----------
+  Snd.muted = prefs.muted; Snd.musicVol = prefs.music; Snd.sfxVol = prefs.sfx;
+  const unlockAudio = () => Snd.unlock();
+  window.addEventListener('pointerdown', unlockAudio, true);
+  window.addEventListener('keydown', unlockAudio, true);
+  function renderSoundBtn() {
+    $('btnSound').textContent = prefs.muted ? '🔇' : '🔊';
+    $('btnSound').setAttribute('aria-label', prefs.muted ? '소리 켜기' : '소리 끄기');
+    $('btnSound').setAttribute('aria-pressed', String(!prefs.muted));
+  }
+  $('btnSound').addEventListener('click', () => {
+    prefs.muted = !prefs.muted; store(PREF_KEY, prefs);
+    Snd.unlock(); Snd.setMuted(prefs.muted);
+    renderSoundBtn();
+    Snd.play('click');
+  });
+  $('musicVol').value = prefs.music; $('sfxVol').value = prefs.sfx;
+  $('musicVol').addEventListener('input', e => { prefs.music = +e.target.value; Snd.setMusicVolume(prefs.music); store(PREF_KEY, prefs); });
+  $('sfxVol').addEventListener('input', e => { prefs.sfx = +e.target.value; Snd.setSfxVolume(prefs.sfx); store(PREF_KEY, prefs); });
+  $('sfxVol').addEventListener('change', () => Snd.play('pickup'));
+  renderSoundBtn();
   document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closePanels));
 
   let journalTab = 'quests';
@@ -961,7 +1007,7 @@
   // ---------- 시작 ----------
   window.addEventListener('resize', resize);
   window.addEventListener('pagehide', save);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); Snd.pause(); } else Snd.resume(); });
 
   buildBase();
   resize();

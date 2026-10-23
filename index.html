@@ -18,6 +18,7 @@
     <div class="clock" aria-live="off"><span id="clockIcon">☀️</span><b id="dayLabel">1일차</b><span id="clockLabel">오전 8시</span></div>
     <div id="inv" class="inv" aria-label="가방"></div>
     <div class="hud-btns">
+      <button id="btnSound" type="button" aria-label="소리 끄기">🔊</button>
       <button id="btnJournal" type="button" aria-label="마을 수첩">📜</button>
       <button id="btnSettings" type="button" aria-label="설정">⚙️</button>
     </div>
@@ -78,6 +79,12 @@
         <progress id="llmProgress" max="1" value="0" hidden></progress>
         <p id="llmStatus" class="muted"></p>
       </div>
+      <h3>소리</h3>
+      <div class="sliders">
+        <label for="musicVol">음악</label><input type="range" id="musicVol" min="0" max="1" step="0.05">
+        <label for="sfxVol">효과음과 목소리</label><input type="range" id="sfxVol" min="0" max="1" step="0.05">
+      </div>
+      <p class="muted">상단의 🔊 버튼으로 모든 소리를 끄고 켤 수 있어요.</p>
       <h3>저장</h3>
       <p class="muted">진행 상황은 이 브라우저에 자동으로 저장돼요.</p>
       <button type="button" id="btnReset" class="danger">처음부터 다시 하기</button>
@@ -102,6 +109,7 @@
 </div>
 
 <script src="js/data.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/world.js"></script>
 <script src="js/brain.js"></script>
 <script src="js/llm.js"></script>
