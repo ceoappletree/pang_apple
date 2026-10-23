@@ -43,7 +43,13 @@ function title() {
       </div>
     </div>`, {
     resume: () => { hide(); Game.resume(title); },
-    career: () => { if (cont && !confirm('저장된 시즌을 지우고 새로 시작할까요?')) return; nameEntry(); },
+    career: () => {
+      if (!cont) return nameEntry();
+      show(`<div class="card"><h2>새로 시작할까요?</h2>
+        <p class="muted small" style="margin:8px 0 16px">저장된 시즌 진행이 지워지고 처음부터 시작해요.</p>
+        <div class="stack"><button class="btn pink" data-a="yes">새로 시작</button><button class="btn ghost" data-a="no">취소</button></div></div>`,
+      { yes: nameEntry, no: title });
+    },
     quick: quickStart,
     howto,
   });
