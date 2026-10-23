@@ -1,0 +1,929 @@
+<title>닫힌 방의 목소리</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@300;500;700&family=IBM+Plex+Sans+KR:wght@400;500&display=swap">
+<style>
+  /* Layout: one-screen voice escape app — room bar, voice "presence" stage, transcript, reply chips, input/door row.
+     Single deliberate dark look: a sealed room lit only by the voice. */
+  :root {
+    --bg: #0d0e12;
+    --wall: #15171d;
+    --line: #262a33;
+    --fg: #e7e2d8;
+    --muted: #8a8f9c;
+    --linen: #efe7d6;
+    --whisper: #c8a9c4;
+    --you: #9fb8d6;
+    --lock: #d9b26a;
+    --bad: #e08a7a;
+    --font-display: "Hahmlet", "Nanum Myeongjo", "AppleMyungjo", serif;
+    --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    overflow: hidden;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--lock); outline-offset: 2px; }
+
+  .app { height: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding-block: 12px; }
+  .btn { border: 1px solid var(--line); background: var(--wall); border-radius: 10px; padding: 10px 14px; cursor: pointer; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.main { background: var(--linen); color: #1a1712; border-color: var(--linen); font-family: var(--font-display); font-weight: 700; font-size: 17px; padding: 13px 18px; }
+  .icon-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--wall); display: grid; place-items: center; cursor: pointer; flex: none; }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* ---------- title ---------- */
+  #title { flex: 1; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  #title .cloth { width: 100%; height: 190px; display: block; }
+  #title h1 { font-family: var(--font-display); font-weight: 300; font-size: 38px; line-height: 1.2; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  #title h1 b { font-weight: 700; }
+  .lede { margin: 0; color: var(--muted); line-height: 1.7; max-width: 34em; }
+  .label { font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+  .moods { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mood { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+  .mood[aria-pressed="true"] { border-color: var(--linen); background: rgba(239, 231, 214, .1); }
+  .title-row { display: flex; gap: 8px; }
+  .title-row .main { flex: 1; }
+  .ai-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
+  .ai-note.off { color: var(--bad); }
+
+  /* ---------- game ---------- */
+  #game { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  .bar { display: flex; align-items: center; gap: 10px; }
+  .room { flex: 1; min-width: 0; }
+  .room .label { display: block; }
+  .room h2 { margin: 2px 0 0; font-family: var(--font-display); font-weight: 500; font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doors { display: flex; gap: 4px; margin-top: 6px; }
+  .doors i { width: 18px; height: 4px; border-radius: 2px; background: var(--line); }
+  .doors i.done { background: var(--linen); }
+  .doors i.here { background: var(--lock); }
+
+  .stage { position: relative; height: clamp(130px, 24vh, 210px); border-radius: 14px; background: radial-gradient(ellipse at 50% 20%, #1c1f27, var(--bg) 75%); border: 1px solid var(--line); overflow: hidden; flex: none; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .who-card { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }
+  .who-card b { font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+  .who-card span { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  .log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
+  .msg { line-height: 1.7; max-width: 92%; word-break: keep-all; overflow-wrap: anywhere; animation: rise .35s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+  .msg.narr { font-family: var(--font-display); font-weight: 300; color: #cfc9bd; font-size: 16px; }
+  .msg.say { border-left: 2px solid var(--linen); padding: 2px 0 2px 12px; font-size: 16px; }
+  .msg.say small, .msg.whisper small { display: block; font-size: 11px; letter-spacing: .1em; color: var(--muted); }
+  .msg.whisper { color: var(--whisper); font-family: var(--font-display); font-style: italic; padding-left: 14px; border-left: 2px dotted var(--whisper); }
+  .msg.you { align-self: flex-end; background: rgba(159, 184, 214, .1); color: var(--you); border-radius: 12px 12px 2px 12px; padding: 7px 12px; }
+  .msg.sys { align-self: center; font-size: 12px; color: var(--muted); }
+  .msg.lock { align-self: center; font-size: 13px; color: var(--lock); }
+  .msg.speaking { text-shadow: 0 0 14px rgba(239, 231, 214, .25); }
+  .thinking { color: var(--muted); font-size: 13px; }
+  .thinking::after { content: "…"; animation: blink 1.2s steps(3) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+
+  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; border: 1px solid var(--line); background: var(--wall); border-radius: 999px; padding: 7px 12px; font-size: 14px; cursor: pointer; white-space: nowrap; }
+
+  .composer { display: flex; gap: 8px; flex: none; }
+  .composer input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--wall); border-radius: 10px; padding: 11px 12px; font-size: 16px; }
+  .composer.door input { border-color: var(--lock); }
+  .composer .icon-btn { width: 46px; height: 46px; }
+  .door-btn[aria-pressed="true"] { border-color: var(--lock); color: var(--lock); }
+  .next { flex: none; }
+
+  .ending { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+  .ending h2 { font-family: var(--font-display); font-weight: 300; font-size: 32px; margin: 0; }
+  .ending .story { font-family: var(--font-display); font-weight: 300; font-size: 17px; line-height: 1.85; margin: 0; }
+  .stats { display: flex; gap: 18px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* settings */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, .6); display: flex; align-items: flex-end; justify-content: center; z-index: 20; padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+  .sheet { width: min(560px, 100%); background: var(--wall); border: 1px solid var(--line); border-bottom: 0; border-radius: 16px 16px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
+  .sheet h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 19px; display: flex; justify-content: space-between; align-items: center; }
+  .field { display: grid; gap: 6px; font-size: 14px; }
+  .field select { padding: 10px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
+  .field input[type=range] { width: 100%; accent-color: var(--linen); }
+  .toggle { display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+  .toggle input { width: 22px; height: 22px; accent-color: var(--linen); }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+  @media (prefers-reduced-motion: reduce) { .msg, .thinking::after { animation: none; } }
+</style>
+
+<div class="app">
+  <!-- 타이틀 -->
+  <section id="title">
+    <canvas class="cloth" id="titleCloth" aria-hidden="true"></canvas>
+    <h1>닫힌 방의<br><b>목소리</b></h1>
+    <p class="lede">창문 하나 없는 방에서 눈을 뜹니다. 하늘하늘한 찢어진 천 한 장을 걸친 여자가 당신에게 말을 겁니다. 그녀의 목소리를 듣고, 방마다 만나는 사람들과 이야기하며 문을 여는 단어를 찾아 탈출하세요.</p>
+    <div>
+      <div class="label">이야기 분위기</div>
+      <div class="moods" id="moods" role="group" aria-label="이야기 분위기" style="margin-top:8px">
+        <button class="mood" data-mood="미스터리" aria-pressed="true">미스터리</button>
+        <button class="mood" data-mood="오싹한 공포">오싹한 공포</button>
+        <button class="mood" data-mood="애틋하고 슬픈">애틋함</button>
+        <button class="mood" data-mood="기묘한 동화">기묘한 동화</button>
+      </div>
+    </div>
+    <div class="title-row">
+      <button class="btn main" id="startBtn">눈을 뜬다</button>
+      <button class="icon-btn" id="titleSettings" aria-label="목소리 설정" style="width:50px;height:50px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+      </button>
+    </div>
+    <p class="ai-note" id="aiNote">이야기와 대사는 Claude가 판마다 새로 씁니다. 처음 시작할 때 Claude 사용 허락을 묻습니다.</p>
+  </section>
+
+  <!-- 게임 -->
+  <section id="game" hidden>
+    <div class="bar">
+      <button class="icon-btn" id="homeBtn" aria-label="처음으로">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="room">
+        <span class="label" id="roomLabel"></span>
+        <h2 id="roomName"></h2>
+        <div class="doors" id="doors"></div>
+      </div>
+      <button class="icon-btn" id="replayBtn" aria-label="마지막 목소리 다시 듣기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+      <button class="icon-btn" id="gameSettings" aria-label="목소리 설정">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>
+      </button>
+    </div>
+
+    <div class="stage">
+      <canvas id="stage" aria-hidden="true"></canvas>
+      <div class="who-card"><b id="whoName"></b><span id="whoLook"></span></div>
+    </div>
+
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="chips" id="chips"></div>
+
+    <form class="composer" id="composer" autocomplete="off">
+      <button type="button" class="icon-btn door-btn" id="doorBtn" aria-pressed="false" aria-label="문 자물쇠에 단어 입력">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      </button>
+      <input id="say" maxlength="120" placeholder="말을 걸거나 행동을 적어 보세요">
+      <button class="icon-btn" id="sendBtn" aria-label="보내기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+    <button class="btn main next" id="nextBtn" hidden>다음 방으로</button>
+  </section>
+
+  <!-- 엔딩 -->
+  <section id="ending" class="ending" hidden>
+    <div class="label">탈출</div>
+    <h2 id="endTitle"></h2>
+    <p class="story" id="endStory"></p>
+    <div class="stats" id="endStats"></div>
+    <div class="title-row">
+      <button class="btn main" id="againBtn">새 이야기로 다시</button>
+      <button class="btn" id="endHome">처음으로</button>
+    </div>
+  </section>
+</div>
+
+<div class="sheet-bg" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h3 id="setTitle">목소리 설정 <button class="icon-btn" id="closeSet" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
+    <label class="toggle">목소리로 읽어 주기 <input type="checkbox" id="optVoice"></label>
+    <div class="field">
+      <label for="optSel">기본 목소리</label>
+      <select id="optSel"></select>
+      <span class="hint" id="voiceHint"></span>
+    </div>
+    <div class="field">
+      <label for="optRate">말하기 속도 <b id="rateVal"></b></label>
+      <input type="range" id="optRate" min="0.7" max="1.5" step="0.1">
+    </div>
+    <button class="btn" id="previewBtn">그녀의 목소리 미리 듣기</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  /* ================= 설정 저장 (브라우저별 편의) ================= */
+  const SKEY = 'closed-room-voice:settings';
+  const settings = { voice: true, voiceURI: '', rate: 1 };
+  try { Object.assign(settings, JSON.parse(localStorage.getItem(SKEY)) || {}); } catch (e) {}
+  const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch (e) {} };
+
+  /* ================= 목소리 종류 ================= */
+  const VOICE_TYPES = ['woman', 'old_man', 'man', 'old_woman', 'child', 'machine'];
+  const VOICE = {
+    narrator:  { pitch: 1.0,  rate: 1.0,  color: [200, 196, 186] },
+    woman:     { pitch: 1.3,  rate: .82,  color: [239, 231, 214], alt: false },
+    whisper:   { pitch: 1.3,  rate: .78,  color: [200, 169, 196], volume: .75 },
+    old_man:   { pitch: .55,  rate: .85,  color: [217, 178, 106], alt: true },
+    man:       { pitch: .8,   rate: 1.0,  color: [140, 170, 205], alt: true },
+    old_woman: { pitch: 1.0,  rate: .78,  color: [196, 160, 130] },
+    child:     { pitch: 1.8,  rate: 1.1,  color: [170, 210, 170] },
+    machine:   { pitch: .3,   rate: 1.15, color: [150, 200, 210], alt: true },
+  };
+
+  /* ================= 준비된 이야기 (Claude를 쓸 수 없을 때) ================= */
+  const FALLBACK = {
+    title: '하얀 커튼 너머',
+    premise: '당신은 창문 하나 없는 하얀 방에서 눈을 뜹니다. 어디선가 낮은 목소리가 당신을 부릅니다.',
+    woman: { name: '그녀', secret: '몇 달 동안 병상 곁에서 매일 당신에게 말을 걸어 준 사람의 목소리' },
+    rooms: [
+      {
+        name: '하얀 방',
+        description: '벽도 천장도 바닥도 온통 하얀 방입니다. 손잡이 없는 문이 하나 있고, 공기는 이상하리만치 고요합니다. 방 한가운데, 하늘하늘한 찢어진 천 한 장을 걸친 창백한 여자가 서 있습니다.',
+        character: { name: '그녀', voice: 'woman', look: '찢어진 천자락이 바람도 없이 흔들린다', greeting: '깨어났구나. 쉿, 이 방은 소리를 싫어해. 문을 열고 싶다면, 이름을 부르는 순간 깨져 버리는 것을 찾아.' },
+        answer: '침묵', aliases: ['고요', '정적'],
+        hints: ['말하는 순간 사라지는 것이 있어. 너도 알고 있을 거야.', '도서관에서도, 장례식장에서도, 모두가 지키려고 하는 것.', '지금 이 방을 가득 채우고 있는 것. 들리지 않는 것.', '두 글자야. 사람들은 그걸 금이라고 하지. 말은 은이고.'],
+        look: ['벽에 귀를 대 보지만 아무 소리도 들리지 않습니다.', '바닥에 손톱으로 긁은 듯한 글자가 희미하게 남아 있습니다. 쉿.'],
+        wrong: '아니야. 그건 소리를 내잖아.',
+        suggestions: ['당신은 누구죠?', '여기가 어디예요?', '주변을 살핀다'],
+      },
+      {
+        name: '시계의 방',
+        description: '째깍째깍. 수백 개의 시계가 벽을 덮고 있습니다. 시계마다 가리키는 시각이 모두 다릅니다. 작업대 앞에 백발의 노인이 돋보기를 쓰고 앉아 있습니다.',
+        character: { name: '시계공 노인', voice: 'old_man', look: '기름 묻은 앞치마, 손끝이 떨린다', greeting: '손님이 오셨군. 이 방 시계들은 다 고장 났다네. 단 하나, 앞으로만 가고 결코 돌아오지 않는 것만 빼고.' },
+        answer: '시간', aliases: ['세월'],
+        hints: ['아무리 많은 돈을 줘도 되돌릴 수는 없지.', '자네가 그 하얀 방에 얼마나 누워 있었는지도 이것으로 재지.', '시계가 재는 것이 무엇이겠나?', '두 글자일세. 시, 그리고 사이 간.'],
+        look: ['멈춘 시계 하나가 오전 세 시 십칠 분을 가리키고 있습니다.', '작업대 위 달력은 몇 달째 넘겨지지 않았습니다.'],
+        wrong: '허허, 그건 멈출 수 있는 것 아닌가.',
+        whisper: '서둘러. 너에게 남은 게 많지 않아.',
+        suggestions: ['시계는 왜 다 고장 났죠?', '그 여자를 아세요?', '주변을 살핀다'],
+      },
+      {
+        name: '인형의 방',
+        description: '낡은 인형들이 선반마다 빼곡히 앉아 있습니다. 바닥엔 크레파스 그림이 흩어져 있습니다. 구석에서 한 아이가 무릎을 끌어안은 채 당신을 올려다봅니다.',
+        character: { name: '작은 아이', voice: 'child', look: '잠옷 차림, 한쪽 팔이 떨어진 곰 인형을 안고 있다', greeting: '안녕? 같이 놀자. 나는 눈을 감아야만 볼 수 있는 걸 제일 좋아해.' },
+        answer: '꿈', aliases: ['꿈속', '악몽'],
+        hints: ['밤마다 찾아오는데, 아침이 되면 다 잊어버려.', '여기 있는 인형들도 전부 그 안에서 왔대.', '잘 때 보는 거 있잖아. 알지?', '한 글자야! 엄청 쉽지?'],
+        look: ['그림마다 하얀 방과 하얀 천을 걸친 여자가 그려져 있습니다.', '인형들의 눈이 모두 감겨 있습니다.'],
+        wrong: '땡! 그거 아니야. 눈을 감아 봐.',
+        whisper: '여기는 진짜가 아니야. 그래도 무서워하지 마.',
+        suggestions: ['무슨 놀이 할까?', '그림 속 여자는 누구야?', '주변을 살핀다'],
+      },
+      {
+        name: '거울의 방',
+        description: '사방이 거울입니다. 그런데 어느 거울에도 당신이 비치지 않습니다. 가장 큰 거울 하나가 낮게 웅웅거리며 말을 걸어옵니다.',
+        character: { name: '말하는 거울', voice: 'machine', look: '금이 간 은빛 거울', greeting: '방문자 확인 불가. 신원을 말하십시오. 당신의 것이지만, 남들이 더 자주 부르는 것.' },
+        answer: '이름', aliases: ['내이름', '제이름'],
+        hints: ['당신이 태어났을 때 누군가 지어 준 것.', '하얀 방의 여자는 그것을 계속 부르고 있었습니다.', '출석부에 적혀 있고, 명찰에 쓰여 있는 것.', '두 글자. 이, 그리고 름.'],
+        look: ['거울 표면에 입김으로 쓴 듯한 글자가 떠오릅니다. 불러 줘.', '금 간 틈 사이로 하얀 천자락이 언뜻 보였다 사라집니다.'],
+        wrong: '일치하지 않습니다. 다시 말하십시오.',
+        whisper: '내 목소리, 기억나? 계속 너를 부르고 있었어.',
+        suggestions: ['왜 내가 안 비치지?', '그 여자는 누구야?', '주변을 살핀다'],
+      },
+    ],
+    ending: '마지막 문이 열리자 눈부신 빛이 쏟아집니다. 삐, 삐, 규칙적인 기계음과 소독약 냄새. 눈을 뜨니 병실 천장입니다. 열린 창으로 바람이 불어와, 찢어진 하얀 커튼이 하늘하늘 흔들립니다. 침대 곁에서 당신의 손을 꼭 잡고 있던 사람이 울먹이며 당신의 이름을 부릅니다. 꿈속의 그 목소리였습니다. 몇 달 동안 매일 당신에게 말을 걸어 주던, 바로 그 목소리.',
+  };
+
+  /* ================= 음성 합성 ================= */
+  const tts = {
+    ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+    voices: [],
+    load() {
+      if (!this.ok) return;
+      try { this.voices = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang)); } catch (e) { this.voices = []; }
+      renderVoiceOptions();
+    },
+    main() {
+      return this.voices.find(v => v.voiceURI === settings.voiceURI) || this.voices.find(v => v.localService) || this.voices[0] || null;
+    },
+    pick(kind) {
+      const m = this.main();
+      return VOICE[kind] && VOICE[kind].alt ? (this.voices.find(v => v !== m) || m) : m;
+    },
+  };
+  const voiceOn = () => tts.ok && settings.voice;
+
+  let speakToken = 0;
+  const timers = new Set();
+  const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
+  function stopSpeech() {
+    speakToken++;
+    timers.forEach(clearTimeout); timers.clear();
+    if (tts.ok) try { speechSynthesis.cancel(); } catch (e) {}
+    vis.target = 0;
+  }
+
+  // items: [{text, kind, el?}] — 순서대로 읽고, 읽는 동안 화면의 목소리 모양을 움직임
+  function speak(items, done) {
+    stopSpeech();
+    const token = speakToken;
+    let i = 0;
+    const step = () => {
+      if (token !== speakToken) return;
+      document.querySelectorAll('.msg.speaking').forEach(n => n.classList.remove('speaking'));
+      if (i >= items.length) { vis.target = 0; done && done(); return; }
+      const it = items[i];
+      if (it.el) it.el.classList.add('speaking');
+      vis.kind = it.kind;
+      if (it.kind === 'whisper') vis.whisper = 1;
+      vis.target = it.kind === 'narrator' ? .35 : 1;
+      if (!voiceOn()) { // 목소리 끔: 글자 길이만큼만 모양을 움직임
+        later(() => { i++; step(); }, Math.min(2500, 400 + it.text.length * 25));
+        return;
+      }
+      const st = VOICE[it.kind] || VOICE.narrator;
+      const u = new SpeechSynthesisUtterance(it.text);
+      u.lang = 'ko-KR';
+      const v = tts.pick(it.kind); if (v) u.voice = v;
+      u.rate = Math.min(2, Math.max(.5, settings.rate * st.rate));
+      u.pitch = st.pitch;
+      u.volume = st.volume || 1;
+      let fin = false;
+      const end = () => { if (fin) return; fin = true; if (token !== speakToken) return; i++; later(step, 220); };
+      u.onend = end; u.onerror = end;
+      const est = 1800 + it.text.length * 240 / u.rate;
+      let waited = 0;
+      const watch = ms => later(() => {
+        if (fin) return;
+        if (speechSynthesis.speaking && waited < est) { waited += 1000; watch(1000); } else end();
+      }, ms);
+      try { speechSynthesis.resume(); speechSynthesis.speak(u); } catch (e) { end(); return; }
+      watch(est);
+    };
+    step();
+  }
+
+  /* ================= 목소리 모양 (캔버스) ================= */
+  const vis = { kind: 'woman', presence: 'woman', level: 0, target: 0, whisper: 0 };
+  const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const TEARS = Array.from({ length: 9 }, (_, k) => .72 + ((k * 37) % 17) / 70);
+
+  function drawCloth(ctx, w, h, t, alpha, level) {
+    const n = 9;
+    for (let k = 0; k < n; k++) {
+      const x0 = w / 2 + (k - (n - 1) / 2) * w * .028;
+      const top = h * .06, bot = h * TEARS[k];
+      const amp = 6 + level * 16 + Math.abs(k - 4) * 2;
+      const width = w * .022 + (k % 3) * 2;
+      ctx.beginPath();
+      const pts = 18;
+      for (let s = 0; s <= pts; s++) {
+        const y = top + (bot - top) * s / pts, f = s / pts;
+        const x = x0 + Math.sin(f * 4 + t * .0011 + k * .7) * amp * f + Math.sin(t * .0007 + k) * 3;
+        s ? ctx.lineTo(x - width / 2, y) : ctx.moveTo(x - width / 2, y);
+      }
+      for (let s = pts; s >= 0; s--) {
+        const y = top + (bot - top) * s / pts, f = s / pts;
+        const x = x0 + Math.sin(f * 4 + t * .0011 + k * .7 + .25) * amp * f + Math.sin(t * .0007 + k) * 3;
+        const jag = s === pts ? (k % 2 ? 6 : -4) : 0;
+        ctx.lineTo(x + width / 2, y + jag);
+      }
+      ctx.closePath();
+      ctx.fillStyle = `rgba(239,231,214,${(.05 + (k % 4) * .025) * alpha})`;
+      ctx.fill();
+    }
+    const g = ctx.createRadialGradient(w / 2, h * .12, 0, w / 2, h * .12, h * .5);
+    g.addColorStop(0, `rgba(239,231,214,${(.14 + level * .12) * alpha})`);
+    g.addColorStop(1, 'rgba(239,231,214,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  }
+
+  function drawPresence(ctx, w, h, t, kind, level) {
+    const c = (VOICE[kind] || VOICE.narrator).color;
+    const cx = w / 2, cy = h * .42, base = Math.min(w, h) * .16;
+    for (let r = 0; r < 4; r++) {
+      const rr = base * (1 + r * .45) + Math.sin(t * .002 + r) * 3 + level * 14 * (r + 1) * .5;
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${c},${.28 - r * .06})`; ctx.lineWidth = 1; ctx.stroke();
+    }
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, base * 1.4);
+    g.addColorStop(0, `rgba(${c},${.35 + level * .3})`); g.addColorStop(1, `rgba(${c},0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, base * 1.4, 0, Math.PI * 2); ctx.fill();
+    // 파형
+    ctx.beginPath();
+    for (let x = 0; x <= w; x += 4) {
+      const f = x / w, env = Math.sin(f * Math.PI);
+      const y = cy + Math.sin(x * .05 + t * .01) * level * 12 * env + Math.sin(x * .13 - t * .006) * level * 6 * env;
+      x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.strokeStyle = `rgba(${c},${.25 + level * .5})`; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  function fit(cv) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = cv.getBoundingClientRect();
+    const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    return dpr;
+  }
+
+  function loop(t) {
+    vis.level += ((vis.target ? vis.target * (.6 + Math.random() * .4) : 0) - vis.level) * .12;
+    vis.whisper *= .985;
+    const tt = reduceMotion ? t * .2 : t;
+    for (const cv of [$('stage'), $('titleCloth')]) {
+      if (!cv.offsetParent) continue;
+      const dpr = fit(cv), ctx = cv.getContext('2d');
+      const w = cv.width / dpr, h = cv.height / dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      if (cv.id === 'titleCloth') { drawCloth(ctx, w, h, tt, 1, .2); continue; }
+      if (vis.presence === 'woman') drawCloth(ctx, w, h, tt, 1, vis.level);
+      else {
+        drawPresence(ctx, w, h, tt, vis.presence, vis.kind === vis.presence ? vis.level : vis.level * .3);
+        if (vis.whisper > .02) drawCloth(ctx, w, h, tt, vis.whisper * .8, vis.kind === 'whisper' ? vis.level : 0);
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ================= Claude ================= */
+  let sample = null;          // null: AI 없음 → 준비된 이야기
+  let aiBlocked = false;
+  const aiReady = (window.claude && window.claude.use)
+    ? window.claude.use('sample').then(s => { sample = s; updateAiNote(); return s; }).catch(() => null)
+    : Promise.resolve(null);
+
+  function updateAiNote() {
+    const n = $('aiNote');
+    if (!sample || aiBlocked) {
+      n.textContent = '지금은 Claude를 쓸 수 없어 준비된 이야기로 진행합니다.';
+      n.classList.add('off');
+    }
+  }
+
+  const ERR = {
+    rate_limited: 'Claude 사용량이 잠시 몰렸어요. 조금 뒤 다시 말을 걸어 보세요.',
+    session_expired: '다시 로그인해야 Claude가 대답할 수 있어요.',
+    refused: '그 말에는 대답할 수 없대요. 다르게 말해 보세요.',
+    upstream_error: '목소리가 끊겼어요. 다시 말을 걸어 보세요.',
+    invalid_json: '대답이 엉켰어요. 다시 말을 걸어 보세요.',
+    empty_completion: '아무 대답이 없었어요. 다르게 말해 보세요.',
+  };
+  const PERMANENT = ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'];
+
+  const clean = (s, max = 400) => String(s == null ? '' : s).replace(/[*#_`~<>\[\]{}]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+
+  function scenarioPrompt(mood) {
+    const seed = Math.random().toString(36).slice(2, 8);
+    return `음성으로 진행되는 방 탈출 게임의 시나리오를 한국어로 만들어 줘.
+분위기: ${mood}. 이번 판의 고유 시드: ${seed} (시드마다 완전히 다른 인물과 사연을 만들 것).
+
+반드시 지킬 설정:
+- 플레이어는 창문도 문틈도 없는 밀폐된 방에서 깨어난다. 왜 여기 있는지 기억나지 않는다.
+- 첫 방에는 하늘하늘한 찢어진 천 한 장을 걸친 창백한 여자가 있다. 신비롭고 쓸쓸한 존재이며, 목소리로 단서를 준다. 정체는 결말에서야 밝혀진다.
+- 옷차림은 분위기로만 다루고 신체 묘사나 선정적 묘사는 하지 않는다. 잔혹한 묘사도 하지 않는다. 무서움은 분위기와 소리로 만든다.
+- 방은 정확히 4개. 2~4번째 방에서는 서로 전혀 다른 사람을 만난다. 나이, 성격, 말투가 뚜렷이 달라야 한다.
+- 각 방의 문은 열쇠 단어 하나를 말하면 열린다. 열쇠 단어는 일상적인 한국어 명사 1~3글자이고, 인물과 대화하면 유추할 수 있어야 한다.
+- 네 열쇠 단어를 이어 보면 여자의 정체와 결말에 연결되는 의미가 있어야 한다.
+- 모든 문장은 TTS가 소리 내어 읽는다. 이모지, 괄호, 따옴표 안의 지문, 특수기호 없이 말하기 좋은 문장으로.
+
+JSON 하나만 출력. 형식:
+{"title":"이야기 제목(10자 이내)",
+ "premise":"도입부 2문장",
+ "woman":{"name":"플레이어가 그녀를 부를 이름. 모르면 그녀","secret":"그녀의 정체 1~2문장"},
+ "rooms":[
+  {"name":"방 이름 6자 이내",
+   "description":"방에 들어섰을 때 내레이터가 읽는 상황 설명 2~3문장",
+   "character":{"name":"인물 이름이나 호칭","voice":"woman, old_man, man, old_woman, child, machine 중 하나","look":"외형이나 인상 한 문장(20자 이내)","persona":"성격과 숨은 사연 1~2문장","greeting":"첫 대사 1~2문장, 첫 단서 포함"},
+   "answer":"열쇠 단어",
+   "aliases":["같은 뜻으로 인정할 말 0~3개"],
+   "clue":"답으로 이끄는 수수께끼의 핵심, 진행자용 한 문장",
+   "suggestions":["플레이어가 처음 해 볼 만한 짧은 말이나 행동 3개, 각 14자 이내, 정답 포함 금지"]}
+ ],
+ "ending":"마지막 문이 열린 뒤 내레이터가 읽는 결말 4~5문장. 여자의 정체를 밝힌다."}
+rooms는 4개. 첫 방의 character는 그 여자이며 voice는 woman.`;
+  }
+
+  function normalizeScenario(raw) {
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.rooms) || raw.rooms.length < 3) throw { code: 'invalid_json' };
+    const rooms = raw.rooms.slice(0, 5).map((r, i) => {
+      const c = r.character || {};
+      const answer = clean(r.answer, 12).replace(/\s/g, '');
+      if (!answer) throw { code: 'invalid_json' };
+      return {
+        name: clean(r.name, 14) || `방 ${i + 1}`,
+        description: clean(r.description, 400),
+        character: {
+          name: clean(c.name, 16) || (i === 0 ? '그녀' : '낯선 사람'),
+          voice: i === 0 ? 'woman' : (VOICE_TYPES.includes(c.voice) ? c.voice : 'man'),
+          look: clean(c.look, 60),
+          persona: clean(c.persona, 300),
+          greeting: clean(c.greeting, 300),
+        },
+        answer,
+        aliases: (Array.isArray(r.aliases) ? r.aliases : []).map(a => clean(a, 12).replace(/\s/g, '')).filter(Boolean).slice(0, 4),
+        clue: clean(r.clue, 300),
+        suggestions: (Array.isArray(r.suggestions) ? r.suggestions : []).map(s => clean(s, 24)).filter(Boolean).slice(0, 3),
+      };
+    });
+    return {
+      title: clean(raw.title, 20) || '닫힌 방',
+      premise: clean(raw.premise, 300),
+      woman: { name: clean(raw.woman && raw.woman.name, 12) || '그녀', secret: clean(raw.woman && raw.woman.secret, 300) },
+      rooms,
+      ending: clean(raw.ending, 900),
+      ai: true,
+    };
+  }
+
+  function turnPrompt(room, idx, history, playerText, isDoor) {
+    const sc = game.scenario, c = room.character;
+    const hist = history.slice(-12).map(h => (h.role === 'p' ? '플레이어: ' : c.name + ': ') + h.text).join('\n') || '(아직 없음)';
+    const tries = history.filter(h => h.role === 'p').length;
+    const action = isDoor
+      ? `플레이어가 문 자물쇠에 "${playerText}" 라고 입력했지만 문은 열리지 않았다. 인물은 이에 반응하고 조금 더 구체적인 힌트를 준다.`
+      : `플레이어의 이번 말이나 행동: "${playerText}"`;
+    return `너는 음성 방 탈출 게임의 진행자이자 등장인물 연기자다. 출력은 모두 한국어이고 TTS가 소리 내어 읽는다. 짧고 말하기 좋은 문장으로, 이모지나 괄호나 특수기호 없이 쓴다.
+
+[이야기] ${sc.title}. ${sc.premise}
+[그 여자] ${sc.woman.name}. 정체: ${sc.woman.secret} (플레이어에게 직접 밝히지 말 것)
+[지금 방 ${idx + 1}/${sc.rooms.length}] ${room.name}. ${room.description}
+[인물] ${c.name}. ${c.look}. 성격과 사연: ${c.persona}
+[문의 열쇠 단어] ${room.answer} (같은 뜻: ${room.aliases.join(', ') || '없음'})
+[수수께끼 핵심] ${room.clue}
+
+규칙:
+- 인물은 열쇠 단어를 절대 그대로 말하지 않는다. 수수께끼, 비유, 기억의 조각으로 힌트를 준다. 지금까지 플레이어가 ${tries}번 말했다. 세 번이 넘으면 힌트를 점점 구체적으로, 여섯 번이 넘으면 글자 수나 첫소리까지 알려 준다.
+- 플레이어가 열쇠 단어나 같은 뜻의 말을 하면 unlocked를 true로 하고, 인물은 문이 열리는 순간에 어울리는 대사를 한다. 그 외에는 false.
+- 인물의 말투와 성격을 끝까지 지킨다. 게임과 무관한 요청은 인물답게 넘기고 방 이야기로 돌린다.
+- 선정적 묘사, 잔혹한 묘사 금지. 무서움은 분위기와 소리로.
+- whisper: ${idx === 0 ? '이 방의 인물이 그 여자이므로 항상 빈 문자열.' : '그 여자가 멀리서 속삭이는 한 문장. 세 번에 한 번 정도만 넣고 나머지는 빈 문자열.'}
+
+[지금까지 대화]
+${hist}
+
+[이번 차례]
+${action}
+
+JSON 하나만 출력:
+{"narration":"상황 묘사 0~2문장, 행동의 결과나 소리. 필요 없으면 빈 문자열","speech":"${c.name}의 대사 1~3문장","whisper":"","suggestions":["플레이어가 다음에 할 만한 짧은 말이나 행동 3개, 각 14자 이내, 정답 금지"],"unlocked":false}`;
+  }
+
+  /* ================= 게임 상태 ================= */
+  let game = null;
+  // game = { scenario, idx, log:[{k, t, who}], hist:[[]], suggestions, unlocked, started, turns, doorMode, phase }
+
+  const norm = s => String(s || '').replace(/[\s.,!?~'"“”‘’…·-]/g, '').toLowerCase();
+  const matches = (room, text) => {
+    const n = norm(text);
+    return [room.answer, ...room.aliases].some(a => a && n.includes(norm(a)));
+  };
+
+  const el = {
+    log: $('log'), chips: $('chips'), say: $('say'), send: $('sendBtn'), door: $('doorBtn'),
+    composer: $('composer'), next: $('nextBtn'),
+  };
+
+  function show(id) {
+    for (const s of ['title', 'game', 'ending']) $(s).hidden = s !== id;
+  }
+
+  function addLog(entry, render = true) {
+    game.log.push(entry);
+    return render ? renderEntry(entry) : null;
+  }
+  function renderEntry(e) {
+    const p = document.createElement('p');
+    p.className = 'msg ' + e.k;
+    if (e.who) { const s = document.createElement('small'); s.textContent = e.who; p.appendChild(s); }
+    p.appendChild(document.createTextNode(e.t));
+    el.log.appendChild(p);
+    el.log.scrollTop = el.log.scrollHeight;
+    return p;
+  }
+  function renderLog() {
+    el.log.textContent = '';
+    game.log.filter(e => e.room === game.idx).forEach(renderEntry);
+  }
+
+  function renderRoom() {
+    const sc = game.scenario, room = sc.rooms[game.idx];
+    $('roomLabel').textContent = `${sc.title} · 방 ${game.idx + 1} / ${sc.rooms.length}`;
+    $('roomName').textContent = room.name;
+    const doors = $('doors'); doors.textContent = '';
+    sc.rooms.forEach((_, i) => {
+      const d = document.createElement('i');
+      d.className = i < game.idx || (i === game.idx && game.unlocked) ? 'done' : i === game.idx ? 'here' : '';
+      doors.appendChild(d);
+    });
+    $('whoName').textContent = room.character.name;
+    $('whoLook').textContent = room.character.look;
+    vis.presence = room.character.voice;
+    renderLog();
+    renderChips();
+    setDoorMode(false);
+    el.composer.hidden = game.unlocked;
+    el.next.hidden = !game.unlocked;
+    el.next.textContent = game.idx === sc.rooms.length - 1 ? '빛 속으로 나간다' : '다음 방으로';
+  }
+
+  function renderChips() {
+    el.chips.textContent = '';
+    if (game.unlocked) return;
+    (game.suggestions || []).forEach(s => {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.type = 'button'; b.textContent = s;
+      b.addEventListener('click', () => submit(s, false));
+      el.chips.appendChild(b);
+    });
+  }
+
+  function setDoorMode(on) {
+    game && (game.doorMode = on);
+    el.door.setAttribute('aria-pressed', String(on));
+    el.composer.classList.toggle('door', on);
+    el.say.placeholder = on ? '문 자물쇠에 넣을 단어' : '말을 걸거나 행동을 적어 보세요';
+  }
+
+  function setBusy(b) {
+    game.busy = b;
+    el.say.disabled = b; el.send.disabled = b; el.door.disabled = b;
+    el.chips.querySelectorAll('button').forEach(x => x.disabled = b);
+  }
+
+  let lastSpoken = [];
+  function speakEntries(entries) {
+    lastSpoken = entries;
+    speak(entries.map(({ entry, node }) => ({
+      text: entry.t, el: node,
+      kind: entry.k === 'narr' || entry.k === 'lock' ? 'narrator' : entry.k === 'whisper' ? 'whisper' : entry.voice,
+    })));
+  }
+
+  function enterRoom() {
+    const room = game.scenario.rooms[game.idx];
+    game.unlocked = false;
+    game.suggestions = room.suggestions && room.suggestions.length ? room.suggestions : ['누구세요?', '여기는 어디죠?', '주변을 살핀다'];
+    game.hintIdx = 0; game.lookIdx = 0;
+    renderRoom();
+    const out = [];
+    const push = (entry) => out.push({ entry, node: addLog(entry) });
+    if (game.idx === 0 && game.scenario.premise) push({ room: 0, k: 'narr', t: game.scenario.premise });
+    push({ room: game.idx, k: 'narr', t: room.description });
+    push({ room: game.idx, k: 'say', who: room.character.name, voice: room.character.voice, t: room.character.greeting });
+    game.hist[game.idx] = [{ role: 'c', text: room.character.greeting }];
+    speakEntries(out);
+    el.say.focus({ preventScroll: true });
+  }
+
+  /* ---------- 준비된 이야기의 대답 ---------- */
+  function fallbackReply(room, text, isDoor) {
+    if (!isDoor && /살피|둘러|본다|찾는다|조사/.test(text) && room.look) {
+      const t = room.look[game.lookIdx++ % room.look.length];
+      return { narration: t, speech: '', whisper: '', suggestions: room.suggestions, unlocked: false };
+    }
+    const hint = room.hints[Math.min(game.hintIdx++, room.hints.length - 1)];
+    const speech = isDoor ? `${room.wrong} ${hint}` : hint;
+    const whisper = room.whisper && game.hintIdx === 2 ? room.whisper : '';
+    return { narration: isDoor ? '자물쇠가 꿈쩍도 하지 않습니다.' : '', speech, whisper, suggestions: room.suggestions, unlocked: false };
+  }
+
+  async function submit(text, isDoor) {
+    text = clean(text, 120);
+    if (!text || game.busy || game.unlocked) return;
+    stopSpeech();
+    const room = game.scenario.rooms[game.idx];
+    const hit = matches(room, text);
+    game.turns++;
+    addLog({ room: game.idx, k: 'you', t: isDoor ? `자물쇠에 입력: ${text}` : text });
+    el.say.value = '';
+
+    if (isDoor && hit) return unlock(room, null);
+
+    const hist = game.hist[game.idx];
+    let reply = null;
+    if (game.scenario.ai && sample && !aiBlocked) {
+      setBusy(true);
+      const myGame = game;
+      const wait = document.createElement('p');
+      wait.className = 'msg sys thinking';
+      wait.textContent = `${room.character.name}의 목소리가 들려오려 합니다`;
+      el.log.appendChild(wait); el.log.scrollTop = el.log.scrollHeight;
+      try {
+        const r = await sample.json(turnPrompt(room, game.idx, hist, text, isDoor), { modelTier: 'quick', cache: false });
+        reply = {
+          narration: clean(r && r.narration, 300), speech: clean(r && r.speech, 400), whisper: clean(r && r.whisper, 160),
+          suggestions: (r && Array.isArray(r.suggestions) ? r.suggestions : []).map(s => clean(s, 24)).filter(Boolean).slice(0, 3),
+          unlocked: !!(r && r.unlocked === true),
+        };
+      } catch (e) {
+        const code = e && e.code;
+        if (PERMANENT.includes(code)) { aiBlocked = true; updateAiNote(); }
+        if (code !== 'cancelled') addLog({ room: game.idx, k: 'sys', t: ERR[code] || (PERMANENT.includes(code) ? 'Claude를 쓸 수 없어 남은 대화는 짧은 힌트로만 이어집니다.' : ERR.upstream_error) });
+      } finally {
+        wait.remove();
+        if (myGame === game) setBusy(false);
+      }
+      if (myGame !== game) return;
+    }
+    if (!reply && !game.scenario.ai) reply = fallbackReply(room, text, isDoor);
+    if (!reply && aiBlocked) reply = genericHint(room, isDoor);
+
+    hist.push({ role: 'p', text: isDoor ? `(자물쇠에 ${text} 입력)` : text });
+    if (!reply) { if (hit) unlock(room, null); return; }
+
+    // Claude가 판정할 때는 대화 속에 우연히 섞인 단어로 열리지 않도록 짧은 대답만 인정
+    const unlocked = reply.unlocked || (hit && (!game.scenario.ai || norm(text).length <= norm(room.answer).length + 4));
+    const out = [];
+    const push = entry => out.push({ entry, node: addLog(entry) });
+    if (reply.narration) push({ room: game.idx, k: 'narr', t: reply.narration });
+    if (reply.speech) { push({ room: game.idx, k: 'say', who: room.character.name, voice: room.character.voice, t: reply.speech }); hist.push({ role: 'c', text: reply.speech }); }
+    if (reply.whisper && game.idx > 0) push({ room: game.idx, k: 'whisper', who: `${game.scenario.woman.name}의 속삭임`, t: reply.whisper });
+    if (reply.suggestions && reply.suggestions.length) game.suggestions = reply.suggestions;
+
+    if (unlocked) return unlock(room, out);
+    renderChips();
+    speakEntries(out);
+    if (!isDoor) setDoorMode(false);
+  }
+
+  // Claude가 도중에 막혔을 때: 답의 글자 수와 첫 글자로 힌트
+  function genericHint(room, isDoor) {
+    const a = room.answer;
+    return {
+      narration: isDoor ? '자물쇠가 꿈쩍도 하지 않습니다.' : '',
+      speech: `${a.length}글자. 첫 글자는 ${a[0]}.`,
+      whisper: '', suggestions: [], unlocked: false,
+    };
+  }
+
+  function unlock(room, out) {
+    out = out || [];
+    game.unlocked = true;
+    out.push({ entry: { room: game.idx, k: 'lock', t: '철컥. 문이 천천히 열립니다.' }, node: null });
+    out[out.length - 1].node = addLog(out[out.length - 1].entry);
+    $('doors').children[game.idx].className = 'done';
+    el.chips.textContent = '';
+    setDoorMode(false);
+    el.composer.hidden = true;
+    el.next.hidden = false;
+    speakEntries(out);
+    el.next.focus({ preventScroll: true });
+  }
+
+  function nextRoom() {
+    stopSpeech();
+    if (game.idx < game.scenario.rooms.length - 1) {
+      game.idx++;
+      enterRoom();
+    } else showEnding();
+  }
+
+  function showEnding() {
+    const sc = game.scenario;
+    game.phase = 'ending';
+    show('ending');
+    $('endTitle').textContent = sc.title;
+    $('endStory').textContent = sc.ending;
+    const mins = Math.max(1, Math.round((Date.now() - game.started) / 60000));
+    $('endStats').textContent = '';
+    [`방 ${sc.rooms.length}개`, `대화 ${game.turns}번`, `약 ${mins}분`].forEach(t => {
+      const s = document.createElement('span'); s.textContent = t; $('endStats').appendChild(s);
+    });
+    vis.presence = 'woman';
+    speak([{ text: sc.ending, kind: 'narrator' }, { text: '탈출 성공.', kind: 'woman' }]);
+  }
+
+  /* ---------- 시작 ---------- */
+  let mood = '미스터리';
+  let genCtl = null;
+
+  async function startGame() {
+    stopSpeech();
+    if (genCtl) genCtl.abort();
+    game = { scenario: null, idx: 0, log: [], hist: [], suggestions: [], unlocked: false, started: Date.now(), turns: 0, doorMode: false, busy: false, phase: 'loading' };
+    show('game');
+    $('roomLabel').textContent = '방 1';
+    $('roomName').textContent = '어둠 속';
+    $('doors').textContent = '';
+    $('whoName').textContent = ''; $('whoLook').textContent = '';
+    vis.presence = 'woman';
+    el.chips.textContent = '';
+    el.log.textContent = '';
+    el.next.hidden = true;
+    el.composer.hidden = false;
+    setBusy(true);
+
+    const prologue = ['눈을 뜹니다.', '아무것도 보이지 않습니다. 숨소리가 벽에 부딪혀 되돌아옵니다.', '어딘가에서, 아주 가까이에서, 누군가 숨을 고르는 소리가 들립니다.'];
+    const nodes = prologue.map(t => ({ entry: { room: 0, k: 'narr', t }, node: renderEntry({ k: 'narr', t }) }));
+    speakEntries(nodes);
+
+    await aiReady;
+    let scenario = null;
+    if (sample && !aiBlocked) {
+      const wait = document.createElement('p');
+      wait.className = 'msg sys thinking';
+      wait.textContent = 'Claude가 이번 이야기를 짓고 있습니다. 30초쯤 걸릴 수 있어요';
+      el.log.appendChild(wait);
+      genCtl = new AbortController();
+      const myGame = game;
+      try {
+        const raw = await sample.json(scenarioPrompt(mood), { signal: genCtl.signal, cache: false });
+        if (myGame !== game) return;
+        scenario = normalizeScenario(raw);
+      } catch (e) {
+        if (myGame !== game || (e && e.code === 'cancelled')) return;
+        if (e && PERMANENT.includes(e.code)) { aiBlocked = true; updateAiNote(); }
+        const msg = document.createElement('p');
+        msg.className = 'msg sys';
+        msg.textContent = (e && ERR[e.code] ? ERR[e.code] + ' ' : '') + '준비된 이야기로 시작합니다.';
+        el.log.appendChild(msg);
+      } finally {
+        wait.remove();
+        genCtl = null;
+      }
+    }
+    if (!scenario) scenario = JSON.parse(JSON.stringify(FALLBACK));
+    game.scenario = scenario;
+    game.phase = 'play';
+    setBusy(false);
+    game.log = [];
+    enterRoom();
+  }
+
+  function toTitle() {
+    stopSpeech();
+    if (genCtl) genCtl.abort();
+    game = null;
+    show('title');
+  }
+
+  /* ---------- 이어 하기 (뷰어가 페이지를 새 버전으로 바꿔도 진행 유지) ---------- */
+  function boot(data) {
+    const saved = data && data.game;
+    if (saved && saved.scenario && saved.phase === 'play') {
+      game = Object.assign(saved, { busy: false });
+      show('game');
+      renderRoom();
+    } else if (saved && saved.scenario && saved.phase === 'ending') {
+      game = saved; showEnding(); stopSpeech();
+    }
+  }
+  try { window.claude?.hot?.snapshot?.(() => ({ game: game && game.scenario ? game : null })); } catch (e) {}
+
+  /* ================= 설정 화면 ================= */
+  const opt = { sheet: $('settings'), voice: $('optVoice'), sel: $('optSel'), rate: $('optRate'), rateVal: $('rateVal'), hint: $('voiceHint') };
+  function renderVoiceOptions() {
+    opt.sel.textContent = '';
+    if (!tts.voices.length) { opt.sel.appendChild(new Option('기기 기본 음성', '')); opt.sel.disabled = true; }
+    else {
+      opt.sel.disabled = false;
+      tts.voices.forEach(v => opt.sel.appendChild(new Option(v.name, v.voiceURI)));
+      const m = tts.main(); if (m) opt.sel.value = m.voiceURI;
+    }
+    opt.hint.textContent = !tts.ok ? '이 브라우저는 음성 읽기를 지원하지 않아요. 글자로 진행됩니다.'
+      : !tts.voices.length ? '한국어 음성을 찾지 못했어요. 기기 설정에서 한국어 TTS 음성을 설치하면 자연스러워요.'
+      : tts.voices.length > 1 ? '인물마다 높낮이와 속도가 다르고, 일부 인물은 다른 음성으로 읽어요.'
+      : '인물마다 높낮이와 속도를 바꿔 읽어요.';
+  }
+  function syncSettings() {
+    opt.voice.checked = voiceOn(); opt.voice.disabled = !tts.ok;
+    opt.rate.value = settings.rate; opt.rateVal.textContent = '×' + Number(settings.rate).toFixed(1);
+  }
+  let lastFocus = null;
+  function openSettings() { lastFocus = document.activeElement; syncSettings(); opt.sheet.hidden = false; $('closeSet').focus(); }
+  function closeSettings() { opt.sheet.hidden = true; lastFocus && lastFocus.focus({ preventScroll: true }); }
+  opt.voice.addEventListener('change', () => { settings.voice = opt.voice.checked; saveSettings(); if (!settings.voice) stopSpeech(); });
+  opt.sel.addEventListener('change', () => { settings.voiceURI = opt.sel.value; saveSettings(); });
+  opt.rate.addEventListener('input', () => { settings.rate = Number(opt.rate.value); opt.rateVal.textContent = '×' + settings.rate.toFixed(1); saveSettings(); });
+  $('previewBtn').addEventListener('click', () => speak([{ text: '깨어났구나. 내 목소리, 들리니?', kind: 'woman' }]));
+  $('closeSet').addEventListener('click', closeSettings);
+  opt.sheet.addEventListener('click', e => { if (e.target === opt.sheet) closeSettings(); });
+
+  /* ================= 이벤트 ================= */
+  document.querySelectorAll('.mood').forEach(b => b.addEventListener('click', () => {
+    mood = b.dataset.mood;
+    document.querySelectorAll('.mood').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+  $('startBtn').addEventListener('click', startGame);
+  $('againBtn').addEventListener('click', startGame);
+  $('endHome').addEventListener('click', toTitle);
+  $('homeBtn').addEventListener('click', toTitle);
+  $('titleSettings').addEventListener('click', openSettings);
+  $('gameSettings').addEventListener('click', openSettings);
+  $('replayBtn').addEventListener('click', () => { if (lastSpoken.length) speakEntries(lastSpoken); });
+  el.door.addEventListener('click', () => { setDoorMode(!game.doorMode); el.say.focus(); });
+  el.composer.addEventListener('submit', e => { e.preventDefault(); if (game) submit(el.say.value, game.doorMode); });
+  el.next.addEventListener('click', nextRoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !opt.sheet.hidden) closeSettings(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopSpeech(); });
+
+  if (tts.ok) {
+    tts.load();
+    try { speechSynthesis.addEventListener('voiceschanged', () => tts.load()); } catch (e) {}
+  } else renderVoiceOptions();
+  syncSettings();
+  if (!window.claude || !window.claude.use) updateAiNote();
+
+  const hot = window.claude && window.claude.hot;
+  try { hot && hot.ready ? hot.ready(boot) : boot(hot && hot.data ? hot.data : {}); } catch (e) {}
+  requestAnimationFrame(loop);
+})();
+</script>
