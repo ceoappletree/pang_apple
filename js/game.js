@@ -39,6 +39,7 @@ function show(html, handlers = {}, opts = {}) {
     const el = e.target.closest('[data-a]');
     if (!el || el.disabled) return;
     Engine.audio();
+    Engine.sfx.click();
     const h = handlers[el.dataset.a];
     if (h) h(el.dataset.v, el);
   };
@@ -48,6 +49,7 @@ function toast(text) {
   const t = document.createElement('div');
   t.className = 'toast'; t.innerHTML = text;
   document.body.appendChild(t);
+  Engine.sfx.pop();
   setTimeout(() => t.remove(), 2500);
 }
 const team = id => TEAMS.find(t => t.id === id);
@@ -130,6 +132,7 @@ function enterWorld() {
   if (C.slot >= 3) World.setTarget('stadium');
   else if (World.target === 'stadium') World.setTarget(null);
   updateWorldHUD();
+  Music.play(C.slot >= 2 ? 'night' : 'city');
   $whud.classList.remove('hidden');
   World.start({
     onEnter: id => { leaveWorld(); openLoc(id); },
@@ -196,6 +199,7 @@ async function startWeek() {
         g.bomb = 0; g.last = w;
         g.aff = clamp(g.aff - 12, 0, 100);
         GIRL_KEYS.filter(o => o !== k && C.girls[o].met).forEach(o => { C.girls[o].aff = clamp(C.girls[o].aff - 5, 0, 100); });
+        Engine.sfx.boom();
         await playVN([{ bg: GIRLS[k].bg }, { who: k, mood: 'angry', text: '…요즘 나한테 관심도 없죠? 됐어요.' },
           { narr: `💥 폭탄 폭발! ${GIRLS[k].name}의 호감도가 크게 떨어지고, 소문이 퍼져 다른 사람들의 호감도도 내려갔다.` }]);
       }
@@ -310,6 +314,7 @@ function openLoc(loc) {
         const g = GIFTS.find(x => x.id === id);
         if (C.money < g.price) return toast('💸 개인 자산이 부족해요');
         C.money -= g.price; C.inv[id] = (C.inv[id] || 0) + 1;
+        Engine.sfx.coin();
         toast(`${g.name} 구매! (-${fmt(g.price)}만)`); save(); openLoc('mall');
       };
       break;
@@ -382,7 +387,7 @@ async function train(kind) {
   st.stamina = clamp(st.stamina - cost, 0, 100);
   st.morale = clamp(st.morale + 1, 0, 100);
   toast(`${msg} · 체력 <span class="loss">-${cost}</span>`);
-  Engine.sfx.ding();
+  Music.jingle('levelup');
   useSlot();
 }
 
@@ -606,6 +611,7 @@ function oppPitcher(opp, inning) {
 }
 
 function preMatch() {
+  Music.play('stadium');
   const final = C.week > WEEKS;
   const opp = team(final ? C.finalOpp : C.schedule[C.week - 1]);
   const ace = opp.ace;
@@ -938,7 +944,7 @@ async function endMatch() {
 
   const line = G.benched ? '부상으로 결장' : `타격 ${m.ab}타수 ${m.h}안타${m.hr ? ` ${m.hr}홈런` : ''} ${m.rbi}타점${m.sb ? ` ${m.sb}도루` : ''}<br>투구 ${Math.floor(mp.outs / 3)}${mp.outs % 3 ? '.' + (mp.outs % 3) : ''}이닝 ${mp.er}실점 ${mp.k}탈삼진`;
   const title = win ? (G.walkoff ? '🎉 끝내기 승리!' : '🎉 승리!') : lose ? '😢 패배' : '🤝 무승부';
-  if (win) Engine.sfx.cheer(2, 0.3);
+  if (win) { Engine.sfx.cheer(2, 0.3); Music.jingle('win'); } else if (lose) Music.jingle('lose');
   show(`<div class="card sitcard">
       <h3>${monthLabel(C.week)} · 경기 종료</h3><div class="big">${title}</div>
       <div style="font-size:28px;font-weight:900">애플즈 ${G.score.us} : ${G.score.them} ${G.opp.short}</div>
@@ -989,6 +995,7 @@ async function seasonEnd() {
 function finishFinal() { C.champion = C.results[C.results.length - 1] === 'W'; awards(); }
 
 async function awards() {
+  Music.play('ending');
   const s = C.stats, p = C.pstats;
   const a = s.ab ? s.h / s.ab : 0;
   const L = { hr: ri(7, 10), avg: rand(0.318, 0.345), sb: ri(8, 12), w: ri(9, 12), k: ri(30, 40) };

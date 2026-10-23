@@ -352,7 +352,13 @@ const fpos = FIELDERS.map(f => ({ x: f.home[0], z: f.home[1], run: 0 }));
 function resetFielders() { FIELDERS.forEach((f, i) => { fpos[i].x = f.home[0]; fpos[i].z = f.home[1]; fpos[i].run = 0; }); }
 
 // ---------- 오디오 ----------
-let actx = null, muted = false;
+let actx = null, muted = false, sfxBus = null;
+// 효과음 전용 출력 (음악과 따로 켜고 끔)
+function sfxOut() {
+  const a = audio();
+  if (!sfxBus) { sfxBus = a.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(a.destination); }
+  return sfxBus;
+}
 function audio() {
   if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
   if (actx.state === 'suspended') actx.resume();
@@ -371,7 +377,7 @@ function noise(dur, type, freq, q, vol, attack = 0.002) {
   gn.gain.setValueAtTime(0.0001, t);
   gn.gain.exponentialRampToValueAtTime(vol, t + attack);
   gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  src.connect(f); f.connect(gn); gn.connect(a.destination);
+  src.connect(f); f.connect(gn); gn.connect(sfxOut());
   src.start(t); src.stop(t + dur + 0.05);
 }
 function tone(freq, dur, vol, type = 'sine', slide = 0) {
@@ -380,7 +386,27 @@ function tone(freq, dur, vol, type = 'sine', slide = 0) {
   o.type = type; o.frequency.setValueAtTime(freq, t);
   if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
   gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(gn); gn.connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
+  o.connect(gn); gn.connect(sfxOut()); o.start(t); o.stop(t + dur + 0.05);
+}
+// 경기장 관중 웅성거림 (계속 반복)
+let crowdSrc = null, crowdGain = null;
+function crowdSound(on) {
+  const a = audio(); if (!a) return;
+  if (on && !crowdSrc) {
+    const len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (0.6 + 0.4 * Math.sin(i / len * Math.PI * 6));
+    crowdSrc = a.createBufferSource(); crowdSrc.buffer = buf; crowdSrc.loop = true;
+    const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 0.6;
+    crowdGain = a.createGain(); crowdGain.gain.value = 0.0001;
+    crowdSrc.connect(f); f.connect(crowdGain); crowdGain.connect(sfxOut());
+    crowdSrc.start();
+    crowdGain.gain.exponentialRampToValueAtTime(0.05, a.currentTime + 1.2);
+  } else if (!on && crowdSrc) {
+    const s = crowdSrc, g = crowdGain;
+    g.gain.setTargetAtTime(0.0001, a.currentTime, 0.3);
+    setTimeout(() => { try { s.stop(); } catch (e) {} }, 1500);
+    crowdSrc = null; crowdGain = null;
+  }
 }
 const sfx = {
   crack(power) {
@@ -399,6 +425,16 @@ const sfx = {
   cheer(dur = 2.5, vol = 0.35) { noise(dur, 'bandpass', 1100, 0.5, vol, 0.25); },
   groan() { noise(0.9, 'lowpass', 500, 0.7, 0.2, 0.1); },
   catchBall() { noise(0.05, 'lowpass', 900, 1, 0.4); },
+  click() { tone(1400, 0.035, 0.05, 'sine', -400); },
+  blip() { tone(760 + Math.random() * 120, 0.03, 0.022, 'square'); },
+  pop() { tone(520, 0.08, 0.08, 'sine', 380); },
+  step() { noise(0.04, 'lowpass', 900, 0.7, 0.05, 0.002); },
+  coin() { tone(1318, 0.09, 0.09, 'square'); setTimeout(() => tone(1760, 0.3, 0.08, 'square'), 80); },
+  sparkle() { [1568, 2093, 2637, 3136].forEach((f, i) => setTimeout(() => tone(f, 0.18, 0.06, 'triangle'), i * 60)); },
+  heart() { tone(988, 0.15, 0.08, 'sine'); setTimeout(() => tone(1319, 0.3, 0.08, 'sine'), 110); },
+  sad() { tone(330, 0.25, 0.08, 'triangle', -80); setTimeout(() => tone(262, 0.4, 0.07, 'triangle', -60), 180); },
+  boom() { noise(0.7, 'lowpass', 180, 0.8, 0.9, 0.003); tone(60, 0.5, 0.5, 'sine', -30); },
+  ooh() { noise(1.1, 'bandpass', 520, 1.2, 0.18, 0.15); },
   ding() { tone(880, 0.25, 0.15, 'triangle'); setTimeout(() => tone(1320, 0.35, 0.12, 'triangle'), 90); },
 };
 function buzz(ms) { if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
@@ -768,6 +804,7 @@ function resolvePitchNoContact() {
     if (ab.strikes >= 3) {
       sfx.groan();
       showMsg('삼진 아웃!', '#ff8a7a', swung ? '헛스윙 삼진' : '루킹 삼진');
+      if (ab.mode === 'pitch') sfx.cheer(1.6, 0.3); else sfx.ooh();
       endAB({ kind: 'k', text: '삼진', ab: true, hit: false, rbi: 0, outs: ab.outs + 1, bases: ab.bases.slice() });
       return;
     }
@@ -880,6 +917,7 @@ function update(dt) {
     }
     return !fw.fired;
   });
+  if (window.Music) Music.duck(state === 'windup' || state === 'pitch' || state === 'gauge');
   if (hitStop > 0) { hitStop -= dt; return; } // 히트스톱: 세계 정지
   stateT += dt;
   cheer = Math.max(0, cheer - dt * 0.3);
@@ -1426,6 +1464,8 @@ window.Engine = {
     Object.assign(cam, CAM_HOME);
     hidePitchInfo();
     updateHUD();
+    crowdSound(true);
+    if ((ab.bases[1] || ab.bases[2]) && window.Music) setTimeout(() => Music.jingle('charge'), 400);
     setState('wait', opts.delay == null ? 0.9 : opts.delay);
   },
   // 투수 모드: 내가 던지고 AI 타자가 친다
@@ -1440,16 +1480,18 @@ window.Engine = {
       ptype: opts.pitcher.reps[0],
     };
     AWAY = HOME_U;
+    crowdSound(true);
     Object.assign(cam, CAM_HOME);
     hidePitchInfo();
     updateHUD();
     setState('wait', opts.delay == null ? 0.6 : opts.delay);
   },
   setPaused(v) { paused = v; if (!v) last = performance.now(); },
-  idle() { ab = null; AWAY = AWAY_U; hidePitchUI(); setState('idle'); swing = null; play = null; marks = null; resetFielders(); Object.assign(cam, CAM_HOME); hidePitchInfo(); },
+  idle() { ab = null; AWAY = AWAY_U; hidePitchUI(); crowdSound(false); setState('idle'); swing = null; play = null; marks = null; resetFielders(); Object.assign(cam, CAM_HOME); hidePitchInfo(); },
   get state() { return state; },
   showMsg, showTiming, sfx, audio, buzz,
   setMuted(m) { muted = m; },
+  sfxOut,
   get muted() { return muted; },
   setBatterVisible(v) { showBatterIdle = v; },
   // 테스트용

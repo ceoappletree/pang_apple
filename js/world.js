@@ -278,19 +278,44 @@ function toggleCar(force) {
     Engine.sfx.firework && engineSound();
   }
 }
-function engineSound() { try { const a = Engine.audio(); if (!a || Engine.muted) return; const o = a.createOscillator(), g = a.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(60, a.currentTime); o.frequency.exponentialRampToValueAtTime(180, a.currentTime + 0.4); o.frequency.exponentialRampToValueAtTime(90, a.currentTime + 0.9); g.gain.setValueAtTime(0.12, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 1); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 1); } catch (e) {} }
-function honk() { try { const a = Engine.audio(); if (!a || Engine.muted) return; for (const f of [392, 494]) { const o = a.createOscillator(), g = a.createGain(); o.type = 'square'; o.frequency.value = f; g.gain.setValueAtTime(0.05, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.35); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.4); } } catch (e) {} }
+function engineSound() { try { const a = Engine.audio(); if (!a || Engine.muted) return; const o = a.createOscillator(), g = a.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(60, a.currentTime); o.frequency.exponentialRampToValueAtTime(180, a.currentTime + 0.4); o.frequency.exponentialRampToValueAtTime(90, a.currentTime + 0.9); g.gain.setValueAtTime(0.12, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 1); o.connect(g); g.connect(Engine.sfxOut()); o.start(); o.stop(a.currentTime + 1); } catch (e) {} }
+function honk() { try { const a = Engine.audio(); if (!a || Engine.muted) return; for (const f of [392, 494]) { const o = a.createOscillator(), g = a.createGain(); o.type = 'square'; o.frequency.value = f; g.gain.setValueAtTime(0.05, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.35); o.connect(g); g.connect(Engine.sfxOut()); o.start(); o.stop(a.currentTime + 0.4); } } catch (e) {} }
 
 // ---------- 업데이트 ----------
 let honkCd = 0;
+let stepT = 0, eng = null;
+function engineLoop(on, speed) {
+  const a = Engine.audio(); if (!a) return;
+  if (on && !eng) {
+    const o = a.createOscillator(), o2 = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+    o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 700; g.gain.value = 0.0001;
+    o.connect(f); o2.connect(f); f.connect(g); g.connect(Engine.sfxOut()); o.start(); o2.start();
+    g.gain.setTargetAtTime(0.035, a.currentTime, 0.2);
+    eng = { o, o2, g, f };
+  } else if (!on && eng) {
+    const e = eng; eng = null;
+    e.g.gain.setTargetAtTime(0.0001, a.currentTime, 0.1);
+    setTimeout(() => { try { e.o.stop(); e.o2.stop(); } catch (er) {} }, 600);
+  }
+  if (eng) {
+    const fq = 42 + Math.abs(speed) * 0.16;
+    eng.o.frequency.setTargetAtTime(fq, a.currentTime, 0.08);
+    eng.o2.frequency.setTargetAtTime(fq * 0.5, a.currentTime, 0.08);
+    eng.f.frequency.setTargetAtTime(500 + Math.abs(speed) * 2.2, a.currentTime, 0.1);
+  }
+}
 function update(dt) {
   time += dt;
+  engineLoop(P.inCar && running, CAR.v);
   honkCd -= dt;
   const inp = inputVec();
   if (!P.inCar) {
     const sp = 175;
     const dx = inp.x * sp * dt, dy = inp.y * sp * dt;
-    if (inp.m > 0.1) { P.dir = Math.atan2(inp.y, inp.x); P.walkT += dt * 10 * inp.m; }
+    if (inp.m > 0.1) {
+      P.dir = Math.atan2(inp.y, inp.x); P.walkT += dt * 10 * inp.m;
+      stepT += dt * inp.m; if (stepT > 0.32) { stepT = 0; Engine.sfx.step(); }
+    }
     moveWithCollision(P, dx, dy, 9);
   } else {
     // 아케이드 운전: 조이스틱 방향으로 회전 + 가속
@@ -370,7 +395,7 @@ function update(dt) {
     if (collected.includes(b.i)) continue;
     if (dist(P.x, P.y, b.x, b.y) < 28) {
       collected.push(b.i);
-      Engine.sfx.ding();
+      Engine.sfx.sparkle();
       hooks.onBall && hooks.onBall(collected.length, BALLS.length);
     }
   }
@@ -691,6 +716,7 @@ window.World = {
   },
   stop() {
     running = false;
+    engineLoop(false, 0);
     stopMotion();
     document.body.classList.remove('in-world');
     Engine.setPaused(false);

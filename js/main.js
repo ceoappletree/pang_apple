@@ -13,6 +13,7 @@ function show(html, handlers) {
     const el = e.target.closest('[data-a]');
     if (!el) return;
     Engine.audio();
+    Engine.sfx.click();
     handlers[el.dataset.a] && handlers[el.dataset.a](el.dataset.v);
   };
 }
@@ -28,6 +29,7 @@ function title() {
   if (window.World && World.running) World.stop();
   document.getElementById('whud').classList.add('hidden');
   $hud.classList.add('hidden');
+  Music.play('title');
   const best = loadBest();
   const cont = Game.hasSave();
   show(`<div class="card">
@@ -94,6 +96,7 @@ function quickStart() {
   hide();
   Q = { inning: 1, outs: 0, bases: [0, 0, 0], runs: 0, hits: 0, hr: 0, k: 0, far: 0 };
   $hud.classList.remove('hidden');
+  Music.play('stadium');
   Engine.showMsg('플레이 볼!', '#ffd54a');
   nextAB(1.3);
 }
@@ -137,13 +140,29 @@ function quickOver() {
   { again: quickStart, title });
 }
 
-// ---------- 음소거 ----------
+// ---------- 소리 설정: 🔊 전체 → 🔉 음악 끔 → 🔇 전체 끔 ----------
 const muteBtn = document.getElementById('mute');
+const SOUND_KEY = 'homerunking_sound';
+let soundMode = 0;
+try { soundMode = +localStorage.getItem(SOUND_KEY) || 0; } catch (e) {}
+function applySound(announce) {
+  Music.setOn(soundMode === 0);
+  Engine.setMuted(soundMode === 2);
+  muteBtn.textContent = ['🔊', '🔉', '🔇'][soundMode];
+  if (announce) {
+    const t = document.createElement('div');
+    t.className = 'toast'; t.textContent = ['🔊 음악 + 효과음 켜짐', '🔉 배경음악 끔 (효과음만)', '🔇 소리 모두 끔'][soundMode];
+    document.body.appendChild(t); setTimeout(() => t.remove(), 2500);
+  }
+}
 muteBtn.addEventListener('pointerdown', e => {
   e.stopPropagation();
-  Engine.setMuted(!Engine.muted);
-  muteBtn.textContent = Engine.muted ? '🔇' : '🔊';
+  Engine.audio();
+  soundMode = (soundMode + 1) % 3;
+  try { localStorage.setItem(SOUND_KEY, String(soundMode)); } catch (er) {}
+  applySound(true);
 });
+applySound(false);
 
 title();
 })();

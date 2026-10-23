@@ -55,6 +55,7 @@ async function say(who, mood, text, ctx) {
   tapResolve = () => { skip = true; };
   for (let i = 0; i < text.length && !skip; i++) {
     textEl.textContent = text.slice(0, i + 1);
+    if (i % 3 === 0 && text[i] !== ' ') Engine.sfx.blip();
     await new Promise(r => setTimeout(r, 22));
   }
   textEl.textContent = text;
@@ -96,10 +97,19 @@ async function run(steps, ctx) {
 function applyFx(fx, ctx) {
   if (ctx.applyFx) ctx.applyFx(fx);
   const love = Story.GIRL_KEYS.reduce((a, k) => a + (fx[k] || 0), 0);
-  if (love) hearts(love);
+  if (love) { hearts(love); Engine.sfx[love > 0 ? 'heart' : 'sad'](); }
 }
 
+// 장면 분위기에 맞는 배경음악
+function sceneTrack(steps) {
+  const whos = steps.filter(s => s.who).map(s => s.who);
+  if (whos.some(w => Story.GIRLS[w])) return 'romance';
+  if (whos.includes('chairman') || steps.some(s => s.bg && /#2a1020|#141828/.test(s.bg))) return 'drama';
+  return null;
+}
 async function play(steps, ctx = {}) {
+  const tr = sceneTrack(steps);
+  if (window.Music) Music.push(tr);
   root.classList.remove('hidden');
   curWho = null;
   portEl.classList.add('hide');
@@ -108,10 +118,12 @@ async function play(steps, ctx = {}) {
   boxEl.style.display = '';
   await run(steps, ctx);
   root.classList.add('hidden');
+  if (window.Music) Music.pop();
 }
 
 // 엔딩 등 큰 타이틀 카드
 function titleCard(title, sub, bg) {
+  if (window.Music) Music.play('ending');
   return new Promise(resolve => {
     root.classList.remove('hidden');
     if (bg) bgEl.style.background = bg;
