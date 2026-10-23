@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>사과나무 마을</title>
+<meta name="description" content="API 없이 브라우저에서 돌아가는 AI NPC 마을 게임">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game" aria-label="사과나무 마을 지도. 땅을 누르면 이동하고 주민을 누르면 대화합니다."></canvas>
+
+  <header id="hud">
+    <div class="clock" aria-live="off"><span id="clockIcon">☀️</span><b id="dayLabel">1일차</b><span id="clockLabel">오전 8시</span></div>
+    <div id="inv" class="inv" aria-label="가방"></div>
+    <div class="hud-btns">
+      <button id="btnJournal" type="button" aria-label="마을 수첩">📜</button>
+      <button id="btnSettings" type="button" aria-label="설정">⚙️</button>
+    </div>
+  </header>
+
+  <div id="toasts" aria-live="polite"></div>
+
+  <section id="chat" class="sheet" hidden aria-label="대화">
+    <div class="chat-head">
+      <div class="portrait" id="chatPortrait">👵</div>
+      <div class="who">
+        <div class="name-row"><span class="name" id="chatName"></span><span class="ai-badge" id="chatAiBadge">규칙 기반 AI</span></div>
+        <div class="meta"><span id="chatRole"></span> · <span id="chatTier"></span> <span id="chatMood"></span></div>
+        <div class="aff"><div class="aff-bar"><i id="chatAff"></i></div><span class="num" id="chatAffNum">0</span></div>
+        <div class="memory" id="chatMemory"></div>
+      </div>
+      <button class="close" id="chatClose" type="button" aria-label="대화 닫기">✕</button>
+    </div>
+    <div class="log" id="chatLog" aria-live="polite"></div>
+    <div class="gift-bar" id="giftBar" hidden></div>
+    <div class="chips" id="chips"></div>
+    <form class="input-row" id="chatForm" autocomplete="off">
+      <input id="chatInput" type="text" maxlength="60" placeholder="하고 싶은 말을 자유롭게 입력하세요" enterkeyhint="send">
+      <button type="submit">보내기</button>
+    </form>
+  </section>
+
+  <section id="journal" class="panel" hidden aria-label="마을 수첩">
+    <div class="panel-head"><h2>마을 수첩</h2><button type="button" class="close" data-close aria-label="닫기">✕</button></div>
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" role="tab" data-tab="quests">부탁</button>
+      <button type="button" class="tab" role="tab" data-tab="people">주민</button>
+      <button type="button" class="tab" role="tab" data-tab="news">마을 소식</button>
+    </div>
+    <div id="journalBody" class="panel-body"></div>
+  </section>
+
+  <section id="settings" class="panel" hidden aria-label="설정">
+    <div class="panel-head"><h2>설정</h2><button type="button" class="close" data-close aria-label="닫기">✕</button></div>
+    <div class="panel-body">
+      <h3>주민들의 두뇌</h3>
+      <label class="radio"><input type="radio" name="aiMode" id="aiRules" value="rules">
+        <span><b>규칙 기반 AI</b> (기본)<br><small>의도 분석, 기억, 호감도, 소문을 전부 기기 안에서 계산해요. 내려받을 것 없이 바로 동작해요.</small></span></label>
+      <label class="radio"><input type="radio" name="aiMode" id="aiLlm" value="llm">
+        <span><b>기기 속 LLM</b> (실험)<br><small>작은 언어 모델을 브라우저로 한 번 내려받아 휴대폰·PC 안에서 돌려요. API 키나 서버는 필요 없어요. 게임 규칙은 그대로 두고 말투만 더 자연스러워져요.</small></span></label>
+      <div id="llmBox" class="llm-box" hidden>
+        <label for="modelSelect">모델</label>
+        <select id="modelSelect">
+          <option value="small">가벼운 모델 (약 0.5GB)</option>
+          <option value="large">똑똑한 모델 (약 1.6GB)</option>
+        </select>
+        <p id="llmSupport" class="muted"></p>
+        <button type="button" id="btnLoadModel" class="primary">모델 내려받기</button>
+        <progress id="llmProgress" max="1" value="0" hidden></progress>
+        <p id="llmStatus" class="muted"></p>
+      </div>
+      <h3>저장</h3>
+      <p class="muted">진행 상황은 이 브라우저에 자동으로 저장돼요.</p>
+      <button type="button" id="btnReset" class="danger">처음부터 다시 하기</button>
+    </div>
+  </section>
+
+  <section id="intro" class="panel intro" hidden aria-label="게임 안내">
+    <div class="panel-body">
+      <p class="eyebrow">AI 주민이 사는 마을</p>
+      <h1>사과나무 마을</h1>
+      <p>주민 넷이 저마다의 성격과 하루 일정을 가지고 살아요. 말을 걸면 당신의 이름과 좋아하는 것을 기억하고, 당신이 한 일을 다른 주민에게 소문내기도 해요.</p>
+      <ul class="howto">
+        <li><b>이동</b> 땅을 누르세요. 키보드는 방향키나 WASD.</li>
+        <li><b>대화</b> 주민을 누르거나 옆에서 스페이스. 아무 말이나 자유롭게 입력해 보세요.</li>
+        <li><b>줍기</b> 🍎 🪨 🌷 위를 지나가면 가방에 들어가요.</li>
+        <li><b>부탁</b> "부탁할 거 있어?"라고 물어보세요.</li>
+      </ul>
+      <button type="button" id="btnStart" class="primary big">마을로 들어가기</button>
+    </div>
+  </section>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/world.js"></script>
+<script src="js/brain.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
