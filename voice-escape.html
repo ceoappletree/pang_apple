@@ -57,6 +57,13 @@
   .title-row .main { flex: 1; }
   .ai-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
   .ai-note.off { color: var(--bad); }
+  .sound-row { display: flex; align-items: center; gap: 10px; }
+  .sound-row .ai-note { flex: 1; min-width: 0; }
+  .sound-row .btn { flex: none; font-size: 14px; padding: 8px 12px; }
+  .sound-alert { flex: none; border: 1px solid var(--bad); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; background: rgba(224, 138, 122, .08); }
+  .sound-alert p { margin: 0; font-size: 14px; line-height: 1.6; }
+  .sound-alert .row { display: flex; gap: 8px; }
+  .sound-alert .btn { flex: 1; font-size: 14px; padding: 8px 10px; }
 
   /* ---------- game ---------- */
   #game { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -141,6 +148,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
       </button>
     </div>
+    <div class="sound-row">
+      <p class="ai-note" id="soundStatus"></p>
+      <button class="btn" id="soundTest">소리 확인</button>
+    </div>
     <p class="ai-note" id="aiNote">이야기와 대사는 Claude가 판마다 새로 씁니다. 처음 시작할 때 Claude 사용 허락을 묻습니다.</p>
   </section>
 
@@ -166,6 +177,14 @@
     <div class="stage">
       <canvas id="stage" aria-hidden="true"></canvas>
       <div class="who-card"><b id="whoName"></b><span id="whoLook"></span></div>
+    </div>
+
+    <div class="sound-alert" id="soundAlert" role="alert" hidden>
+      <p id="soundMsg"></p>
+      <div class="row">
+        <button class="btn" id="soundRetry">다시 시도</button>
+        <button class="btn" id="soundOff">글자로만 진행</button>
+      </div>
     </div>
 
     <div class="log" id="log" aria-live="polite"></div>
@@ -292,12 +311,13 @@
 
   /* ================= 음성 합성 ================= */
   const tts = {
-    ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+    ok: !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function',
     voices: [],
     load() {
       if (!this.ok) return;
       try { this.voices = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang)); } catch (e) { this.voices = []; }
       renderVoiceOptions();
+      renderSoundStatus();
     },
     main() {
       return this.voices.find(v => v.voiceURI === settings.voiceURI) || this.voices.find(v => v.localService) || this.voices[0] || null;
@@ -310,53 +330,135 @@
   const voiceOn = () => tts.ok && settings.voice;
 
   let speakToken = 0;
+  let lastCancel = 0;
   const timers = new Set();
   const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
+
+  // 소리가 실제로 나는지 지켜보는 상태: 한 번이라도 onstart가 오면 정상
+  const health = { started: false, failed: '', noLang: false, checking: false };
+
+  // 휴대폰 브라우저는 첫 음성을 '터치하는 그 순간'에 내야 이후 음성도 허락함
+  let unlocked = false;
+  function unlockSpeech() {
+    if (!tts.ok || unlocked) return;
+    unlocked = true;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0; u.lang = 'ko-KR';
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
   function stopSpeech() {
     speakToken++;
     timers.forEach(clearTimeout); timers.clear();
-    if (tts.ok) try { speechSynthesis.cancel(); } catch (e) {}
+    if (tts.ok) try {
+      if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); lastCancel = Date.now(); }
+    } catch (e) {}
     vis.target = 0;
+  }
+
+  // 긴 문장은 크롬에서 15초쯤 지나면 끊기므로 문장 단위로 나눠 읽음
+  const chunks = text => (String(text).match(/[^.!?…]+[.!?…]*\s*/g) || [String(text)])
+    .reduce((acc, s) => {
+      const last = acc[acc.length - 1];
+      if (last && (last + s).length < 60) acc[acc.length - 1] = last + s; else acc.push(s);
+      return acc;
+    }, []).map(s => s.trim()).filter(Boolean);
+
+  const SOUND_MSG = {
+    unsupported: '이 앱에서는 음성 읽기 기능을 쓸 수 없어요. 크롬이나 사파리 같은 브라우저에서 이 링크를 열면 목소리가 나와요. 글자로는 계속 진행돼요.',
+    'not-allowed': '브라우저가 소리를 막았어요. 다시 시도 버튼을 눌러 주세요.',
+    other: '목소리가 나오지 않는 것 같아요. 무음 모드와 볼륨을 확인하고 다시 시도해 보세요. 그래도 안 되면 크롬이나 사파리에서 이 링크를 열어 보세요.',
+  };
+  function soundProblem(code) {
+    if (health.started) return;
+    health.failed = code || 'other';
+    showSoundAlert(SOUND_MSG[code] || SOUND_MSG.other);
+    renderSoundStatus();
+  }
+  function showSoundAlert(msg) { $('soundMsg').textContent = msg; $('soundAlert').hidden = false; }
+  function hideSoundAlert() { $('soundAlert').hidden = true; renderSoundStatus(); }
+  function renderSoundStatus() {
+    const n = $('soundStatus');
+    n.classList.toggle('off', !tts.ok || !!health.failed);
+    n.textContent = !tts.ok ? '목소리: 이 앱에서는 음성 읽기를 지원하지 않아요. 크롬이나 사파리에서 열어 주세요.'
+      : !settings.voice ? '목소리: 꺼져 있어요. 오른쪽 스피커 버튼에서 켤 수 있어요.'
+      : health.failed ? '목소리: 소리가 나지 않았어요. 무음 모드와 볼륨을 확인해 주세요.'
+      : health.started ? '목소리: 잘 나오고 있어요.'
+      : tts.voices.length ? `목소리: 한국어 음성 ${tts.voices.length}개 준비됨`
+      : '목소리: 기기 기본 음성을 사용해요. 한국어 음성은 찾지 못했어요.';
+  }
+  function retrySound() {
+    health.failed = ''; health.started = false; health.noLang = false;
+    unlocked = false; unlockSpeech();
+    $('soundAlert').hidden = true;
+    renderSoundStatus();
   }
 
   // items: [{text, kind, el?}] — 순서대로 읽고, 읽는 동안 화면의 목소리 모양을 움직임
   function speak(items, done) {
     stopSpeech();
     const token = speakToken;
+    const queue = [];
+    items.forEach(it => chunks(it.text).forEach((t, j) => queue.push({ ...it, text: t, first: j === 0 })));
     let i = 0;
     const step = () => {
       if (token !== speakToken) return;
-      document.querySelectorAll('.msg.speaking').forEach(n => n.classList.remove('speaking'));
-      if (i >= items.length) { vis.target = 0; done && done(); return; }
-      const it = items[i];
+      const it = queue[i];
+      if (!it || it.first) document.querySelectorAll('.msg.speaking').forEach(n => n.classList.remove('speaking'));
+      if (!it) { vis.target = 0; done && done(); return; }
       if (it.el) it.el.classList.add('speaking');
       vis.kind = it.kind;
       if (it.kind === 'whisper') vis.whisper = 1;
       vis.target = it.kind === 'narrator' ? .35 : 1;
-      if (!voiceOn()) { // 목소리 끔: 글자 길이만큼만 모양을 움직임
+      if (!voiceOn() || health.failed) { // 목소리 끔/안 나옴: 글자 길이만큼만 모양을 움직임
         later(() => { i++; step(); }, Math.min(2500, 400 + it.text.length * 25));
         return;
       }
-      const st = VOICE[it.kind] || VOICE.narrator;
-      const u = new SpeechSynthesisUtterance(it.text);
-      u.lang = 'ko-KR';
-      const v = tts.pick(it.kind); if (v) u.voice = v;
-      u.rate = Math.min(2, Math.max(.5, settings.rate * st.rate));
-      u.pitch = st.pitch;
-      u.volume = st.volume || 1;
-      let fin = false;
-      const end = () => { if (fin) return; fin = true; if (token !== speakToken) return; i++; later(step, 220); };
-      u.onend = end; u.onerror = end;
-      const est = 1800 + it.text.length * 240 / u.rate;
-      let waited = 0;
-      const watch = ms => later(() => {
-        if (fin) return;
-        if (speechSynthesis.speaking && waited < est) { waited += 1000; watch(1000); } else end();
-      }, ms);
-      try { speechSynthesis.resume(); speechSynthesis.speak(u); } catch (e) { end(); return; }
-      watch(est);
+      // 크롬은 cancel 직후 곧바로 speak하면 소리 없이 무시하는 경우가 있어 잠깐 기다림
+      const gap = 180 - (Date.now() - lastCancel);
+      if (gap > 0) { later(step, gap); return; }
+      utter(it, () => { i++; later(step, 200); }, token);
     };
     step();
+  }
+
+  function utter(it, next, token) {
+    const st = VOICE[it.kind] || VOICE.narrator;
+    const u = new SpeechSynthesisUtterance(it.text);
+    if (!health.noLang) {
+      u.lang = 'ko-KR';
+      const v = tts.pick(it.kind); if (v) u.voice = v;
+    }
+    u.rate = Math.min(2, Math.max(.5, settings.rate * st.rate));
+    u.pitch = st.pitch;
+    u.volume = st.volume || 1;
+    let fin = false, began = false;
+    const end = () => { if (fin) return; fin = true; if (token !== speakToken) return; next(); };
+    u.onstart = () => { began = true; health.started = true; hideSoundAlert(); };
+    u.onend = end;
+    u.onerror = e => {
+      const code = e && e.error;
+      if (code === 'interrupted' || code === 'canceled') return end();
+      if ((code === 'language-unavailable' || code === 'voice-unavailable') && !health.noLang) {
+        health.noLang = true; fin = true; // 한국어 지정 없이 한 번 더
+        if (token === speakToken) utter(it, next, token);
+        return;
+      }
+      if (!health.started) soundProblem(code);
+      end();
+    };
+    const est = 1800 + it.text.length * 240 / u.rate;
+    let waited = 0;
+    const watch = ms => later(() => {
+      if (fin) return;
+      // 처음 몇 초 안에 소리가 시작되지 않으면 기기에서 음성이 막힌 것으로 봄
+      if (!began && !health.started) { soundProblem('no-start'); try { speechSynthesis.cancel(); } catch (e) {} end(); return; }
+      if (speechSynthesis.speaking && waited < est) { waited += 1000; watch(1000); } else end();
+    }, ms);
+    try { speechSynthesis.resume(); speechSynthesis.speak(u); } catch (e) { soundProblem('exception'); end(); return; }
+    watch(health.started ? est : 4000);
   }
 
   /* ================= 목소리 모양 (캔버스) ================= */
@@ -800,6 +902,7 @@ JSON 하나만 출력:
     if (genCtl) genCtl.abort();
     game = { scenario: null, idx: 0, log: [], hist: [], suggestions: [], unlocked: false, started: Date.now(), turns: 0, doorMode: false, busy: false, phase: 'loading' };
     show('game');
+    if (!tts.ok && settings.voice) showSoundAlert(SOUND_MSG.unsupported);
     $('roomLabel').textContent = '방 1';
     $('roomName').textContent = '어둠 속';
     $('doors').textContent = '';
@@ -890,7 +993,11 @@ JSON 하나만 출력:
   let lastFocus = null;
   function openSettings() { lastFocus = document.activeElement; syncSettings(); opt.sheet.hidden = false; $('closeSet').focus(); }
   function closeSettings() { opt.sheet.hidden = true; lastFocus && lastFocus.focus({ preventScroll: true }); }
-  opt.voice.addEventListener('change', () => { settings.voice = opt.voice.checked; saveSettings(); if (!settings.voice) stopSpeech(); });
+  opt.voice.addEventListener('change', () => {
+    settings.voice = opt.voice.checked; saveSettings();
+    if (!settings.voice) stopSpeech(); else retrySound();
+    renderSoundStatus();
+  });
   opt.sel.addEventListener('change', () => { settings.voiceURI = opt.sel.value; saveSettings(); });
   opt.rate.addEventListener('input', () => { settings.rate = Number(opt.rate.value); opt.rateVal.textContent = '×' + settings.rate.toFixed(1); saveSettings(); });
   $('previewBtn').addEventListener('click', () => speak([{ text: '깨어났구나. 내 목소리, 들리니?', kind: 'woman' }]));
@@ -903,6 +1010,24 @@ JSON 하나만 출력:
     document.querySelectorAll('.mood').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   }));
   $('startBtn').addEventListener('click', startGame);
+  document.addEventListener('click', unlockSpeech, true);
+  $('soundTest').addEventListener('click', () => {
+    retrySound();
+    if (!tts.ok) return renderSoundStatus();
+    if (!settings.voice) { settings.voice = true; saveSettings(); syncSettings(); }
+    $('soundStatus').textContent = '재생 중이에요. 여자 목소리가 들리나요?';
+    speak([{ text: '깨어났구나. 내 목소리, 들리니?', kind: 'woman' }], renderSoundStatus);
+  });
+  $('soundRetry').addEventListener('click', () => {
+    retrySound();
+    if (!tts.ok) return;
+    if (lastSpoken.length) speakEntries(lastSpoken);
+    else speak([{ text: '목소리가 들리나요?', kind: 'narrator' }]);
+  });
+  $('soundOff').addEventListener('click', () => {
+    settings.voice = false; saveSettings(); syncSettings();
+    $('soundAlert').hidden = true; renderSoundStatus();
+  });
   $('againBtn').addEventListener('click', startGame);
   $('endHome').addEventListener('click', toTitle);
   $('homeBtn').addEventListener('click', toTitle);
@@ -920,6 +1045,7 @@ JSON 하나만 출력:
     try { speechSynthesis.addEventListener('voiceschanged', () => tts.load()); } catch (e) {}
   } else renderVoiceOptions();
   syncSettings();
+  renderSoundStatus();
   if (!window.claude || !window.claude.use) updateAiNote();
 
   const hot = window.claude && window.claude.hot;

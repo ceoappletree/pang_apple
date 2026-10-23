@@ -602,7 +602,7 @@
 
   /* ================= 음성 합성 ================= */
   const tts = {
-    ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+    ok: !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function',
     voices: [],
     load() {
       if (!this.ok) return;
@@ -625,11 +625,21 @@
   const timers = new Set();
   const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); return id; };
 
+  let lastCancel = 0;
   function stopSpeech() {
     narrToken++;
     timers.forEach(clearTimeout); timers.clear();
-    if (tts.ok) speechSynthesis.cancel();
+    if (tts.ok && (speechSynthesis.speaking || speechSynthesis.pending)) { speechSynthesis.cancel(); lastCancel = Date.now(); }
   }
+
+  // 휴대폰 브라우저는 첫 음성을 터치하는 순간에 내야 이후 음성도 허락함
+  let unlocked = false;
+  function unlockSpeech() {
+    if (!tts.ok || unlocked) return;
+    unlocked = true;
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'ko-KR'; speechSynthesis.speak(u); } catch (e) {}
+  }
+  document.addEventListener('click', unlockSpeech, true);
 
   function speakOne(line, done) {
     const st = STYLE[line.v] || STYLE.n;
@@ -663,6 +673,9 @@
     const step = () => {
       if (token !== narrToken) return;
       if (i >= lines.length) { onDone && onDone(); return; }
+      // 크롬은 cancel 직후 곧바로 speak하면 소리 없이 무시하는 경우가 있어 잠깐 기다림
+      const gap = 180 - (Date.now() - lastCancel);
+      if (gap > 0) { later(step, gap); return; }
       onLine && onLine(i);
       speakOne(lines[i], () => {
         if (token !== narrToken) return;
