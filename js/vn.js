@@ -11,7 +11,7 @@ const tagEl = root.querySelector('.nametag');
 const nextEl = root.querySelector('.next');
 const choicesEl = root.querySelector('.choices');
 
-const NAMES = { coach: '김대호 감독' };
+const NAMES = { coach: '김대호 감독', chairman: '강철민 회장 (아버지)' };
 let curWho = null, curMood = null;
 let tapResolve = null;
 
@@ -24,7 +24,7 @@ const waitTap = () => new Promise(r => { tapResolve = r; });
 function setPortrait(who, mood) {
   if (!who || who === 'narr') { portEl.classList.add('hide'); curWho = null; return; }
   if (who === curWho && mood === curMood) return;
-  portEl.innerHTML = who === 'coach' ? Portraits.coach(mood) : Portraits.girl(who, mood);
+  portEl.innerHTML = Portraits.render(who, mood);
   portEl.classList.remove('hide');
   curWho = who; curMood = mood;
 }
@@ -45,7 +45,7 @@ async function say(who, mood, text, ctx) {
   setPortrait(who, mood);
   if (who && who !== 'narr') {
     tagEl.textContent = NAMES[who] || Story.GIRLS[who].name;
-    tagEl.style.background = who === 'coach' ? '#ffd54a' : Story.GIRLS[who].color;
+    tagEl.style.background = NAMES[who] ? '#ffd54a' : Story.GIRLS[who].color;
     tagEl.classList.remove('hidden');
   } else tagEl.classList.add('hidden');
   nextEl.style.visibility = 'hidden';
@@ -95,7 +95,7 @@ async function run(steps, ctx) {
 }
 function applyFx(fx, ctx) {
   if (ctx.applyFx) ctx.applyFx(fx);
-  const love = ['haneul', 'seoyun', 'minji'].reduce((a, k) => a + (fx[k] || 0), 0);
+  const love = Story.GIRL_KEYS.reduce((a, k) => a + (fx[k] || 0), 0);
   if (love) hearts(love);
 }
 

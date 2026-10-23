@@ -275,7 +275,10 @@ function drawPerson(x, z, opts) {
   ctx.beginPath(); ctx.arc(bx, by - m(1.68), Math.max(1, m(0.135)), Math.PI, 0); ctx.fill();
 }
 
-const AWAY = { shirt: '#cfd6e6', pants: '#aab3c8', cap: '#1d2f6b' };
+const AWAY_U = { shirt: '#cfd6e6', pants: '#aab3c8', cap: '#1d2f6b' };
+const HOME_U = { shirt: '#f4f4f8', pants: '#e2e2ea', cap: '#c8202e' };
+// 투수 모드에서는 수비가 우리 팀(애플즈)
+let AWAY = AWAY_U;
 
 function drawPitcher() {
   const z = 18.4;
@@ -448,7 +451,9 @@ function updateHUD() {
   $('b2').classList.toggle('on', !!ab.bases[1]);
   $('b3').classList.toggle('on', !!ab.bases[2]);
 }
+const FLIP = { '#ff8a7a': '#8ef0a8', '#7fe0ff': '#ff8a7a', '#ffd54a': '#ff6b6b', '#8ef0a8': '#ffb38a' };
 function showMsg(text, color = '#fff', sub = '') {
+  if (ab && ab.mode === 'pitch' && FLIP[color]) color = FLIP[color];
   const el = $('msg');
   el.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
   el.style.color = color;
@@ -653,6 +658,7 @@ canvas.addEventListener('pointerdown', e => {
 });
 
 function trySwing(sx, sy) {
+  if (ab && ab.mode === 'pitch') { pitchTap(sx, sy); return; }
   if (state !== 'pitch' || swing) return;
   const P = ab.P;
   // 화면 터치 위치 → 홈플레이트 평면(z=0) 상의 월드 좌표
@@ -900,14 +906,19 @@ function update(dt) {
 
   switch (state) {
     case 'wait':
-      if (stateT >= waitFor) nextPitch();
+      if (stateT >= waitFor) { if (ab.mode === 'pitch') beginAim(); else nextPitch(); }
+      break;
+    case 'aim':
+      break;
+    case 'gauge':
+      gaugeT += dt;
       break;
     case 'windup': {
       const dur = 1.05;
       pitcherPhase = Math.min(1, stateT / dur);
       if (stateT >= dur) {
         sfx.release();
-        if (ab.P.showType) showPitchInfo(`${pitch.name}!`);
+        if (ab.P.showType && ab.mode !== 'pitch') showPitchInfo(`${pitch.name}!`);
         setState('pitch');
       }
       break;
@@ -915,6 +926,7 @@ function update(dt) {
     case 'pitch':
       pitch.t += dt;
       pitcherPhase = 1 + pitch.t;
+      if (ab.mode === 'pitch' && !pitch.aiDone && pitch.t >= pitch.T - 0.004) { aiBat(); if (state !== 'pitch') break; }
       if (pitchPos(pitch, pitch.t).z <= CATCH_Z) {
         sfx.mitt();
         showPitchInfo(`${pitch.name} ${pitch.kmh}km/h`);
@@ -929,9 +941,9 @@ function update(dt) {
       updateFielders(dt * ts);
       const ti = Math.floor(play.t / SIM_DT);
       if (play.outcome.kind === 'hr' && ti >= play.hr && !play.cheered) {
-        play.cheered = true; cheer = 1; sfx.cheer(3.4, 0.45); buzz([40, 60, 40]);
-        launchFireworks();
-        play.slow = 0.5;
+        play.cheered = true;
+        if (ab.mode !== 'pitch') { cheer = 1; sfx.cheer(3.4, 0.45); buzz([40, 60, 40]); launchFireworks(); play.slow = 0.5; }
+        else sfx.groan();
       }
       if (play.catchI >= 0 && ti >= play.catchI && !play.caught) { play.caught = true; sfx.catchBall(); }
       if (play.t >= play.end) resolvePlay();
@@ -940,6 +952,7 @@ function update(dt) {
     case 'done':
       if (stateT >= waitFor) {
         const cb = ab.onEnd, res = ab.result;
+        hidePitchUI();
         setState('idle');
         swing = null; play = null; marks = null;
         resetFielders();
@@ -1084,7 +1097,7 @@ function drawBatter() {
   const baseAlpha = vis;
   // 몸 (반투명 실루엣)
   ctx.globalAlpha = 0.92 * baseAlpha;
-  ctx.fillStyle = '#7a1420';
+  ctx.fillStyle = batCol().body;
   ctx.beginPath();
   ctx.moveTo(-40, 330); ctx.quadraticCurveTo(30, 320, 45, 420);
   ctx.lineTo(55, 560); ctx.quadraticCurveTo(40, 620, 20, 760); ctx.lineTo(-60, 760); ctx.closePath();
@@ -1092,11 +1105,11 @@ function drawBatter() {
   ctx.fillStyle = '#e8e8ee';
   ctx.beginPath(); ctx.moveTo(-30, 575); ctx.lineTo(50, 570); ctx.lineTo(35, 760); ctx.lineTo(-40, 760); ctx.closePath(); ctx.fill();
   // 헬멧
-  ctx.fillStyle = '#9c1b2a';
+  ctx.fillStyle = batCol().helmet;
   ctx.beginPath(); ctx.arc(-8, 278, 46, 0, 7); ctx.fill();
-  ctx.fillStyle = '#c0283a';
+  ctx.fillStyle = batCol().hi;
   ctx.beginPath(); ctx.arc(-14, 270, 40, Math.PI * 1.1, Math.PI * 1.9); ctx.fill();
-  ctx.fillStyle = '#5c0f18';
+  ctx.fillStyle = batCol().dark;
   ctx.beginPath(); ctx.ellipse(28, 300, 22, 9, -0.2, 0, 7); ctx.fill();
   ctx.globalAlpha = baseAlpha;
 
@@ -1177,6 +1190,10 @@ function render() {
 
   // 공
   if (state !== 'hit') lastTrail = [];
+  if (state === 'aim' || state === 'gauge') {
+    drawZone();
+    drawAim();
+  }
   if (state === 'pitch') {
     drawZone();
     const b = pitchPos(pitch, pitch.t);
@@ -1206,6 +1223,136 @@ function render() {
   }
 }
 
+
+// ---------- 투수 모드 ----------
+const PITCH_EMOJI = { FB: '🔥', TW: '↙️', CH: '🌀', CU: '🌈', SL: '➡️', FK: '⬇️' };
+const pitchUI = document.createElement('div');
+pitchUI.id = 'pitchUI';
+pitchUI.className = 'hidden';
+document.body.appendChild(pitchUI);
+pitchUI.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  const b = e.target.closest('[data-p]');
+  if (!b || !ab) return;
+  ab.ptype = b.dataset.p;
+  renderPitchUI();
+});
+function renderPitchUI() {
+  const me = ab.me;
+  pitchUI.innerHTML = `<div class="ptitle">${state === 'gauge' ? '⏱ 제구 게이지를 초록색에서 터치!' : '🎯 구종을 고르고, 던질 곳을 터치!'}</div>
+    <div class="ptypes">${me.reps.map(t => `<button data-p="${t}" class="${t === ab.ptype ? 'on' : ''}">${PITCH_EMOJI[t] || ''} ${PITCH_DEF[t].name}</button>`).join('')}</div>`;
+  pitchUI.classList.remove('hidden');
+}
+function hidePitchUI() { pitchUI.classList.add('hidden'); }
+let aimPt = null, gaugeT = 0;
+function beginAim() {
+  swing = null; play = null;
+  resetFielders();
+  pitcherPhase = 0;
+  setState('aim');
+  renderPitchUI();
+}
+function pitchTap(sx, sy) {
+  if (state === 'aim') {
+    const s = F / (0 - CAM_HOME.z);
+    aimPt = { x: clamp((sx - CX) / s, -0.7, 0.7), y: clamp(CAM_HOME.y - (sy - CY) / s, 0.05, 1.8), sx, sy };
+    gaugeT = 0;
+    setState('gauge');
+    renderPitchUI();
+  } else if (state === 'gauge') {
+    throwPitch(gaugeValue());
+  }
+}
+function gaugeSpeed() { return 2.4 + (1 - ab.me.control / 100) * 2.6; }
+function gaugeValue() { return (Math.sin(gaugeT * gaugeSpeed() - Math.PI / 2) + 1) / 2; }
+function sweetW() { return 0.1 + ab.me.control / 100 * 0.16; }
+function throwPitch(m) {
+  hidePitchUI();
+  const me = ab.me, def = PITCH_DEF[ab.ptype];
+  const off = Math.abs(m - 0.5);
+  const acc = off < sweetW() / 2 ? 1 : clamp(1 - (off - sweetW() / 2) * 2.4, 0, 1);
+  const errR = (1 - acc) * 0.3 * (1.25 - me.control / 100 * 0.7) + rand(0, 0.025);
+  const ea = rand(0, Math.PI * 2);
+  const tx = aimPt.x + Math.cos(ea) * errR, ty = aimPt.y + Math.sin(ea) * errR;
+  const bm = 0.55 + me.breaking / 100 * 0.85;
+  const kmh = Math.round(me.velo * def.k + (acc === 1 ? 2 : 0) + rand(-1.5, 1.5));
+  const T = 18.0 / (kmh / 3.6) * 1.2;
+  const inZone = tx > ZONE.x0 - BALL_R && tx < ZONE.x1 + BALL_R && ty > ZONE.y0 - BALL_R && ty < ZONE.y1 + BALL_R;
+  pitch = { type: ab.ptype, name: def.name, kmh, T, tx, ty, bx: rand(def.bx[0], def.bx[1]) * bm, by: def.by * bm, t: 0, inZone, acc };
+  if (acc === 1) showTiming('👌 나이스 피치!', '#b5f5a0');
+  else if (acc < 0.4) showTiming('앗, 손에서 빠졌다…', '#ffb38a');
+  marks = null;
+  setState('windup');
+}
+// AI 타자 판단 (공이 홈에 도착하는 순간)
+function aiBat() {
+  pitch.aiDone = true;
+  const bt = ab.batter, me = ab.me;
+  const ex = Math.max(0, Math.abs(pitch.tx) - 0.215), ey = Math.max(0, ZONE.y0 - pitch.ty, pitch.ty - ZONE.y1);
+  const outDist = Math.hypot(ex, ey);                                    // 존에서 벗어난 거리
+  const cx = Math.abs(pitch.tx) / 0.215, cy = Math.abs(pitch.ty - 0.8) / 0.3;
+  const edge = clamp(Math.max(cx, cy), 0, 1);                             // 존 안에서 가장자리일수록 1
+  const breaking = pitch.type !== 'FB';
+  const deceive = breaking ? 0.12 + me.breaking / 600 : 0;
+  let swingP;
+  if (pitch.inZone) swingP = 0.6 + ab.strikes * 0.12 - edge * 0.12;
+  else swingP = clamp(0.32 + deceive + ab.strikes * 0.12 - outDist * 2.2 - bt.eye / 400, 0.02, 0.7);
+  if (Math.random() > swingP) return; // 지켜봄 → 볼/스트라이크 판정은 그대로
+  const p0 = proj(pitch.tx, pitch.ty, 0);
+  swing = { sx: p0[0] + rand(-25, 25), sy: p0[1] + rand(-20, 20), wx: pitch.tx, wy: pitch.ty, t: 0, ai: true };
+  sfx.whoosh();
+  const velo = pitch.kmh;
+  let contactP = 0.45 + bt.contact / 220 - (velo - 140) / 110 - (breaking ? me.breaking / 450 : 0) - edge * 0.15 - outDist * 1.6;
+  if (pitch.acc === 1) contactP -= 0.05;
+  if (Math.random() > clamp(contactP, 0.12, 0.92)) return; // 헛스윙
+  // 맞힘
+  let q = clamp(Math.pow(Math.random(), 0.9) * (0.55 + bt.power / 220) - edge * 0.2 - outDist * 1.5 - (velo - 145) / 140, 0, 1);
+  const foul = Math.random() < 0.28 + edge * 0.25 + outDist;
+  const ev = 18 + (22 + bt.power * 0.09) * q + rand(-2, 2);
+  let launch = 12 + (pitch.ty - 0.8) * 55 + rand(-18, 24);
+  if (pitch.type === 'FK' || pitch.type === 'CH') launch -= 8;
+  let spray = rand(-38, 38);
+  if (foul) spray = (Math.random() < 0.5 ? -1 : 1) * rand(48, 75);
+  const pos = pitchPos(pitch, pitch.t);
+  play = planPlay(pos, ev, clamp(launch, -20, 70) * DEG, spray * DEG, { q, perfect: false });
+  sfx.crack(play.foul ? 0.4 : clamp(q + 0.2, 0.3, 1));
+  hitStop = play.foul ? 0.02 : 0.05;
+  shake = 2 + q * 4;
+  setState('hit');
+}
+function drawAim() {
+  // 조준점
+  if (state === 'gauge' && aimPt) {
+    const p = proj(aimPt.x, aimPt.y, 0);
+    ctx.strokeStyle = '#ffd54a'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(p[0], p[1], 16, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p[0] - 24, p[1]); ctx.lineTo(p[0] + 24, p[1]); ctx.moveTo(p[0], p[1] - 24); ctx.lineTo(p[0], p[1] + 24); ctx.stroke();
+    // 게이지
+    const gx = 60, gy = 600, gw = 280, gh = 22;
+    ctx.fillStyle = 'rgba(8,14,32,.8)'; ctx.fillRect(gx - 4, gy - 4, gw + 8, gh + 8);
+    const grad = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+    grad.addColorStop(0, '#e5484d'); grad.addColorStop(0.5, '#ffd54a'); grad.addColorStop(1, '#e5484d');
+    ctx.fillStyle = grad; ctx.fillRect(gx, gy, gw, gh);
+    const sw = sweetW() * gw;
+    ctx.fillStyle = '#4ade80'; ctx.fillRect(gx + gw / 2 - sw / 2, gy, sw, gh);
+    const m = gaugeValue();
+    ctx.fillStyle = '#fff'; ctx.fillRect(gx + m * gw - 3, gy - 8, 6, gh + 16);
+  }
+}
+function batCol() {
+  if (ab && ab.mode === 'pitch') {
+    const c = ab.batter.color || '#3b82f6';
+    return { body: shadeHex(c, -0.45), helmet: shadeHex(c, -0.2), hi: c, dark: shadeHex(c, -0.6) };
+  }
+  return { body: '#7a1420', helmet: '#9c1b2a', hi: '#c0283a', dark: '#5c0f18' };
+}
+function shadeHex(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const t = f < 0 ? 0 : 255, p = Math.abs(f);
+  r = Math.round((t - r) * p + r); g = Math.round((t - g) * p + g); b = Math.round((t - b) * p + b);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
 
 // 임팩트: 충격파 링 + 방사선 + 의성어
 function drawImpacts() {
@@ -1252,11 +1399,11 @@ function drawImpacts() {
 // ---------- 루프 ----------
 let showBatterIdle = false;
 let last = performance.now();
+let paused = false;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  update(dt);
-  render();
+  if (!paused) { update(dt); render(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -1268,6 +1415,8 @@ window.Engine = {
   //         sit:{inningLabel,scoreLabel,scoreText,outs,bases}, tactic:'normal'|'bunt'|'hitrun', onEnd(res) }
   atBat(opts) {
     const sit = opts.sit || {};
+    AWAY = AWAY_U;
+    hidePitchUI();
     ab = {
       batter: opts.batter, pitcher: opts.pitcher || { lv: 0.5 }, sit,
       tactic: opts.tactic || 'normal', onEnd: opts.onEnd,
@@ -1279,7 +1428,25 @@ window.Engine = {
     updateHUD();
     setState('wait', opts.delay == null ? 0.9 : opts.delay);
   },
-  idle() { ab = null; setState('idle'); swing = null; play = null; marks = null; resetFielders(); Object.assign(cam, CAM_HOME); hidePitchInfo(); },
+  // 투수 모드: 내가 던지고 AI 타자가 친다
+  // opts: { pitcher:{velo,control,breaking,reps:[...]}, batter:{name,contact,power,eye,speed,color}, sit, onEnd }
+  pitchAB(opts) {
+    const sit = opts.sit || {};
+    const bt = opts.batter;
+    ab = {
+      mode: 'pitch', me: opts.pitcher, batter: bt, pitcher: { lv: 0.5 }, sit, tactic: 'normal', onEnd: opts.onEnd,
+      P: { run1B: 4.6 - 0.008 * (bt.speed || 50), hitR: 0.2, winE: 0.1, winL: 0.06 },
+      balls: 0, strikes: 0, outs: sit.outs || 0, bases: (sit.bases || [0, 0, 0]).slice(),
+      ptype: opts.pitcher.reps[0],
+    };
+    AWAY = HOME_U;
+    Object.assign(cam, CAM_HOME);
+    hidePitchInfo();
+    updateHUD();
+    setState('wait', opts.delay == null ? 0.6 : opts.delay);
+  },
+  setPaused(v) { paused = v; if (!v) last = performance.now(); },
+  idle() { ab = null; AWAY = AWAY_U; hidePitchUI(); setState('idle'); swing = null; play = null; marks = null; resetFielders(); Object.assign(cam, CAM_HOME); hidePitchInfo(); },
   get state() { return state; },
   showMsg, showTiming, sfx, audio, buzz,
   setMuted(m) { muted = m; },

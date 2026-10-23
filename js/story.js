@@ -1,16 +1,15 @@
-// 커리어 모드 데이터: 팀, 히로인, 이벤트 스크립트
+// 게임 데이터: 리그, 히로인, 장소, 선물, 경영, 이벤트 대사
 (() => {
 'use strict';
 
 // ---------- 리그 ----------
-// off: 타선 / pit: 투수진 (높을수록 강함), ace: 선발 투수
 const TEAMS = [
-  { id: 'APL', name: '서울 애플즈', short: '애플즈', color: '#e5484d', off: 52, pit: 53, me: true },
-  { id: 'SEA', name: '부산 씨걸스', short: '씨걸스', color: '#3b82f6', off: 56, pit: 52,
+  { id: 'APL', name: '서울 애플즈', short: '애플즈', color: '#e5484d', off: 48, pit: 48, me: true },
+  { id: 'SEA', name: '부산 씨걸스', short: '씨걸스', color: '#3b82f6', off: 55, pit: 52,
     ace: { name: '박해성', velo: 147, ctrl: 0.55, mix: { FB: 0.45, SL: 0.3, CH: 0.15, CU: 0.1 } } },
-  { id: 'WAV', name: '인천 웨이브스', short: '웨이브스', color: '#14b8a6', off: 51, pit: 57,
+  { id: 'WAV', name: '인천 웨이브스', short: '웨이브스', color: '#14b8a6', off: 51, pit: 56,
     ace: { name: '최강윤', velo: 150, ctrl: 0.6, mix: { FB: 0.5, FK: 0.3, SL: 0.2 } } },
-  { id: 'BLZ', name: '대구 블레이즈', short: '블레이즈', color: '#f97316', off: 58, pit: 47,
+  { id: 'BLZ', name: '대구 블레이즈', short: '블레이즈', color: '#f97316', off: 57, pit: 47,
     ace: { name: '이도훈', velo: 144, ctrl: 0.45, mix: { FB: 0.4, TW: 0.25, CU: 0.2, CH: 0.15 } } },
   { id: 'PHX', name: '광주 피닉스', short: '피닉스', color: '#a855f7', off: 49, pit: 53,
     ace: { name: '김서준', velo: 141, ctrl: 0.7, mix: { TW: 0.35, CH: 0.3, CU: 0.2, FB: 0.15 } } },
@@ -18,224 +17,323 @@ const TEAMS = [
     ace: { name: '정우람', velo: 145, ctrl: 0.5, mix: { FB: 0.5, CU: 0.25, SL: 0.25 } } },
 ];
 
+// ---------- 시간 ----------
+const SLOTS = ['오전', '오후', '저녁'];
+
+// ---------- 장소 (도시 지도 위 위치는 world.js) ----------
+const LOCS = {
+  home: { name: '펜트하우스', emoji: '🏠', desc: '휴식 · 저장' },
+  stadium: { name: '애플파크', emoji: '🏟', desc: '훈련 · 경기 · 응원단' },
+  office: { name: '애플타워 (구단 사무실)', emoji: '🏢', desc: '구단 경영' },
+  studio: { name: '스타 스튜디오', emoji: '🎬', desc: '촬영장' },
+  campus: { name: '한국대학교', emoji: '🎓', desc: '캠퍼스' },
+  cafe: { name: '카페거리', emoji: '☕', desc: '카페' },
+  mall: { name: '애플백화점', emoji: '🛍', desc: '선물 쇼핑' },
+  park: { name: '한강공원', emoji: '🌳', desc: '산책 · 조깅' },
+  umpire: { name: 'KBL 심판위원회', emoji: '⚖️', desc: '리그 사무국' },
+  batting: { name: '홈런 배팅센터', emoji: '⚾', desc: '개인 타격 연습' },
+  restaurant: { name: '레스토랑 라루체', emoji: '🍷', desc: '고급 레스토랑' },
+};
+
 // ---------- 히로인 ----------
+// sched: 시간대(오전/오후/저녁)별 위치
+// likes: 데이트 장소 선호 (-1 싫음 ~ 2 아주 좋아함), gifts: 선물 선호
 const GIRLS = {
-  haneul: {
-    name: '윤하늘', role: '소꿉친구 · 카페 사장', color: '#ff9ec0', bg: 'linear-gradient(180deg,#ffd9b8,#f7a8a0)',
-    // 데이트 장소 선호도: -1 싫어함, 0 보통, 1 좋아함, 2 아주 좋아함
-    likes: { cafe: 1, movie: 1, park: 2, amusement: 2, restaurant: 0, museum: 0, bowling: 0, batting: 1 },
+  yuna: {
+    name: '차유나', age: 26, role: '톱 여배우', color: '#ff7aa8', bg: 'linear-gradient(180deg,#3a1030,#c0507a)',
+    sched: ['studio', 'studio', 'restaurant'], needFame: 20,
+    likes: { cafe: 0, movie: 1, park: 0, amusement: -1, restaurant: 2, museum: 2, karaoke: 0, batting: -1, drive: 1 },
+    gifts: { flower: 1, perfume: 2, bag: 1, books: 0, bat: 0, shoes: 0, cake: 1 },
     lines: {
-      2: ['"여기 와 보고 싶었어! 오늘 진짜 행복하다~"', '"헤헤, 우리 어릴 때도 이렇게 놀았었지?"'],
-      1: ['"재밌었어! 다음에 또 오자, 응?"', '"너랑 오니까 더 좋네."'],
-      0: ['"음… 나쁘진 않았어."', '"그래도 같이 있어서 좋았어."'],
-      '-1': ['"…나 이런 데 별로인 거 알면서."', '"좀 피곤하다. 오늘은 일찍 들어갈게."'],
+      2: ['"…당신, 취향이 꽤 고급이네요. 마음에 들어요."', '"카메라 없는 데서 이렇게 웃어 본 거, 오랜만이에요."'],
+      1: ['"괜찮았어요. 다음에도 불러 줘요."', '"후후, 오늘은 기사 걱정 안 할래요."'],
+      0: ['"…그럭저럭이네요."', '"다음엔 좀 더 기대할게요."'],
+      '-1': ['"사람 많은 데는… 사진 찍힐까 봐 불편해요."', '"미안해요, 매니저가 찾아서 먼저 갈게요."'],
     },
   },
-  seoyun: {
-    name: '한서윤', role: '스포츠 아나운서', color: '#b7a6ff', bg: 'linear-gradient(180deg,#2b2f63,#7b5ea7)', needFame: 30,
-    likes: { cafe: 0, movie: 1, park: 0, amusement: -1, restaurant: 2, museum: 2, bowling: -1, batting: 0 },
+  jiwoo: {
+    name: '서지우', age: 22, role: '한국대 스포츠통계학과', color: '#9fd3ff', bg: 'linear-gradient(180deg,#1f3a5c,#8fb8de)',
+    sched: ['campus', 'campus', 'cafe'],
+    likes: { cafe: 2, movie: 2, park: 1, amusement: 0, restaurant: 0, museum: 1, karaoke: -1, batting: 1, drive: 0 },
+    gifts: { flower: 1, perfume: 0, bag: -1, books: 2, bat: 1, shoes: 0, cake: 1 },
     lines: {
-      2: ['"…취향이 좋네요. 조금 놀랐어요."', '"오늘은 방송 생각 안 하고 즐겼어요. 고마워요."'],
-      1: ['"괜찮은 선택이에요."', '"생각보다 즐거웠어요."'],
-      0: ['"그럭저럭이네요."', '"다음엔 좀 더 기대할게요."'],
-      '-1': ['"…저 이런 시끄러운 곳 별로예요."', '"내일 아침 생방송이라 먼저 갈게요."'],
+      2: ['"오늘 데이터… 아니, 오늘 하루 완벽했어요!"', '"이런 데 같이 오고 싶었어요. 어떻게 알았어요?"'],
+      1: ['"재밌었어요! 논문 스트레스가 다 풀렸어요."', '"다음에 또 와요, 꼭이요."'],
+      0: ['"음… 나쁘진 않았어요."', '"같이 있어서 좋았어요. 장소는… 평범했지만요."'],
+      '-1': ['"시끄러운 데는 좀… 머리가 아파요."', '"저 내일 발표라서 먼저 갈게요…"'],
     },
   },
-  minji: {
-    name: '강민지', role: '구단 트레이너', color: '#ffb36b', bg: 'linear-gradient(180deg,#ffcf70,#ff7a59)',
-    likes: { cafe: 0, movie: -1, park: 1, amusement: 1, restaurant: 0, museum: -1, bowling: 2, batting: 2 },
+  harin: {
+    name: '박하린', age: 24, role: '애플즈 응원단장', color: '#ffb36b', bg: 'linear-gradient(180deg,#ff8a5c,#ffd27a)',
+    sched: ['park', 'stadium', 'mall'],
+    likes: { cafe: 0, movie: 0, park: 1, amusement: 2, restaurant: 0, museum: -1, karaoke: 2, batting: 0, drive: 1 },
+    gifts: { flower: 2, perfume: 1, bag: 2, books: -1, bat: 1, shoes: 1, cake: 1 },
     lines: {
-      2: ['"오! 이런 데 좋아! 한 판 더 해!"', '"너 의외로 센스 있다? …칭찬 아니거든!"'],
-      1: ['"땀 좀 흘리니까 개운하네."', '"뭐, 나쁘지 않았어."'],
-      0: ['"…그냥 그랬어."', '"다음엔 몸 좀 움직이는 데 가자."'],
-      '-1': ['"가만히 앉아만 있으니까 좀이 쑤셔…"', '"…졸려. 나 간다."'],
+      2: ['"꺄아~ 최고! 오늘 텐션 완전 MAX예요!"', '"구단주님이랑 오니까 두 배로 신나요!"'],
+      1: ['"재밌었어요! 다음 응원 때 힘이 날 것 같아요."', '"헤헤, 또 놀러 가요!"'],
+      0: ['"음… 조용하네요."', '"다음엔 좀 신나는 데 가요!"'],
+      '-1': ['"…저 여기 좀 졸려요."', '"으음, 응원 연습 있어서 먼저 갈게요!"'],
+    },
+  },
+  sea: {
+    name: '정세아', age: 28, role: 'KBL 최초 여성 1군 심판', color: '#a3b8d8', bg: 'linear-gradient(180deg,#141828,#3b4a6b)',
+    sched: ['umpire', 'umpire', 'park'],
+    likes: { cafe: 0, movie: 0, park: 2, amusement: 0, restaurant: 0, museum: 1, karaoke: -1, batting: 1, drive: -1 },
+    gifts: { flower: 0, perfume: 1, bag: -1, books: 1, bat: -1, shoes: 2, cake: 1 },
+    lines: {
+      2: ['"…좋네요. 여기 오면 머리가 맑아져요."', '"오늘은 판정 생각 안 했어요. 당신 덕분에요."'],
+      1: ['"괜찮은 선택이었어요."', '"다음 주에도… 시간 되면요."'],
+      0: ['"평범하네요."', '"규정상 문제는 없는 데이트였어요."'],
+      '-1': ['"…저 이런 데는 좀 불편해요."', '"과속은 원칙 위반이에요. 내릴게요."'],
+    },
+  },
+  somi: {
+    name: '한소미', age: 23, role: '애플즈 열성팬 · 유튜버', color: '#ff9ec0', bg: 'linear-gradient(180deg,#e5484d,#ffb0b8)',
+    sched: ['cafe', 'batting', 'stadium'],
+    likes: { cafe: 1, movie: 0, park: 0, amusement: 1, restaurant: 0, museum: -1, karaoke: 1, batting: 2, drive: 2 },
+    gifts: { flower: 1, perfume: 0, bag: 1, books: -1, bat: 2, shoes: 0, cake: 2 },
+    lines: {
+      2: ['"꺄아아! 이거 영상으로 남겨도 돼요?! 아니 그냥 기억할래요!"', '"선수님이랑 여기라니… 오늘 성덕 완성이에요!"'],
+      1: ['"너무 좋았어요! 구독자들한테 자랑하고 싶다~"', '"헤헤, 오늘은 팬 말고 친구로 놀았어요!"'],
+      0: ['"음… 좋았어요! 아마도요!"', '"선수님이랑 있으면 어디든 좋아요. 진짜로."'],
+      '-1': ['"여긴… 좀 졸려요. 헤헤."', '"아, 라이브 방송 시간이라 먼저 갈게요!"'],
     },
   },
 };
+const GIRL_KEYS = Object.keys(GIRLS);
 
-const PLACES = [
-  { id: 'cafe', name: '☕ 카페' }, { id: 'movie', name: '🎬 영화관' }, { id: 'park', name: '🌳 공원 산책' },
-  { id: 'amusement', name: '🎡 놀이공원' }, { id: 'restaurant', name: '🍝 레스토랑' }, { id: 'museum', name: '🖼 미술관' },
-  { id: 'bowling', name: '🎳 볼링장' }, { id: 'batting', name: '⚾ 배팅센터' },
+const DATE_PLACES = [
+  { id: 'cafe', name: '☕ 카페', cost: 5 }, { id: 'movie', name: '🎬 영화관', cost: 8 }, { id: 'park', name: '🌳 한강 산책', cost: 0 },
+  { id: 'amusement', name: '🎡 놀이공원', cost: 20 }, { id: 'restaurant', name: '🍷 레스토랑', cost: 50 }, { id: 'museum', name: '🖼 미술관', cost: 10 },
+  { id: 'karaoke', name: '🎤 노래방', cost: 5 }, { id: 'batting', name: '⚾ 배팅센터', cost: 3 }, { id: 'drive', name: '🏎 슈퍼카 드라이브', cost: 0 },
+];
+
+const GIFTS = [
+  { id: 'flower', name: '💐 꽃다발', price: 20 }, { id: 'perfume', name: '🌸 향수', price: 50 },
+  { id: 'bag', name: '👜 명품백', price: 500 }, { id: 'books', name: '📚 전문서적 세트', price: 10 },
+  { id: 'bat', name: '🏏 친필 사인 배트', price: 30 }, { id: 'shoes', name: '👟 러닝화', price: 30 },
+  { id: 'cake', name: '🍰 수제 케이크', price: 15 },
+];
+
+// ---------- 경영 ----------
+const TICKETS = [
+  { id: 0, name: '저가 (8천원)', price: 0.8, demand: 1.18 },
+  { id: 1, name: '보통 (1만5천원)', price: 1.5, demand: 1.0 },
+  { id: 2, name: '고가 (2만5천원)', price: 2.5, demand: 0.78 },
+];
+// 시설: 레벨당 비용(억)과 효과
+const FACILITIES = {
+  seats: { name: '🏟 관중석 확장', desc: '수용 인원 +5,000', cost: [25, 35, 50], max: 3 },
+  training: { name: '🏋️ 훈련센터', desc: '훈련 효과 +1', cost: [15, 25, 40], max: 3 },
+  medical: { name: '🏥 메디컬센터', desc: '부상 위험 -30%', cost: [10, 20, 30], max: 3 },
+  screen: { name: '📺 초대형 전광판', desc: '팬 증가 속도 ↑', cost: [20, 35], max: 2 },
+};
+const FAS = [
+  { id: 'fa1', name: '최대한', pos: '1루수 · 거포', type: 'off', boost: 6, cost: 22, salary: 0.35 },
+  { id: 'fa2', name: '이민호', pos: '유격수 · 교타자', type: 'off', boost: 4, cost: 12, salary: 0.22 },
+  { id: 'fa3', name: '마르티네스', pos: '외국인 선발투수', type: 'pit', boost: 7, cost: 28, salary: 0.45 },
+  { id: 'fa4', name: '오승철', pos: '베테랑 마무리', type: 'pit', boost: 4, cost: 11, salary: 0.2 },
+  { id: 'fa5', name: '로드리게스', pos: '외국인 중견수', type: 'off', boost: 5, cost: 18, salary: 0.3 },
 ];
 
 // ---------- 스크립트 ----------
-// 스텝: { who, mood, text } | { narr } | { bg } | { choice:[{ text, fx, then:[...] }] } | { fx }
-// fx: { haneul:+5, seoyun:.., minji:.., fame, trust, cond, stamina, meet, power, eye, speed, charm }
+// 스텝: { who, mood, text } | { narr } | { bg } | { choice:[{ text, fx, then }] } | { fx }
 const S = {};
 
 S.opening = [
+  { bg: 'linear-gradient(180deg,#141828,#3b2f2a)' },
+  { narr: '애플그룹 본사 최상층, 회장실.' },
+  { who: 'chairman', mood: 'normal', text: '{name}. 애플즈를 너한테 맡긴 건 장난감으로 주려던 게 아니다.' },
+  { who: 'chairman', mood: 'angry', text: '시즌이 끝날 때까지 구단 흑자, 그리고 가을야구(3위 이내). 하나라도 못 하면 구단은 매각이다.' },
+  { narr: '스물다섯, 재벌 2세. 애플즈 구단주이자 4번 타자, 그리고 에이스 투수— {name}.' },
   { bg: 'linear-gradient(180deg,#1b2a55,#3a4f8a)' },
-  { narr: '봄. 서울 애플즈 홈구장, 애플파크.' },
-  { narr: '드래프트 2라운드로 입단한 신인 타자, {name}.' },
-  { who: 'coach', mood: 'normal', text: '네가 {name}인가. 감독 김대호다.' },
-  { who: 'coach', mood: 'angry', text: '신인이라고 봐주는 건 없다. 시즌은 24주. 결과로 증명해라.' },
-  { who: 'coach', mood: 'normal', text: '평일 시간은 네가 알아서 써라. 훈련을 하든, 쉬든. 대신 주말 경기에서 못 치면 벤치다.' },
-  { narr: '사무실을 나서자 익숙한 목소리가 들렸다.' },
-  { bg: 'linear-gradient(180deg,#ffd9b8,#f7a8a0)' },
-  { who: 'haneul', mood: 'happy', text: '{name}! 진짜 프로 선수가 됐네! 축하해!!' },
-  { who: 'haneul', mood: 'smile', text: '나 구장 앞에 카페 차렸다? \'하늘정원\'. 훈련 끝나면 꼭 들러!' },
+  { who: 'coach', mood: 'normal', text: '구단주님이 직접 4번 타자에 선발 투수까지… 진심이십니까?' },
   { choice: [
-    { text: '당연하지. 단골 될게.', fx: { haneul: 6 }, then: [{ who: 'haneul', mood: 'love', text: '약속했다? 아메리카노는 평생 공짜로 해 줄게!' }] },
-    { text: '바빠서 자주는 못 갈 것 같아.', fx: { haneul: -2 }, then: [{ who: 'haneul', mood: 'sad', text: '…그래도 가끔은 와야 해?' }] },
+    { text: '진심입니다. 실력으로 증명하죠.', fx: { morale: 8 }, then: [{ who: 'coach', mood: 'smile', text: '…좋습니다. 그 눈빛, 마음에 드는군요.' }] },
+    { text: '제 구단이니까요. 제 마음이죠.', fx: { morale: -5 }, then: [{ who: 'coach', mood: 'angry', text: '…선수들 앞에선 그런 말씀 마십시오.' }] },
   ] },
+  { narr: '도시를 자유롭게 돌아다닐 수 있다. 하루는 오전·오후·저녁, 장소에서 무언가 하면 시간이 흐른다.' },
+  { narr: '3번 행동하면 주말 경기. 애플파크로 가자! (지도의 💗는 만난 사람이 있는 곳)' },
 ];
 
-S.meetSeoyun = [
-  { bg: 'linear-gradient(180deg,#2b2f63,#7b5ea7)' },
-  { narr: '경기가 끝나고, 카메라 조명 앞에 선 아나운서가 다가왔다.' },
-  { who: 'seoyun', mood: 'normal', text: 'SBC 스포츠 한서윤입니다. 신인 {name} 선수, 데뷔 첫 주 소감 부탁드려요.' },
-  { choice: [
-    { text: '팀 승리에 보탬이 되겠습니다.', fx: { seoyun: 3, fame: 2 }, then: [{ who: 'seoyun', mood: 'smile', text: '교과서 같은 답변이네요. 나쁘지 않아요.' }] },
-    { text: '올 시즌 홈런왕, 제가 가져가겠습니다!', fx: { seoyun: 6, fame: 5 }, then: [
-      { who: 'seoyun', mood: 'surprised', text: '…신인이 큰소리네요?' },
-      { who: 'seoyun', mood: 'smile', text: '그 말, 기억해 둘게요. 시즌 끝나고 다시 인터뷰하죠.' }] },
-    { text: '아나운서님이 예뻐서 긴장되네요.', fx: { seoyun: -4 }, then: [{ who: 'seoyun', mood: 'angry', text: '…방송 중입니다. 프로답게 해 주세요.' }] },
-  ] },
-];
-
-S.meetMinji = [
-  { bg: 'linear-gradient(180deg,#ffcf70,#ff7a59)' },
-  { narr: '아침 일찍 실내 훈련장. 배트를 휘두르려는 순간—' },
-  { who: 'minji', mood: 'angry', text: '거기 신인! 스트레칭도 안 하고 배트 휘두르면 어깨 나가요!' },
-  { who: 'minji', mood: 'normal', text: '트레이너 강민지. 앞으로 부상당하면 나한테 혼날 줄 알아요.' },
-  { choice: [
-    { text: '죄송합니다. 스트레칭 가르쳐 주세요.', fx: { minji: 6 }, then: [{ who: 'minji', mood: 'shy', text: '…흥, 말은 잘 듣네. 따라 해요.' }] },
-    { text: '괜찮아요, 저 튼튼해요.', fx: { minji: -3 }, then: [{ who: 'minji', mood: 'angry', text: '그런 사람이 제일 먼저 다쳐요. 두고 봐요.' }] },
-  ] },
-];
-
-// 호감도 이벤트 (A: 35 이상, B: 60 이상)
-S.haneulA = [
-  { bg: 'linear-gradient(180deg,#3b3f6b,#8b6f8f)' },
-  { narr: '비 오는 밤. 문 닫을 시간이 지난 \'하늘정원\'에 불이 켜져 있다.' },
-  { who: 'haneul', mood: 'smile', text: '왔네? 단백질 라테. 너 전용 메뉴야.' },
-  { who: 'haneul', mood: 'normal', text: '있잖아… 어릴 때 동네 공터에서 했던 약속, 기억해?' },
-  { who: 'haneul', mood: 'shy', text: '네가 프로 가서 홈런 치면… 아, 아니다. 아무것도 아냐!' },
-  { choice: [
-    { text: '기억하고 있어.', fx: { haneul: 8 }, then: [{ who: 'haneul', mood: 'love', text: '……바보. 그럼 꼭 쳐야 해, 홈런.' }] },
-    { text: '그런 약속을 했었나?', fx: { haneul: -3 }, then: [{ who: 'haneul', mood: 'sad', text: '…그렇구나. 응, 별거 아니었어.' }] },
-  ] },
-];
-S.haneulB = [
-  { bg: 'linear-gradient(180deg,#0f1b3d,#3a4f8a)' },
-  { narr: '야간 훈련이 끝난 구장 출입구. 하늘이가 보자기를 들고 서 있었다.' },
-  { who: 'haneul', mood: 'smile', text: '도시락! 그리고… 이건 부적. 직접 만들었어.' },
-  { who: 'haneul', mood: 'sad', text: '다치지 마. …네가 다치면, 나 진짜 속상해.' },
-  { choice: [
-    { text: '고마워. 다음 홈런은 너한테 바칠게.', fx: { haneul: 10, cond: 1 }, then: [{ who: 'haneul', mood: 'love', text: '정말? …기대할게. 엄청 엄청 기대할게!' }] },
-    { text: '부적 같은 거 안 믿는데…', fx: { haneul: -5 }, then: [{ who: 'haneul', mood: 'angry', text: '그래도 들고 다녀! 정성이야, 정성!' }] },
-  ] },
-];
-S.seoyunA = [
-  { bg: 'linear-gradient(180deg,#2b2f63,#7b5ea7)' },
-  { narr: '방송국 복도. 서윤이 떨어뜨린 취재 노트를 주웠다.' },
-  { narr: '펼쳐진 페이지엔 내 타석 기록이 빼곡히 적혀 있었다.' },
-  { who: 'seoyun', mood: 'surprised', text: '아… 그거 제 거예요!' },
-  { who: 'seoyun', mood: 'shy', text: '…취재용이에요. 오해하지 마세요.' },
-  { choice: [
-    { text: '이렇게 꼼꼼히 봐 줘서 고마워요.', fx: { seoyun: 7 }, then: [{ who: 'seoyun', mood: 'smile', text: '…당연하죠. 일이니까요. 그래도, 천만에요.' }] },
-    { text: '혹시 제 팬이세요?', fx: { seoyun: 4 }, then: [{ who: 'seoyun', mood: 'angry', text: '아, 아니거든요?! …아마도.' }] },
-  ] },
-];
-S.seoyunB = [
-  { bg: 'linear-gradient(180deg,#0d0f24,#2b2f63)' },
-  { narr: '늦은 밤 방송국 주차장. 차 안에서 서윤이 혼자 울고 있었다.' },
-  { who: 'seoyun', mood: 'sad', text: '…보셨죠? 오늘 생방송 실수. 완벽해야 하는데.' },
-  { who: 'seoyun', mood: 'sad', text: '저, 실수하는 제가 너무 싫어요.' },
-  { choice: [
-    { text: '완벽하지 않아도, 서윤 씨 방송이 제일 좋아요.', fx: { seoyun: 10 }, then: [
-      { who: 'seoyun', mood: 'shy', text: '……' }, { who: 'seoyun', mood: 'love', text: '그런 말, 반칙이에요. …고마워요.' }] },
-    { text: '다음에 잘하면 되죠.', fx: { seoyun: 3 }, then: [{ who: 'seoyun', mood: 'smile', text: '…그렇죠. 맞는 말이에요.' }] },
-  ] },
-];
-S.minjiA = [
-  { bg: 'linear-gradient(180deg,#ffcf70,#ff7a59)' },
-  { narr: '트레이닝실. 민지가 손목에 테이핑을 감아 주고 있다.' },
-  { who: 'minji', mood: 'normal', text: '너 요즘 훈련 열심히 하더라.' },
-  { who: 'minji', mood: 'shy', text: '…조금은, 아주 조금은 인정해 줄게.' },
-  { choice: [
-    { text: '민지 씨 덕분이에요.', fx: { minji: 8 }, then: [{ who: 'minji', mood: 'love', text: '뭐, 뭐래! 테이핑 다 됐어! 가!' }] },
-    { text: '원래 잘했는데요?', fx: { minji: -2 }, then: [{ who: 'minji', mood: 'angry', text: '그 입만 좀 덜 놀리면 완벽할 텐데.' }] },
-  ] },
-];
-S.minjiB = [
-  { bg: 'linear-gradient(180deg,#1b2a55,#ff7a59)' },
-  { narr: '노을 지는 불펜. 민지가 오래된 소프트볼 글러브를 만지고 있었다.' },
-  { who: 'minji', mood: 'sad', text: '나, 고등학교 때 소프트볼 국가대표 후보였어. 무릎 다치기 전까진.' },
-  { who: 'minji', mood: 'normal', text: '그래서 선수들 다치는 거 못 봐. …특히 너는.' },
-  { choice: [
-    { text: '민지 씨 몫까지 뛸게요. 다치지 않고.', fx: { minji: 10, stamina: 20 }, then: [{ who: 'minji', mood: 'love', text: '……약속이야. 어기면 죽어.' }] },
-    { text: '그럼 왜 트레이너를 하게 됐어요?', fx: { minji: 3 }, then: [{ who: 'minji', mood: 'smile', text: '야구장이 좋아서. …그냥, 그게 다야.' }] },
-  ] },
-];
-
-S.allstar = [
-  { bg: 'linear-gradient(180deg,#1b2a55,#e5484d)' },
-  { narr: '전반기 종료. 팬 투표 결과가 발표됐다.' },
-  { who: 'coach', mood: 'smile', text: '{name}, 올스타 선정이다. 신인이 제법이군.' },
-  { fx: { fame: 10, trust: 6 } },
-  { narr: '올스타전에서 팬들의 환호를 한 몸에 받았다! (인기 +10, 신뢰 +6)' },
-];
-S.allstarMiss = [
-  { bg: 'linear-gradient(180deg,#1b2a55,#3a4f8a)' },
-  { narr: '전반기 종료. 올스타에는 뽑히지 못했다.' },
-  { who: 'coach', mood: 'normal', text: '쉬는 것도 실력이다. 후반기엔 이름값 좀 해 봐라.' },
-  { fx: { stamina: 100, cond: 1 } },
-  { narr: '올스타 브레이크 동안 푹 쉬었다. (체력 회복, 컨디션 UP)' },
-];
-
-S.festivalIntro = [
-  { bg: 'linear-gradient(180deg,#0b0f2a,#3a1f5c)' },
-  { narr: '한여름 밤, 한강 불꽃축제. 누구와 함께 갈까?' },
-];
-S.festival = {
-  haneul: [
-    { who: 'haneul', mood: 'happy', text: '와아—! 봤어? 하트 모양이었어!' },
-    { who: 'haneul', mood: 'shy', text: '…내년에도, 그다음 해에도, 같이 보러 오자.' }],
-  seoyun: [
-    { who: 'seoyun', mood: 'smile', text: '방송으로만 보던 불꽃을 이렇게 보니… 다르네요.' },
-    { who: 'seoyun', mood: 'shy', text: '…오늘은 아나운서 말고, 그냥 서윤이로 있을게요.' }],
-  minji: [
-    { who: 'minji', mood: 'happy', text: '야, 저기! 저거 봐! 진짜 크다!' },
-    { who: 'minji', mood: 'shy', text: '…손 잡은 거, 사람 많아서 놓칠까 봐 그런 거야. 진짜야.' }],
+S.meet = {
+  yuna: [
+    { bg: 'linear-gradient(180deg,#3a1030,#c0507a)' },
+    { narr: '스타 스튜디오. 화장품 CF 촬영이 한창이다. 조명 아래 그녀가 돌아봤다.' },
+    { who: 'yuna', mood: 'normal', text: '…누구시죠? 관계자 외 출입금지인데요.' },
+    { choice: [
+      { text: '애플즈 구단주 겸 선수, {name}입니다.', fx: { yuna: 6 }, then: [{ who: 'yuna', mood: 'surprised', text: '아, 그 야구하는 재벌 2세? 기사로 봤어요.' }, { who: 'yuna', mood: 'smile', text: '…생각보다 괜찮네요, 실물이.' }] },
+      { text: '팬입니다! 사인해 주세요!', fx: { yuna: 3 }, then: [{ who: 'yuna', mood: 'smile', text: '후후, 재벌 2세가 팬이라니. 영광인데요?' }] },
+      { text: '광고 모델 계약하러 왔죠. 몸값이 얼마예요?', fx: { yuna: -6 }, then: [{ who: 'yuna', mood: 'angry', text: '…사람을 돈으로 사려는 사람, 제일 싫어요.' }] },
+    ] },
+  ],
+  jiwoo: [
+    { bg: 'linear-gradient(180deg,#1f3a5c,#8fb8de)' },
+    { narr: '한국대 캠퍼스. 벤치에서 노트북으로 뭔가를 분석하던 여학생이 고개를 들었다.' },
+    { who: 'jiwoo', mood: 'surprised', text: '어? 애플즈 {name} 선수…? 저, 선수님 타구 데이터로 졸업 논문 쓰고 있어요!' },
+    { choice: [
+      { text: '정말요? 어떤 데이터요?', fx: { jiwoo: 7, eye: 2 }, then: [{ who: 'jiwoo', mood: 'happy', text: '발사각 28도 근처에서 홈런 확률이 확 올라가요! 공 살짝 아래를 노려 보세요!' }, { narr: '(선구안 +2)' }] },
+      { text: '논문에 제 이름 쓰면 저작권료 받아요.', fx: { jiwoo: 3 }, then: [{ who: 'jiwoo', mood: 'shy', text: '에, 에?! …농담이죠? 깜짝 놀랐잖아요.' }] },
+    ] },
+  ],
+  harin: [
+    { bg: 'linear-gradient(180deg,#ff8a5c,#ffd27a)' },
+    { narr: '애플파크 응원단 연습실. 음악과 함께 회전하던 누군가가 부딪혔다.' },
+    { who: 'harin', mood: 'surprised', text: '꺄! 죄송해요! …어, 구단주님?!' },
+    { who: 'harin', mood: 'happy', text: '애플즈 응원단장 박하린이에요! 구단주님 등장곡 안무, 제가 짰어요!' },
+    { choice: [
+      { text: '그 안무, 보여 줄 수 있어요?', fx: { harin: 7 }, then: [{ who: 'harin', mood: 'love', text: '물론이죠! 하나, 둘, 셋— {name}! 홈런! 헤헤♪' }] },
+      { text: '응원단 예산 좀 줄여야겠던데요.', fx: { harin: -6 }, then: [{ who: 'harin', mood: 'sad', text: '…저희 정말 열심히 하는데.' }] },
+    ] },
+  ],
+  sea: [
+    { bg: 'linear-gradient(180deg,#141828,#3b4a6b)' },
+    { narr: 'KBL 심판위원회 로비. 서류를 든 여성이 단호하게 말했다.' },
+    { who: 'sea', mood: 'normal', text: '구단주님께서 무슨 일이시죠? 판정 항의라면 정식 절차를 밟으세요.' },
+    { choice: [
+      { text: '항의 아니에요. 인사드리러 왔습니다.', fx: { sea: 5 }, then: [{ who: 'sea', mood: 'smile', text: '…특이한 분이네요. 심판한테 인사하러 오는 구단주라니.' }] },
+      { text: '지난 경기 볼 판정, 솔직히 오심이었죠?', fx: { sea: -4 }, then: [{ who: 'sea', mood: 'angry', text: '제 판정은 정확했습니다. 영상 확인하세요.' }] },
+    ] },
+  ],
+  somi: [
+    { bg: 'linear-gradient(180deg,#e5484d,#ffb0b8)' },
+    { narr: '옆에서 "딱!" 하는 경쾌한 소리. 27번 유니폼을 입은 여자가 이쪽을 보고 굳었다.' },
+    { who: 'somi', mood: 'surprised', text: '헉… 진짜 {name} 선수?! 저 유튜브 \'소미의 직관일기\' 하는데요, 27번 유니폼만 세 벌이에요!' },
+    { choice: [
+      { text: '영상 같이 찍을까요?', fx: { somi: 7, fame: 2 }, then: [{ who: 'somi', mood: 'love', text: '꺄아아! 구독자 여러분, 저 지금 꿈꾸는 거 아니죠?!' }] },
+      { text: '사적인 시간이라 촬영은 곤란해요.', fx: { somi: 1 }, then: [{ who: 'somi', mood: 'sad', text: '아… 그렇죠. 죄송해요! 그래도 응원할게요!' }] },
+    ] },
+  ],
 };
+
+// 호감도 이벤트 A(35↑) / B(60↑): 그 장소에서 대화할 때 발생
+S.evA = {
+  yuna: [
+    { bg: 'linear-gradient(180deg,#1a0a18,#5a2040)' },
+    { narr: '늦은 밤 레스토랑. 유나가 와인잔만 바라보고 있었다.' },
+    { who: 'yuna', mood: 'sad', text: '다들 \'차유나\'만 봐요. 진짜 나는… 아무도 안 봐요.' },
+    { choice: [
+      { text: '오늘은 그냥 유나 씨랑 밥 먹으러 온 거예요.', fx: { yuna: 9 }, then: [{ who: 'yuna', mood: 'shy', text: '……그런 말, 처음 들어 봐요.' }] },
+      { text: '스캔들 한 번 나면 홍보 효과 좋겠네요.', fx: { yuna: -7 }, then: [{ who: 'yuna', mood: 'angry', text: '당신도 똑같네요.' }] },
+    ] },
+  ],
+  jiwoo: [
+    { bg: 'linear-gradient(180deg,#0f1b30,#1f3a5c)' },
+    { narr: '새벽 도서관. 지우가 노트북 앞에서 꾸벅꾸벅 졸고 있었다.' },
+    { who: 'jiwoo', mood: 'sad', text: '교수님이… 데이터 분석으론 야구 못 이긴대요. 현장은 다르다고.' },
+    { choice: [
+      { text: '지우 씨 분석 덕에 제 타율이 올랐어요.', fx: { jiwoo: 9, eye: 2 }, then: [{ who: 'jiwoo', mood: 'love', text: '정말요?! …그럼 저 계속 해 볼게요!' }] },
+      { text: '교수님 말도 일리 있죠.', fx: { jiwoo: -4 }, then: [{ who: 'jiwoo', mood: 'sad', text: '…그렇죠. 제가 괜히.' }] },
+    ] },
+  ],
+  harin: [
+    { bg: 'linear-gradient(180deg,#2a3a5c,#6b7a9a)' },
+    { narr: '비 오는 평일 경기. 텅 빈 관중석 앞에서 하린이 혼자 응원 동작을 하고 있었다.' },
+    { who: 'harin', mood: 'sad', text: '관중석이 비어 있으면… 저희가 무슨 의미가 있을까요.' },
+    { choice: [
+      { text: '한 명이라도 보고 있으면 의미 있어요. 제가 보고 있잖아요.', fx: { harin: 9 }, then: [{ who: 'harin', mood: 'love', text: '…구단주님. 반칙이에요, 그 말.' }] },
+      { text: '그러니까 성적이 중요하죠.', fx: { harin: 2 }, then: [{ who: 'harin', mood: 'normal', text: '…네, 맞아요. 이겨 주세요.' }] },
+    ] },
+  ],
+  sea: [
+    { bg: 'linear-gradient(180deg,#0b0f20,#26304a)' },
+    { narr: '밤의 한강공원. 조깅하던 세아가 숨을 고르며 멈췄다.' },
+    { who: 'sea', mood: 'normal', text: '심판은 친구도, 연인도 만들면 안 된대요. 공정해야 하니까.' },
+    { choice: [
+      { text: '그래서 세아 씨가 멋있는 거예요.', fx: { sea: 9 }, then: [{ who: 'sea', mood: 'shy', text: '…그런 말 하면, 원칙이 흔들리잖아요.' }] },
+      { text: '그럼 우리 경기 땐 좀 봐주세요. 하하.', fx: { sea: -9, seaFoul: 1 }, then: [{ who: 'sea', mood: 'angry', text: '…농담이라도 그런 말은 하지 마세요. 실망이에요.' }] },
+    ] },
+  ],
+  somi: [
+    { bg: 'linear-gradient(180deg,#3a1a2a,#e5484d)' },
+    { narr: '카페 구석. 소미가 휴대폰을 보며 눈물을 참고 있었다.' },
+    { who: 'somi', mood: 'sad', text: '악플이요… "재벌 2세한테 꼬리친다"래요. 저 그냥 팬인데.' },
+    { choice: [
+      { text: '소미 씨는 제일 진심인 팬이에요. 제가 알아요.', fx: { somi: 9 }, then: [{ who: 'somi', mood: 'love', text: '…헤헤. 그 한마디면 악플 백 개도 괜찮아요.' }] },
+      { text: '그러게 너무 티 내지 말지 그랬어요.', fx: { somi: -7 }, then: [{ who: 'somi', mood: 'sad', text: '……네. 죄송해요.' }] },
+    ] },
+  ],
+};
+S.evB = {
+  yuna: [
+    { bg: 'linear-gradient(180deg,#1a0a18,#c0507a)' },
+    { who: 'yuna', mood: 'surprised', text: '큰일이에요. 우리 같이 있는 사진, 파파라치한테 찍혔대요. 내일 기사 나간대요.' },
+    { who: 'yuna', mood: 'sad', text: '…어떡할래요?' },
+    { choice: [
+      { text: '사실대로 말하죠. 숨길 거 없어요.', fx: { yuna: 12, fame: 6 }, then: [{ who: 'yuna', mood: 'love', text: '…바보. 그래서 당신이 좋은 거예요.' }] },
+      { text: '구단 돈으로 기사 막을게요.', fx: { yuna: 2, money: -3 }, then: [{ who: 'yuna', mood: 'normal', text: '…또 돈이네요. 고마운데, 조금 서운해요.' }] },
+    ] },
+  ],
+  jiwoo: [
+    { bg: 'linear-gradient(180deg,#1f3a5c,#8fb8de)' },
+    { who: 'jiwoo', mood: 'shy', text: '저기… 애플즈 데이터분석팀 인턴 공고 봤어요. 지원해도… 될까요?' },
+    { choice: [
+      { text: '구단주로서 정식 채용할게요. 지우 씨 실력이면 충분해요.', fx: { jiwoo: 12, eye: 3, morale: 3 }, then: [{ who: 'jiwoo', mood: 'love', text: '정말요?! 애플즈 우승, 제 데이터로 만들어 드릴게요!' }] },
+      { text: '아는 사이라 특혜 논란이 생길 수도…', fx: { jiwoo: -3 }, then: [{ who: 'jiwoo', mood: 'sad', text: '…맞아요. 제가 너무 앞서갔네요.' }] },
+    ] },
+  ],
+  harin: [
+    { bg: 'linear-gradient(180deg,#ff8a5c,#ffd27a)' },
+    { who: 'harin', mood: 'sad', text: '부산 씨걸스에서 연봉 두 배 준다고 오래요… 저, 어떡하죠?' },
+    { choice: [
+      { text: '애플즈에 남아 줘요. …내가 하린 씨 응원이 필요해.', fx: { harin: 12, fans: 1 }, then: [{ who: 'harin', mood: 'love', text: '…그럼 평생 구단주님 응원단장 할게요!' }] },
+      { text: '더 좋은 조건이면 가야죠. 응원할게요.', fx: { harin: -6 }, then: [{ who: 'harin', mood: 'sad', text: '…잡아 줄 줄 알았는데.' }] },
+    ] },
+  ],
+  sea: [
+    { bg: 'linear-gradient(180deg,#141828,#3b4a6b)' },
+    { who: 'sea', mood: 'normal', text: '다음 주 애플즈 경기 주심으로 배정됐어요. …기피 신청할까요? 당신이랑 가까워져서.' },
+    { choice: [
+      { text: '아니요. 세아 씨 판정을 믿어요. 공정하게 해 주세요.', fx: { sea: 12 }, then: [{ who: 'sea', mood: 'love', text: '……네. 그래서, 당신이 좋아요. 아, 방금 건 못 들은 걸로 해요.' }] },
+      { text: '주심이면 저한테 좀 유리하겠네요?', fx: { sea: -12, seaFoul: 1 }, then: [{ who: 'sea', mood: 'angry', text: '기피 신청하겠습니다. …다신 그런 말 하지 마세요.' }] },
+    ] },
+  ],
+  somi: [
+    { bg: 'linear-gradient(180deg,#e5484d,#ffb0b8)' },
+    { narr: '구장 앞. 소미가 밤새 만든 커다란 플래카드를 펼쳤다. "{name}, 너는 우리의 홈런왕!"' },
+    { who: 'somi', mood: 'shy', text: '이거… 내일 경기 때 외야석에서 들 거예요.' },
+    { choice: [
+      { text: '다음 홈런은 저 플래카드 쪽으로 칠게요.', fx: { somi: 12, cond: 1 }, then: [{ who: 'somi', mood: 'love', text: '야, 약속했어요?! 저 그 공 받으면 평생 가보로 할 거예요!' }] },
+      { text: '좀 부끄럽네요…', fx: { somi: 3 }, then: [{ who: 'somi', mood: 'smile', text: '헤헤, 부끄러워하는 것도 귀여워요!' }] },
+    ] },
+  ],
+};
+
+S.ending = {
+  yuna: [{ bg: 'linear-gradient(180deg,#1a0a18,#ff7aa8)' }, { narr: '시즌이 끝난 밤, 레드카펫 행사장 뒤편. 유나가 드레스 차림으로 달려왔다.' },
+    { who: 'yuna', mood: 'shy', text: '레드카펫보다… 당신 홈런 볼 때가 더 떨려요.' }, { who: 'yuna', mood: 'love', text: '연기 아니에요. 좋아해요, {name} 씨.' }],
+  jiwoo: [{ bg: 'linear-gradient(180deg,#1f3a5c,#ffd27a)' }, { narr: '졸업식 날. 학사모를 쓴 지우가 논문 한 권을 내밀었다. 감사의 글에 내 이름이 있었다.' },
+    { who: 'jiwoo', mood: 'shy', text: '제 데이터엔 오차가 없는데요… 당신 앞에선 계산이 안 돼요.' }, { who: 'jiwoo', mood: 'love', text: '좋아해요. 이건 99% 신뢰구간이에요!' }],
+  harin: [{ bg: 'linear-gradient(180deg,#ff8a5c,#ffe27a)' }, { narr: '시즌 마지막 홈경기가 끝난 그라운드. 하린이 응원 단상에서 내려왔다.' },
+    { who: 'harin', mood: 'shy', text: '앞으로 당신 응원은… 평생 저 혼자 할 거예요.' }, { who: 'harin', mood: 'love', text: '좋아해요, 구단주님. 아니— {name}!' }],
+  sea: [{ bg: 'linear-gradient(180deg,#141828,#a3b8d8)' }, { narr: '시즌 종료 후, 한강공원. 심판복이 아닌 사복 차림의 세아가 서 있었다.' },
+    { who: 'sea', mood: 'shy', text: '오늘은 판정 없이 말할게요.' }, { who: 'sea', mood: 'love', text: '…아웃이에요, 당신. 내 마음에서 못 나가요. 좋아해요.' }],
+  somi: [{ bg: 'linear-gradient(180deg,#e5484d,#ffd0d6)' }, { narr: '팬 사인회가 끝난 뒤. 마지막 줄에 서 있던 소미가 사인 대신 편지를 내밀었다.' },
+    { who: 'somi', mood: 'shy', text: '팬으로 시작했는데… 이제 팬으로만 있기 싫어요.' }, { who: 'somi', mood: 'love', text: '좋아해요, 진짜로! 이건 라이브 아니에요!' }],
+};
+
+// 길거리 랜덤 이벤트 (도시에서 ❗ NPC에게 말 걸기)
+S.street = [
+  { text: '"{name} 선수! 사인 한 장만요!" 팬에게 사인을 해 줬다.', fx: { fame: 1 } },
+  { text: '꼬마가 글러브를 내밀었다. "캐치볼 해 주세요!" 잠깐 같이 놀아 줬다.', fx: { charm: 2 } },
+  { text: '"구단주님, 이번 시즌 기대합니다!" 시민들이 응원해 줬다.', fx: { morale: 1 } },
+  { text: '기자가 따라붙었다. "투타겸업 힘들지 않으세요?" 멋지게 답했다.', fx: { fame: 2 } },
+  { text: '버스킹 중인 밴드가 애플즈 응원가를 불러 줬다. 기분이 좋아졌다.', fx: { cond: 1 } },
+  { text: '할머니가 길을 물어봐서 안내해 드렸다. "복 받을 거여~"', fx: { charm: 1, cond: 1 } },
+];
 
 S.injury = [
   { bg: 'linear-gradient(180deg,#2a1020,#5c1f2f)' },
-  { narr: '무리한 훈련 도중, 옆구리에 날카로운 통증이 스쳤다.' },
-  { who: 'minji', mood: 'angry', text: '거봐! 내가 쉬라고 했잖아! …2주는 절대 안정이야.' },
+  { narr: '무리한 훈련 도중, 어깨에 날카로운 통증이 스쳤다.' },
+  { who: 'coach', mood: 'angry', text: '구단주님! 그러다 선수 생명 끝납니다. 2주는 쉬셔야 합니다.' },
   { narr: '부상으로 2주간 경기에 나설 수 없다.' },
 ];
-
-S.randoms = [
-  { id: 'fanletter', w: 3, steps: [{ narr: '구단 사무실에 내 앞으로 팬레터가 도착했다! "{name} 선수 홈런 보고 야구가 좋아졌어요!"' }, { fx: { fame: 3, cond: 1 } }] },
-  { id: 'coachTip', w: 2, steps: [{ who: 'coach', mood: 'normal', text: '{name}. 하체가 먼저 나가고 손이 따라와야 한다. …잘 봐라.' }, { fx: { meet: 2, trust: 2 } }, { narr: '감독의 특별 지도! (미트 +2)' }] },
-  { id: 'slump', w: 2, steps: [{ narr: '요즘 공이 잘 안 보인다. 슬럼프인가…' }, { fx: { cond: -1 } }] },
-  { id: 'haneulStreet', w: 2, need: 'haneul', steps: [{ who: 'haneul', mood: 'smile', text: '어? {name}! 장 보러 나왔어. 짐 좀 들어 줄래?' }, { fx: { haneul: 3 } }] },
-  { id: 'seoyunNews', w: 2, need: 'seoyun', steps: [{ who: 'seoyun', mood: 'smile', text: '오늘 뉴스에 {name} 선수 하이라이트 나갔어요. …제가 넣었어요.' }, { fx: { seoyun: 3, fame: 2 } }] },
-  { id: 'minjiCheck', w: 2, need: 'minji', steps: [{ who: 'minji', mood: 'normal', text: '컨디션 체크. …흠, 나쁘지 않네. 오늘은 이거 먹어.' }, { fx: { minji: 3, stamina: 15 } }, { narr: '민지가 준 에너지바를 먹었다. (체력 +15)' }] },
-  { id: 'blackout', w: 1, steps: [{ narr: '숙소가 정전돼서 한숨도 못 잤다…' }, { fx: { stamina: -15 } }] },
+S.chairmanMid = [
+  { bg: 'linear-gradient(180deg,#141828,#3b2f2a)' },
+  { who: 'chairman', mood: 'normal', text: '시즌 절반이 지났다. 숫자는 보고 있다.' },
 ];
+S.chairmanBad = [{ who: 'chairman', mood: 'angry', text: '적자에 성적까지 이 모양이면… 매각 서류 준비하라고 하겠다.' }];
+S.chairmanGood = [{ who: 'chairman', mood: 'smile', text: '…생각보다 잘하고 있구나. 계속 이렇게만 해라.' }];
 
-// 고백 엔딩
-S.ending = {
-  haneul: [
-    { bg: 'linear-gradient(180deg,#0f1b3d,#f7a8a0)' },
-    { narr: '시즌이 끝난 밤. 텅 빈 애플파크 그라운드에 하늘이가 서 있었다.' },
-    { who: 'haneul', mood: 'shy', text: '어릴 때 약속… 네가 프로에서 홈런 치면, 내가 먼저 말하기로 했잖아.' },
-    { who: 'haneul', mood: 'love', text: '좋아해, {name}. 아주 오래전부터.' }],
-  seoyun: [
-    { bg: 'linear-gradient(180deg,#0d0f24,#7b5ea7)' },
-    { narr: '시즌 결산 인터뷰가 끝나고, 서윤이 마이크를 내려놓았다.' },
-    { who: 'seoyun', mood: 'shy', text: '사실 취재 핑계였어요. 그냥… 당신을 보고 싶어서 매주 구장에 왔어요.' },
-    { who: 'seoyun', mood: 'love', text: '이건 방송 아니에요. 좋아해요, {name} 씨.' }],
-  minji: [
-    { bg: 'linear-gradient(180deg,#1b2a55,#ffcf70)' },
-    { narr: '마지막 경기 후 트레이닝실. 민지가 내 손목 테이핑을 천천히 풀었다.' },
-    { who: 'minji', mood: 'shy', text: '다음 시즌에도, 그 다음에도… 네 몸은 내가 관리할 거야. 평생.' },
-    { who: 'minji', mood: 'love', text: '…그런 의미로 하는 말이야. 바보야.' }],
-};
-
-window.Story = { TEAMS, GIRLS, PLACES, S };
+window.Story = { TEAMS, SLOTS, LOCS, GIRLS, GIRL_KEYS, DATE_PLACES, GIFTS, TICKETS, FACILITIES, FAS, S };
 })();

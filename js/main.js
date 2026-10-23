@@ -23,50 +23,60 @@ const saveBest = v => { try { localStorage.setItem(BEST_KEY, String(v)); } catch
 // ---------- 타이틀 ----------
 function title() {
   Engine.idle();
+  Engine.setPaused(false);
   Engine.setBatterVisible(false);
+  if (window.World && World.running) World.stop();
+  document.getElementById('whud').classList.add('hidden');
   $hud.classList.add('hidden');
   const best = loadBest();
-  const cont = Career.hasSave();
+  const cont = Game.hasSave();
   show(`<div class="card">
       <h1 class="logo">홈런<span>왕</span> ⚾</h1>
-      <p class="tagline">루키 시즌 · 그라운드 위의 두근두근</p>
+      <p class="tagline">재벌 2세 구단주는 4번 타자 겸 에이스<br>야구 · 연애 · 구단 경영 · 오픈월드</p>
       <div class="stack">
-        ${cont ? '<button class="btn pink" data-a="resume">▶ 커리어 이어하기</button>' : ''}
-        <button class="btn ${cont ? 'sub' : 'pink'}" data-a="career">💗 커리어 모드 (새로 시작)<small>훈련 · 연애 · 리그 24주</small></button>
+        ${cont ? '<button class="btn pink" data-a="resume">▶ 시즌 이어하기</button>' : ''}
+        <button class="btn ${cont ? 'sub' : 'pink'}" data-a="career">💗 시즌 모드 (새로 시작)<small>오픈월드 · 투타겸업 · 히로인 5명 · 구단 경영</small></button>
         <button class="btn" data-a="quick">⚾ 빠른 경기<small>3이닝 타격전${best ? ` · 최고 ${best}점` : ''}</small></button>
-        <button class="btn ghost" data-a="howto">타격 방법</button>
+        <button class="btn ghost" data-a="howto">조작 방법</button>
       </div>
     </div>`, {
-    resume: () => { hide(); Career.resume(title); },
-    career: () => { if (cont && !confirm('저장된 커리어를 지우고 새로 시작할까요?')) return; nameEntry(); },
+    resume: () => { hide(); Game.resume(title); },
+    career: () => { if (cont && !confirm('저장된 시즌을 지우고 새로 시작할까요?')) return; nameEntry(); },
     quick: quickStart,
     howto,
   });
 }
 
 function howto() {
-  show(`<div class="card"><h2>타격 방법</h2>
-    <div class="howto" style="margin:12px 0 16px">
-      ⏱ 공이 <b>스트라이크 존</b>(흰 네모)에 도착하는 순간<br>
-      👆 공이 지나갈 <b>위치를 터치</b>하면 스윙!<br>
-      🎯 정확한 타이밍 + 정확한 위치 = <b>퍼펙트</b><br>
-      ⬆️ 공보다 살짝 <b>아래</b>를 치면 타구가 높이 뜹니다 (홈런 각도)<br>
-      ⬇️ 공 <b>위</b>를 치면 땅볼이 됩니다<br>
-      ↔️ 빨리 치면 <b>당겨치기</b>(좌측), 늦으면 <b>밀어치기</b>(우측)<br>
-      🙅 존 밖 공은 참으면 <b>볼</b>, 4개면 볼넷<br><br>
-      커리어 모드에서는 <b>미트</b>가 높을수록 맞힐 수 있는 범위가 넓어지고, <b>파워</b>가 높을수록 멀리 날아가요.
-      <b>선구안</b>이 45 이상이면 공을 던지는 순간 구종이 보여요.
+  show(`<div class="card"><h2>조작 방법</h2>
+    <h3 style="margin-top:12px">🏙 도시 (오픈월드)</h3>
+    <div class="howto" style="margin-bottom:10px">
+      화면 아무 곳이나 <b>드래그</b> = 조이스틱 (PC: WASD/방향키)<br>
+      건물 앞 노란 원에서 <b>🚪 버튼</b>으로 들어가기 (PC: E)<br>
+      내 슈퍼카 옆에서 <b>🏎 타기</b>, 도시를 질주!<br>
+      ❗ 시민에게 말 걸기 · ✨ 황금 야구공 12개 수집<br>
+      📋 메뉴: 내 정보 · 인연 · 목적지 화살표 설정
     </div>
+    <h3>⚾ 투구</h3>
+    <div class="howto" style="margin-bottom:10px">구종 선택 → 던질 곳 <b>터치</b> → 제구 게이지를 <b>초록색</b>에서 터치<br>존 구석·유인구일수록 헛스윙이 늘지만 볼넷 주의!</div>
+    <h3>🏏 타격</h3>
+    <div class="howto" style="margin-bottom:10px">
+      공이 <b>스트라이크 존</b>에 도착하는 순간, 공이 지나갈 <b>위치를 터치</b><br>
+      공 살짝 <b>아래</b>를 치면 높이 뜸 (홈런 각도) · <b>위</b>를 치면 땅볼<br>
+      빨리 치면 당겨치기, 늦으면 밀어치기 · 존 밖 공은 참기
+    </div>
+    <h3>🏃 도루</h3>
+    <div class="howto" style="margin-bottom:16px">1루 출루 시 도루 시도 → 불이 <b>초록색</b>이 되는 순간 터치! (빨간불에 뛰면 견제사)</div>
     <button class="btn" data-a="back">돌아가기</button></div>`, { back: title });
 }
 
 function nameEntry() {
-  show(`<div class="card"><h2>신인 선수 등록</h2>
-    <p class="muted small" style="margin:6px 0 14px">서울 애플즈에 입단할 당신의 이름은?</p>
-    <input class="name" id="nm" maxlength="8" placeholder="이름 입력" value="김루키">
-    <div style="margin-top:14px" class="stack"><button class="btn pink" data-a="ok">입단하기</button><button class="btn ghost" data-a="back">돌아가기</button></div></div>`,
+  show(`<div class="card"><h2>구단주 등록</h2>
+    <p class="muted small" style="margin:6px 0 14px">애플그룹 회장의 아들, 25세. 서울 애플즈의 구단주이자 4번 타자 겸 에이스 투수, 그리고 도루왕을 노리는 당신의 이름은?</p>
+    <input class="name" id="nm" maxlength="8" placeholder="이름 입력" value="강태양">
+    <div style="margin-top:14px" class="stack"><button class="btn pink" data-a="ok">시즌 시작</button><button class="btn ghost" data-a="back">돌아가기</button></div></div>`,
   {
-    ok: () => { const n = (document.getElementById('nm').value || '').trim() || '김루키'; hide(); Career.start(n, title); },
+    ok: () => { const n = (document.getElementById('nm').value || '').trim() || '강태양'; hide(); Game.start(n, title); },
     back: title,
   });
   setTimeout(() => { const el = document.getElementById('nm'); el && el.select(); }, 50);

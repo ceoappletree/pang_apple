@@ -218,3 +218,60 @@ table.stand tr.me td { color: var(--gold); font-weight: 800; }
   font-size: 30px; font-weight: 900; padding: 20px; text-shadow: 0 2px 10px rgba(0,0,0,.5);
 }
 #vn .title-card small { font-size: 15px; font-weight: 600; margin-top: 10px; color: #ffe; }
+
+/* ---------- 오픈월드 ---------- */
+canvas#w { position: fixed; inset: 0; width: 100%; height: 100%; display: none; touch-action: none; z-index: 4; }
+body.in-world canvas#w { display: block; }
+body.in-world #mute { bottom: auto; top: calc(env(safe-area-inset-top) + 64px); right: 10px; width: 36px; height: 36px; font-size: 15px; }
+#whud { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+#whud.hidden { display: none; }
+#whud .wtop {
+  position: absolute; left: 10px; right: 10px; top: calc(env(safe-area-inset-top) + 8px);
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+}
+#whud .wtop > div { background: rgba(8,14,32,.82); border: 1px solid var(--line); border-radius: 14px; padding: 7px 12px; font-size: 13px; line-height: 1.5; }
+#wclock b { color: var(--gold); }
+#wmoney { font-size: 12px; color: #dbe4ff; }
+#wmenu { pointer-events: auto; width: 46px; height: 46px; border-radius: 14px; border: 1px solid var(--line); background: rgba(8,14,32,.82); font-size: 22px; cursor: pointer; }
+#minimap {
+  position: absolute; right: 10px; top: calc(env(safe-area-inset-top) + 106px); width: 110px; height: 110px;
+  border-radius: 14px; border: 2px solid rgba(255,255,255,.25); box-shadow: 0 4px 14px rgba(0,0,0,.4);
+}
+#wbanner {
+  position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 74px); transform: translateX(-50%);
+  background: linear-gradient(180deg, #ffe27a, #ffb820); color: #1b1300; font-weight: 900; font-size: 14px;
+  padding: 8px 16px; border-radius: 99px; display: none; white-space: nowrap; animation: blink 1.4s infinite;
+}
+#wbanner.on { display: block; }
+#wact {
+  position: absolute; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 70px); pointer-events: auto;
+  padding: 16px 20px; border-radius: 18px; border: none; font-size: 16px; font-weight: 900; color: #1b1300; cursor: pointer;
+  background: linear-gradient(180deg, #ffe27a, #ffb820); box-shadow: 0 4px 0 #b97a00, 0 8px 18px rgba(0,0,0,.4); max-width: 60vw;
+}
+#wcar {
+  position: absolute; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 14px); pointer-events: auto;
+  padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(8,14,32,.85); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer;
+}
+#wact.hidden, #wcar.hidden { display: none; }
+#wjoy { position: fixed; width: 110px; height: 110px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); display: none; }
+#wjoy.on { display: block; }
+#wjoy .knob { position: absolute; left: 33px; top: 33px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.7); }
+#whelp { position: absolute; left: 12px; bottom: calc(env(safe-area-inset-bottom) + 14px); font-size: 11px; color: rgba(255,255,255,.7); text-shadow: 0 1px 3px #000; }
+.herocard .face { width: 76px; height: 86px; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.08); }
+.herocard .face svg, .herocard .face img { width: 100%; height: auto; display: block; }
+.girls.five { grid-template-columns: repeat(3, 1fr); }
+.girl .face img { width: 100%; height: auto; }
+
+/* ---------- 투수 모드 ---------- */
+#pitchUI {
+  position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 60px); z-index: 8; text-align: center; pointer-events: auto;
+}
+#pitchUI.hidden { display: none; }
+#pitchUI .ptitle { font-size: 15px; font-weight: 900; text-shadow: 0 1px 4px #000; margin-bottom: 8px; }
+#pitchUI .ptypes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 0 10px; }
+#pitchUI button { padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(8,14,32,.85); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; }
+#pitchUI button.on { background: linear-gradient(180deg, #ffe27a, #ffb820); color: #1b1300; }
+
+/* ---------- 도루 ---------- */
+.steal .light { width: 110px; height: 110px; margin: 16px auto; border-radius: 50%; background: #e5484d; box-shadow: 0 0 30px #e5484d; transition: background .05s; }
+.steal .light.go { background: #4ade80; box-shadow: 0 0 40px #4ade80; }

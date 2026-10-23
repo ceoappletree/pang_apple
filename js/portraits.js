@@ -4,39 +4,71 @@
 
 const SKIN = '#ffe3d1', SKIN_SH = '#f4c4ad';
 
+const BODY = 'M30 340 Q42 262 112 250 L188 250 Q258 262 270 340 Z';
 const CHARS = {
-  haneul: {
-    hair: '#7b4a2c', hairHi: '#a3683f', eye: ['#6b3b1f', '#c98a4b'], style: 'long',
-    outfit(o) {
-      return `<path d="M30 340 Q42 262 112 250 L188 250 Q258 262 270 340 Z" fill="#f2e6d0"/>
-        <path d="M112 250 L150 300 L188 250" fill="none" stroke="#e0cfb0" stroke-width="4"/>
-        <path d="M96 340 L104 282 Q150 300 196 282 L204 340 Z" fill="#5f8f5a"/>
-        <path d="M104 282 L96 262 M196 282 L204 262" stroke="#5f8f5a" stroke-width="6" stroke-linecap="round"/>
-        <circle cx="150" cy="318" r="9" fill="#fff" opacity=".9"/><path d="M146 318 l4 -6 l4 6 z" fill="#e5484d"/>`;
-    },
-    acc: `<g transform="translate(206 92) rotate(20)"><path d="M0 0 L-20 -14 L-20 14 Z M0 0 L20 -14 L20 14 Z" fill="#ff7aa8"/><circle r="6" fill="#ff5c93"/></g>`,
-  },
-  seoyun: {
-    hair: '#1d1b2b', hairHi: '#3e3a5c', eye: ['#3a2a5a', '#8a6fc2'], style: 'bob',
+  // 여배우 차유나: 긴 웨이브 머리, 버건디 오프숄더 드레스
+  yuna: {
+    hair: '#3b2216', hairHi: '#6b4130', eye: ['#4a1d2a', '#b5546a'], style: 'wave',
     outfit() {
-      return `<path d="M30 340 Q42 262 112 250 L188 250 Q258 262 270 340 Z" fill="#23305e"/>
-        <path d="M120 250 L150 320 L180 250 Z" fill="#fbfbff"/>
-        <path d="M120 250 L138 300 L112 290 Z M180 250 L162 300 L188 290 Z" fill="#1a2550"/>
-        <rect x="196" y="292" width="34" height="22" rx="4" fill="#ffd54a"/><text x="213" y="307" font-size="11" font-weight="900" text-anchor="middle" fill="#23305e">SBC</text>`;
+      return `<path d="${BODY}" fill="${SKIN}"/>
+        <path d="M34 340 Q46 296 92 286 Q150 300 208 286 Q254 296 266 340 Z" fill="#7a1530"/>
+        <path d="M92 286 Q150 306 208 286" fill="none" stroke="#a42a4a" stroke-width="5"/>
+        <path d="M122 252 Q150 284 178 252" fill="none" stroke="#f4efe6" stroke-width="4" stroke-dasharray="1 7" stroke-linecap="round"/>`;
     },
-    acc: `<rect x="186" y="96" width="26" height="6" rx="3" fill="#e8c35a" transform="rotate(-25 199 99)"/>
-      <circle cx="92" cy="182" r="4" fill="#e8c35a"/><circle cx="208" cy="182" r="4" fill="#e8c35a"/>`,
+    acc: `<path d="M92 184 l0 14" stroke="#e8c35a" stroke-width="2"/><circle cx="92" cy="202" r="5" fill="#f4efe6"/>
+      <path d="M208 184 l0 14" stroke="#e8c35a" stroke-width="2"/><circle cx="208" cy="202" r="5" fill="#f4efe6"/>
+      <circle cx="172" cy="196" r="1.8" fill="#5a3a2a"/>`,
   },
-  minji: {
-    hair: '#a54a26', hairHi: '#d06a3a', eye: ['#1f5a3a', '#4fb07a'], style: 'pony',
+  // 여대생 서지우: 단발 + 동그란 안경, 니트 가디건
+  jiwoo: {
+    hair: '#2a1f1a', hairHi: '#4d3a30', eye: ['#3a2418', '#8a5a3a'], style: 'bob',
     outfit() {
-      return `<path d="M30 340 Q42 262 112 250 L188 250 Q258 262 270 340 Z" fill="#c8202e"/>
-        <path d="M112 250 Q150 270 188 250 L182 270 Q150 290 118 270 Z" fill="#fff"/>
-        <path d="M150 272 L150 340" stroke="#fff" stroke-width="5"/>
-        <path d="M60 300 L95 340 M240 300 L205 340" stroke="#fff" stroke-width="6"/>
-        <path d="M128 270 Q120 300 136 318" fill="none" stroke="#333" stroke-width="2"/><rect x="128" y="314" width="16" height="10" rx="3" fill="#cfd6e6"/>`;
+      return `<path d="${BODY}" fill="#e9dcc3"/>
+        <path d="M118 250 L150 286 L182 250 Z" fill="#fff"/>
+        <path d="M118 250 L132 340 M182 250 L168 340" stroke="#d4c3a3" stroke-width="5"/>
+        <circle cx="140" cy="300" r="3" fill="#b89f78"/><circle cx="140" cy="322" r="3" fill="#b89f78"/>
+        <path d="M206 262 L232 340" stroke="#5a7a9a" stroke-width="9" stroke-linecap="round"/>`;
     },
-    acc: `<path d="M88 112 Q150 76 212 112" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>`,
+    acc: `<g fill="none" stroke="#5a4a40" stroke-width="3.5"><circle cx="122" cy="156" r="22"/><circle cx="178" cy="156" r="22"/><path d="M144 154 Q150 150 156 154 M100 152 L90 148 M200 152 L210 148"/></g>
+      <path d="M190 104 l16 -6" stroke="#ffd54a" stroke-width="5" stroke-linecap="round"/>`,
+  },
+  // 치어리더 박하린: 트윈테일, 애플즈 응원복
+  harin: {
+    hair: '#d99a48', hairHi: '#f5cf86', eye: ['#7a3b10', '#e08a3c'], style: 'twin',
+    outfit() {
+      return `<path d="${BODY}" fill="#d81e34"/>
+        <path d="M112 250 Q150 272 188 250 L184 262 Q150 284 116 262 Z" fill="#fff"/>
+        <path d="M44 318 Q150 296 256 318" fill="none" stroke="#fff" stroke-width="7"/>
+        <text x="150" y="326" text-anchor="middle" font-size="22" font-weight="900" fill="#fff" font-family="sans-serif">APPLES</text>`;
+    },
+    acc: `<g transform="translate(150 66)"><path d="M0 0 L-30 -16 L-30 16 Z M0 0 L30 -16 L30 16 Z" fill="#e5484d"/><circle r="8" fill="#ff6b6b"/></g>
+      <path d="M200 188 l3 6 l6 1 l-5 4 l1 6 l-5 -3 l-5 3 l1 -6 l-5 -4 l6 -1 z" fill="#ffd54a"/>`,
+  },
+  // 여심판 정세아: 단정한 머리 + 심판 모자, 검정 유니폼
+  sea: {
+    hair: '#141418', hairHi: '#33333d', eye: ['#1d2a3a', '#4f6f8f'], style: 'cap',
+    outfit() {
+      return `<path d="${BODY}" fill="#1c1f2b"/>
+        <path d="M118 250 L150 280 L182 250" fill="#cfd3dc"/>
+        <rect x="190" y="282" width="38" height="20" rx="4" fill="#3b4258"/>
+        <text x="209" y="296" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" font-family="sans-serif">UMP</text>
+        <path d="M70 300 L82 340 M230 300 L218 340" stroke="#3b4258" stroke-width="5"/>`;
+    },
+    acc: `<path d="M86 128 Q86 60 150 58 Q214 60 214 128 Z" fill="#1b1b22"/>
+      <path d="M84 126 Q150 108 216 126 Q226 134 240 130 Q226 142 210 138 Q150 122 90 138 Z" fill="#0e0e14"/>
+      <text x="150" y="104" text-anchor="middle" font-size="16" font-weight="900" fill="#cfd3dc" font-family="sans-serif">KBL</text>`,
+  },
+  // 여성팬 한소미: 짧은 머리, 등번호 27 유니폼
+  somi: {
+    hair: '#6b3a24', hairHi: '#9a5a38', eye: ['#5a2a1a', '#d2894a'], style: 'short',
+    outfit() {
+      return `<path d="${BODY}" fill="#f4f4f8"/>
+        <path d="M112 250 Q150 270 188 250" fill="none" stroke="#d81e34" stroke-width="8"/>
+        <path d="M40 300 L70 340 M260 300 L230 340" stroke="#d81e34" stroke-width="8"/>
+        <text x="150" y="330" text-anchor="middle" font-size="40" font-weight="900" fill="#d81e34" font-family="sans-serif">27</text>`;
+    },
+    acc: `<path d="M196 96 l14 -12 l6 16 z" fill="#ffd54a"/>
+      <path d="M190 190 c-3 -5 -10 -1 -6 4 l6 6 l6 -6 c4 -5 -3 -9 -6 -4z" fill="#e5484d"/>`,
   },
 };
 
@@ -47,6 +79,13 @@ function face() {
 function neckFront() { return ''; }
 
 function backHair(c) {
+  if (c.style === 'wave') return `<path d="M76 140 Q62 46 150 36 Q238 46 224 140 Q240 200 226 250 Q248 292 230 328 Q190 342 150 334 Q110 342 70 328 Q52 292 74 250 Q60 200 76 140 Z" fill="${c.hair}"/>`;
+  if (c.style === 'twin') return `<path d="M86 138 Q82 52 150 46 Q218 52 214 138 Z" fill="${c.hair}"/>
+    <path d="M92 92 Q30 110 34 190 Q38 250 70 290 Q60 230 74 180 Q86 140 104 112 Z" fill="${c.hair}"/>
+    <path d="M208 92 Q270 110 266 190 Q262 250 230 290 Q240 230 226 180 Q214 140 196 112 Z" fill="${c.hair}"/>
+    <circle cx="94" cy="98" r="9" fill="#e5484d"/><circle cx="206" cy="98" r="9" fill="#e5484d"/>`;
+  if (c.style === 'cap') return `<path d="M86 140 Q82 56 150 50 Q218 56 214 140 L216 196 Q204 208 196 196 L104 196 Q96 208 84 196 Z" fill="${c.hair}"/>`;
+  if (c.style === 'short') return `<path d="M84 150 Q76 52 150 44 Q224 52 216 150 L218 200 Q206 214 194 204 L106 204 Q94 214 82 200 Z" fill="${c.hair}"/>`;
   if (c.style === 'long') return `<path d="M78 140 Q66 46 150 38 Q234 46 222 140 L236 318 Q150 336 64 318 Z" fill="${c.hair}"/>`;
   if (c.style === 'bob') return `<path d="M80 140 Q70 46 150 40 Q230 46 220 140 L228 232 Q214 246 196 236 L104 236 Q86 246 72 232 Z" fill="${c.hair}"/>`;
   // 포니테일
@@ -57,7 +96,11 @@ function backHair(c) {
 function bangs(c) {
   const h = c.hair, hi = c.hairHi;
   let d;
-  if (c.style === 'long') {
+  if (c.style === 'wave') {
+    d = 'M84 152 Q78 54 150 46 Q222 54 216 152 Q210 116 196 98 Q176 104 160 122 Q156 100 140 94 Q118 104 104 116 Q92 128 84 152 Z';
+  } else if (c.style === 'cap') {
+    d = 'M88 150 Q86 120 96 112 L204 112 Q214 120 212 150 Q206 128 192 124 L108 124 Q94 128 88 150 Z';
+  } else if (c.style === 'long') {
     d = 'M86 150 Q80 56 150 50 Q220 56 214 150 Q206 112 192 96 Q186 122 170 132 Q174 104 166 92 Q146 120 112 128 Q126 110 128 94 Q104 112 86 150 Z';
   } else if (c.style === 'bob') {
     d = 'M86 148 Q80 54 150 50 Q220 54 214 148 Q210 124 204 116 L196 118 L190 112 L110 112 L104 118 L96 116 Q90 124 86 148 Z';
@@ -160,5 +203,38 @@ function coach(mood = 'normal') {
   </svg>`;
 }
 
-window.Portraits = { girl, coach, CHARS };
+function chairman(mood = 'normal') {
+  const eyes = mood === 'smile'
+    ? '<path d="M110 160 Q122 152 134 160 M166 160 Q178 152 190 160" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>'
+    : '<circle cx="122" cy="160" r="4" fill="#222"/><circle cx="178" cy="160" r="4" fill="#222"/>';
+  const brows = mood === 'angry'
+    ? '<path d="M104 138 L138 148 M196 138 L162 148" stroke="#bbb" stroke-width="6" stroke-linecap="round"/>'
+    : '<path d="M104 144 L138 142 M196 144 L162 142" stroke="#bbb" stroke-width="6" stroke-linecap="round"/>';
+  return `<svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg">
+    <path d="M24 340 Q36 258 110 248 L190 248 Q264 258 276 340 Z" fill="#1d2440"/>
+    <path d="M122 248 L150 300 L178 248 Z" fill="#fff"/><path d="M144 256 L156 256 L160 320 L150 330 L140 320 Z" fill="#b3261e"/>
+    <path d="M130 212 L130 258 Q150 268 170 258 L170 212 Z" fill="#e2ad8e"/>
+    <path d="M150 238 Q130 236 116 222 Q90 196 88 146 Q88 84 150 80 Q212 84 212 146 Q210 196 184 222 Q170 236 150 238 Z" fill="#f0c3a2"/>
+    <path d="M86 140 Q80 70 150 64 Q220 70 214 140 Q208 104 186 96 Q150 90 120 98 Q96 106 86 140 Z" fill="#c9c9cf"/>
+    <path d="M110 96 Q150 80 196 98" fill="none" stroke="#e8e8ee" stroke-width="5"/>
+    ${eyes}${brows}
+    <g fill="none" stroke="#333" stroke-width="3"><rect x="102" y="146" width="40" height="28" rx="6"/><rect x="158" y="146" width="40" height="28" rx="6"/><path d="M142 158 L158 158"/></g>
+    <path d="M150 168 l-4 16 l8 0" fill="none" stroke="#c99478" stroke-width="3" stroke-linecap="round"/>
+    <path d="M136 206 Q150 ${mood === 'smile' ? 214 : mood === 'angry' ? 200 : 206} 164 206" fill="none" stroke="#8a4a3a" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// 일러스트 이미지가 있으면 우선 사용 (assets/characters/manifest.js 에 등록)
+function render(key, mood = 'normal') {
+  const imgs = (window.CHAR_IMAGES || {})[key];
+  if (imgs && imgs.length) {
+    const m = imgs.includes(mood) ? mood : imgs.includes('normal') ? 'normal' : null;
+    if (m) return `<img src="assets/characters/${key}_${m}.png" alt="" style="width:100%;height:auto;display:block">`;
+  }
+  if (key === 'coach') return coach(mood);
+  if (key === 'chairman') return chairman(mood);
+  return girl(key, mood);
+}
+
+window.Portraits = { girl, coach, chairman, render, CHARS };
 })();
