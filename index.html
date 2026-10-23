@@ -3,105 +3,118 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b09">
 <title>주사위 원정대</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
 <style>
-  /* Layout: portrait one-screen app — HUD, 7×7 ring board with dice in the middle, log; modals for battle/shop/events */
+  /* Layout: portrait one-screen app — HUD, family strip, 9×9 ring board with dice in the middle, log; modals for everything else.
+     Dark-only palette by request. */
   :root {
-    --bg: #f1ead9;
-    --fg: #2a2116;
-    --muted: #75684f;
-    --card: #fffaf0;
-    --line: #dccfb2;
-    --board: #e8dcbf;
-    --tile: #fffaf0;
-    --tile-line: #cbb994;
-    --corner: #f6e2a8;
-    --monster: #f7dcd6;
-    --shop: #d9ecf7;
-    --treasure: #fbefc4;
-    --key: #f3e1f5;
-    --inn: #dff1dc;
-    --trap: #e9e2d6;
-    --accent: #c4512b;
-    --accent-ink: #ffffff;
-    --gold: #c98a00;
-    --hp: #d63b3b;
-    --mp: #3a6fd6;
-    --exp: #43a047;
-    --ok: #2b8a3e;
-    --bad: #c92a2a;
-    --shadow: rgba(70, 50, 20, .18);
+    color-scheme: dark;
+    --bg: #0d0b09;
+    --bg-glow: #1e150d;
+    --fg: #ece3d0;
+    --muted: #9a8c73;
+    --card: #191511;
+    --card-2: #221c16;
+    --line: #342b21;
+    --board: #120f0c;
+    --tile: #1d1813;
+    --tile-line: #3a3026;
+    --corner: #3a2c10;
+    --monster: #3b1a18;
+    --shop: #15283a;
+    --treasure: #382d10;
+    --key: #2f1d38;
+    --inn: #18301a;
+    --trap: #29241f;
+    --lot: #1a1814;
+    --plaza: #3a1a2c;
+    --work: #23243a;
+    --tavern: #3a2212;
+    --owned: #f2b52c;
+    --accent: #e0803f;
+    --accent-ink: #1a1009;
+    --gold: #f2b52c;
+    --hp: #ff5d5d;
+    --mp: #6b9bff;
+    --exp: #66c06a;
+    --stress: #b97cff;
+    --love: #ff7aa8;
+    --ok: #57d06e;
+    --bad: #ff6b6b;
+    --shadow: rgba(0, 0, 0, .55);
     --font-display: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
     --font-body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #17140f; --fg: #efe6d4; --muted: #a89a7e; --card: #221d16; --line: #3a3226;
-      --board: #2a241b; --tile: #221d16; --tile-line: #4a3f2e; --corner: #4a3b17;
-      --monster: #4a2622; --shop: #1d3646; --treasure: #4a3c14; --key: #3d2442; --inn: #22401f; --trap: #35302a;
-      --accent: #e8703f; --accent-ink: #1a120a; --gold: #f2b52c; --hp: #ff5d5d; --mp: #6b9bff; --exp: #66c06a;
-      --ok: #57d06e; --bad: #ff6b6b; --shadow: rgba(0, 0, 0, .5);
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #17140f; --fg: #efe6d4; --muted: #a89a7e; --card: #221d16; --line: #3a3226;
-    --board: #2a241b; --tile: #221d16; --tile-line: #4a3f2e; --corner: #4a3b17;
-    --monster: #4a2622; --shop: #1d3646; --treasure: #4a3c14; --key: #3d2442; --inn: #22401f; --trap: #35302a;
-    --accent: #e8703f; --accent-ink: #1a120a; --gold: #f2b52c; --hp: #ff5d5d; --mp: #6b9bff; --exp: #66c06a;
-    --ok: #57d06e; --bad: #ff6b6b; --shadow: rgba(0, 0, 0, .5);
-    color-scheme: dark;
-  }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
+  html, body { margin: 0; min-height: 100%; }
   body {
-    background: var(--bg); color: var(--fg); font-family: var(--font-body);
-    -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
-    overscroll-behavior: none;
+    background: radial-gradient(120% 60% at 50% 0%, var(--bg-glow), var(--bg) 70%) fixed, var(--bg);
+    color: var(--fg); font-family: var(--font-body);
+    -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; overscroll-behavior: none;
   }
-  button { font: inherit; color: inherit; cursor: pointer; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
   .app {
-    max-width: 520px; margin: 0 auto; min-height: 100%; min-height: 100dvh;
+    max-width: 520px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
     padding: max(10px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
-    display: flex; flex-direction: column; gap: 10px;
+    display: flex; flex-direction: column; gap: 8px;
   }
 
   /* HUD */
-  .hud { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; display: grid; gap: 6px; box-shadow: 0 2px 6px var(--shadow); }
-  .hud-top { display: flex; align-items: center; gap: 8px; }
-  .hud-face { font-size: 26px; line-height: 1; }
-  .hud-name { font-family: var(--font-display); font-size: 17px; }
-  .hud-lv { font-size: 12px; color: var(--muted); }
-  .hud-right { margin-left: auto; display: flex; gap: 10px; font-family: var(--font-display); font-size: 15px; }
+  .hud { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; display: grid; gap: 6px; box-shadow: 0 2px 10px var(--shadow); }
+  .hud-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .hud-face { font-size: 26px; line-height: 1; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--accent); flex: none; }
+  .hud-who { min-width: 0; }
+  .hud-name { font-family: var(--font-display); font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hud-lv { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hud-right { margin-left: auto; display: flex; gap: 8px; align-items: center; font-family: var(--font-display); font-size: 15px; flex: none; }
   .hud-right span { white-space: nowrap; }
-  .bars { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-  .bar { position: relative; height: 16px; border-radius: 8px; background: var(--line); overflow: hidden; }
+  .bars { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 6px; }
+  .bar { position: relative; height: 15px; border-radius: 8px; background: #2b241c; overflow: hidden; }
   .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 8px; transition: width .3s; }
-  .bar b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10.5px; font-weight: 400; color: #fff; text-shadow: 0 0 2px rgba(0,0,0,.7); font-family: var(--font-display); }
-  .bar.hp i { background: var(--hp); } .bar.mp i { background: var(--mp); } .bar.exp i { background: var(--exp); }
-  .stats { display: flex; gap: 12px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .bar b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10.5px; font-weight: 400; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.9); font-family: var(--font-display); white-space: nowrap; }
+  .bar.hp i { background: var(--hp); } .bar.mp i { background: var(--mp); } .bar.exp i { background: var(--exp); } .bar.st i { background: var(--stress); }
+  .bar.thin { height: 6px; }
+  .stats { display: flex; gap: 4px 11px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
   .stats strong { color: var(--fg); font-weight: 400; font-family: var(--font-display); }
-  .icon-btn { border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 2px 7px; font-size: 14px; }
+  .stats .down { color: var(--bad); font-size: 11px; }
+  .stats .up { color: var(--ok); font-size: 11px; }
+  .icon-btn { border: 1px solid var(--line); background: var(--card-2); border-radius: 8px; padding: 2px 7px; font-size: 14px; }
+
+  /* Family strip */
+  .family { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }
+  .family::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; display: flex; align-items: center; gap: 5px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px 10px 3px 4px; text-align: left;
+  }
+  .chip .cf { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; background: var(--card-2); border: 2px solid transparent; }
+  .chip .cn { font-size: 12px; line-height: 1.15; white-space: nowrap; }
+  .chip .cn small { display: block; font-size: 10.5px; color: var(--muted); }
+  .chip.active { border-color: var(--accent); background: #2a1d12; }
+  .chip.npc .cf { border-style: dashed; border-color: var(--love); }
 
   /* Board */
   .board-wrap { position: relative; width: 100%; aspect-ratio: 1; }
   .board {
-    position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(7, 1fr);
+    position: absolute; inset: 0; display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr);
     gap: 2px; padding: 2px; background: var(--board); border-radius: 12px; border: 1px solid var(--tile-line);
+    box-shadow: 0 6px 24px var(--shadow), inset 0 0 40px rgba(0,0,0,.6);
   }
   .tile {
-    position: relative; background: var(--tile); border: 1px solid var(--tile-line); border-radius: 6px;
+    position: relative; background: var(--tile); border: 1px solid var(--tile-line); border-radius: 5px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;
     padding: 1px; min-width: 0; transition: transform .15s, box-shadow .15s;
   }
-  .tile .ti { font-size: clamp(14px, 4.4vw, 22px); line-height: 1.3; }
-  .tile .tl { font-size: clamp(8px, 2.3vw, 11px); line-height: 1.1; color: var(--muted); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-  .tile .badge { position: absolute; top: 1px; right: 2px; font-size: clamp(7px, 2vw, 10px); font-family: var(--font-display); color: var(--bad); }
-  .tile .flag { position: absolute; top: 0; left: 1px; font-size: clamp(9px, 2.6vw, 13px); }
+  .tile .ti { font-size: clamp(12px, 3.7vw, 20px); line-height: 1.25; }
+  .tile .tl { font-size: clamp(7px, 1.95vw, 10px); line-height: 1.1; color: var(--muted); white-space: nowrap; max-width: 100%; overflow: hidden; }
+  .tile .badge { position: absolute; top: 0; right: 1px; font-size: clamp(6.5px, 1.8vw, 9px); font-family: var(--font-display); color: var(--bad); }
+  .tile .flag { position: absolute; top: -1px; left: 0; font-size: clamp(8px, 2.2vw, 11px); }
   .tile.corner { background: var(--corner); }
   .tile.corner .tl { color: var(--fg); }
   .tile.monster { background: var(--monster); }
@@ -110,22 +123,30 @@
   .tile.key { background: var(--key); }
   .tile.inn { background: var(--inn); }
   .tile.trap { background: var(--trap); }
-  .tile.cleared .ti { opacity: .35; filter: grayscale(1); }
+  .tile.lot { background: var(--lot); border-style: dashed; }
+  .tile.plaza { background: var(--plaza); }
+  .tile.labor, .tile.clerk { background: var(--work); }
+  .tile.tavern { background: var(--tavern); }
+  .tile.owned { border: 1.5px solid var(--owned); background: #2c2210; }
+  .tile.owned .tl { color: var(--owned); }
+  .tile.cleared .ti { opacity: .3; filter: grayscale(1); }
   .tile.flash { animation: flash .5s; }
-  @keyframes flash { 50% { transform: scale(1.12); box-shadow: 0 0 0 3px var(--accent); } }
+  @keyframes flash { 50% { transform: scale(1.14); box-shadow: 0 0 0 3px var(--accent); z-index: 2; } }
   .board.picking .tile { cursor: pointer; box-shadow: 0 0 0 2px var(--accent) inset; animation: pulse 1s infinite; }
   @keyframes pulse { 50% { box-shadow: 0 0 0 3px var(--accent) inset; } }
 
   .center {
-    grid-column: 2 / 7; grid-row: 2 / 7; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: clamp(4px, 1.6vw, 10px); padding: 6px; text-align: center;
+    grid-column: 2 / 9; grid-row: 2 / 9; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(4px, 1.5vw, 9px); padding: 6px; text-align: center;
   }
-  .lap { font-family: var(--font-display); font-size: clamp(15px, 4.4vw, 20px); }
-  .lap small { display: block; font-family: var(--font-body); font-size: clamp(10px, 2.8vw, 12px); color: var(--muted); }
+  .year { font-family: var(--font-display); font-size: clamp(15px, 4.4vw, 20px); }
+  .year small { display: block; font-family: var(--font-body); font-size: clamp(10px, 2.8vw, 12px); color: var(--muted); }
+  .year small.warn { color: var(--bad); }
+  .who { font-size: clamp(11.5px, 3.2vw, 14px); color: var(--fg); background: var(--card-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dice { display: flex; gap: 12px; }
   .die {
-    --d: clamp(40px, 12vw, 56px); width: var(--d); height: var(--d); background: #fffdf8; border-radius: 22%; border: 1px solid #cbb994;
-    box-shadow: 0 3px 0 #b9a47a, 0 4px 8px var(--shadow); display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 11%;
+    --d: clamp(38px, 11vw, 54px); width: var(--d); height: var(--d); background: #f6efe0; border-radius: 22%; border: 1px solid #b9a47a;
+    box-shadow: 0 3px 0 #8d7a55, 0 4px 10px var(--shadow); display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 11%;
   }
   .die i { width: calc(var(--d) * .2); height: calc(var(--d) * .2); border-radius: 50%; background: #2a2116; place-self: center; visibility: hidden; }
   .die.red i { background: #d63b3b; }
@@ -133,101 +154,117 @@
   .die.rolling { animation: shake .12s infinite; }
   @keyframes shake { 0% { transform: rotate(-10deg) translateY(-2px); } 50% { transform: rotate(10deg) translateY(2px); } 100% { transform: rotate(-10deg); } }
   .roll-btn {
-    font-family: var(--font-display); font-size: clamp(16px, 4.6vw, 21px); border: 0; border-radius: 14px; padding: 9px 22px;
-    background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 60%, #000);
+    font-family: var(--font-display); font-size: clamp(15px, 4.4vw, 20px); border: 0; border-radius: 14px; padding: 8px 20px;
+    background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 0 #8a4620;
   }
-  .roll-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, #000); }
-  .roll-btn:disabled { opacity: .45; cursor: default; transform: none; }
-  .sub-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-  .sub-btn { font-size: clamp(11px, 3vw, 13px); border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 4px 8px; }
+  .roll-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a4620; }
+  .roll-btn:disabled { opacity: .4; cursor: default; transform: none; }
+  .sub-btns { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+  .sub-btn { font-size: clamp(11px, 3vw, 13px); border: 1px solid var(--line); background: var(--card-2); border-radius: 10px; padding: 4px 8px; }
   .sub-btn:disabled { opacity: .4; }
-  .hint { font-size: clamp(11px, 3vw, 13px); color: var(--muted); min-height: 1.2em; }
+  .sub-btn.build { border-color: var(--owned); color: var(--owned); }
+  .hint { font-size: clamp(10.5px, 2.9vw, 12.5px); color: var(--muted); min-height: 1.2em; }
 
-  .token {
-    position: absolute; width: calc(100% / 7); height: calc(100% / 7); display: grid; place-items: center; pointer-events: none;
-    transition: left .16s ease-in-out, top .16s ease-in-out; z-index: 5;
-  }
+  .token { position: absolute; width: calc(100% / 9); height: calc(100% / 9); pointer-events: none; transition: left .15s ease-in-out, top .15s ease-in-out; z-index: 5; }
+  .token.active { z-index: 7; }
+  .token .off { width: 100%; height: 100%; display: grid; place-items: center; transform: translate(var(--dx, 0%), var(--dy, -12%)); transition: transform .2s; }
   .token span {
-    width: 64%; aspect-ratio: 1; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
-    font-size: clamp(14px, 4.4vw, 22px); box-shadow: 0 3px 6px var(--shadow); border: 2px solid #fff; transform: translateY(-18%);
+    width: 64%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+    font-size: clamp(12px, 3.7vw, 19px); box-shadow: 0 3px 6px var(--shadow); border: 2px solid #fff;
   }
-  .token.hop span { animation: hop .16s; }
-  @keyframes hop { 50% { transform: translateY(-55%); } }
+  .token.npc span { width: 54%; background: #2a1f26; border: 2px dashed var(--love); font-size: clamp(10px, 3.1vw, 16px); }
+  .token.active span { box-shadow: 0 0 0 2px var(--bg), 0 0 12px 3px var(--accent); }
+  .token.hop span { animation: hop .15s; }
+  @keyframes hop { 50% { transform: translateY(-40%); } }
 
-  .floater { position: absolute; z-index: 30; font-family: var(--font-display); font-size: 18px; pointer-events: none; animation: floatUp 1.1s forwards; white-space: nowrap; text-shadow: 0 1px 0 var(--card), 0 0 4px var(--card); }
+  .floater { position: absolute; z-index: 30; font-family: var(--font-display); font-size: 17px; pointer-events: none; animation: floatUp 1.1s forwards; white-space: nowrap; text-shadow: 0 0 4px #000, 0 0 2px #000; }
   @keyframes floatUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -46px); } }
 
   /* Log */
-  .log { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 13px; line-height: 1.5; flex: 1 1 96px; min-height: 96px; max-height: 40vh; overflow-y: auto; }
+  .log { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; line-height: 1.5; flex: 1 1 90px; min-height: 90px; max-height: 36vh; overflow-y: auto; }
   .log p { margin: 0; }
   .log p:first-child { color: var(--fg); }
   .log p:not(:first-child) { color: var(--muted); }
 
   /* Modal */
-  .modal { position: fixed; inset: 0; background: rgba(20, 14, 6, .55); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .7); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
   .modal.show { display: flex; }
   .sheet {
-    width: 100%; max-width: 420px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--card); border-radius: 18px;
-    padding: 18px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); animation: pop .2s;
+    width: 100%; max-width: 420px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; background: var(--card);
+    border: 1px solid var(--line); border-radius: 18px; padding: 18px 16px; box-shadow: 0 10px 40px rgba(0,0,0,.6); animation: pop .2s;
   }
   @keyframes pop { from { transform: scale(.92); opacity: 0; } }
-  .sheet h2 { font-family: var(--font-display); font-weight: 400; margin: 0 0 4px; font-size: 22px; text-align: center; }
-  .sheet .desc { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 12px; line-height: 1.5; }
-  .big-emoji { font-size: 58px; text-align: center; line-height: 1.2; }
-  .choices { display: grid; gap: 8px; }
+  .sheet h2 { font-family: var(--font-display); font-weight: 400; margin: 0 0 4px; font-size: 21px; text-align: center; }
+  .sheet .desc { text-align: center; color: var(--muted); font-size: 13.5px; margin: 0 0 12px; line-height: 1.55; }
+  .big-emoji { font-size: 54px; text-align: center; line-height: 1.2; }
+  .choices { display: grid; gap: 7px; }
   .choice {
-    display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; border: 1px solid var(--line); background: var(--bg);
-    border-radius: 12px; padding: 10px 12px; font-size: 15px;
+    display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; border: 1px solid var(--line); background: var(--card-2);
+    border-radius: 12px; padding: 9px 12px; font-size: 15px;
   }
-  .choice:disabled { opacity: .45; cursor: default; }
-  .choice .ce { font-size: 24px; }
+  .choice:disabled { opacity: .4; cursor: default; }
+  .choice .ce { font-size: 23px; }
   .choice .ct { flex: 1; }
-  .choice .ct small { display: block; color: var(--muted); font-size: 12px; }
+  .choice .ct small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
   .choice .cp { font-family: var(--font-display); color: var(--gold); white-space: nowrap; }
-  .primary { width: 100%; margin-top: 12px; font-family: var(--font-display); font-size: 18px; border: 0; border-radius: 12px; padding: 11px; background: var(--accent); color: var(--accent-ink); }
-  .ghost { width: 100%; margin-top: 8px; font-size: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 9px; background: transparent; }
+  .primary { width: 100%; margin-top: 10px; font-family: var(--font-display); font-size: 18px; border: 0; border-radius: 12px; padding: 11px; background: var(--accent); color: var(--accent-ink); }
+  .ghost { width: 100%; margin-top: 4px; font-size: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 9px; background: transparent; }
 
   /* Battle */
-  .battle-field { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; margin: 6px 0 10px; }
+  .battle-field { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; margin: 6px 0 8px; }
+  .party { display: grid; gap: 6px; }
+  .pm { text-align: center; border-radius: 10px; padding: 3px; border: 1px solid transparent; }
+  .pm.cur { border-color: var(--accent); background: #2a1d12; }
+  .pm.down { opacity: .35; }
+  .party.many .fe { font-size: 26px; }
   .fighter { text-align: center; position: relative; }
-  .fighter .fe { font-size: 50px; line-height: 1.15; display: inline-block; }
-  .fighter .fn { font-family: var(--font-display); font-size: 15px; }
-  .fighter .fs { font-size: 11px; color: var(--muted); }
-  .fighter .bar { margin-top: 4px; }
+  .fe { font-size: 48px; line-height: 1.15; display: inline-block; }
+  .fn, .pn { font-family: var(--font-display); font-size: 14px; }
+  .fs { font-size: 11px; color: var(--muted); }
+  .pm .bar, .fighter .bar { margin-top: 3px; }
   .vs { font-family: var(--font-display); color: var(--muted); font-size: 18px; }
   .fe.hit { animation: hit .35s; }
   @keyframes hit { 20% { transform: translateX(-7px); filter: brightness(2) saturate(0); } 60% { transform: translateX(6px); } }
   .fe.lunge-r { animation: lungeR .3s; } .fe.lunge-l { animation: lungeL .3s; }
   @keyframes lungeR { 50% { transform: translateX(16px) scale(1.1); } }
   @keyframes lungeL { 50% { transform: translateX(-16px) scale(1.1); } }
-  .blog { background: var(--bg); border-radius: 10px; padding: 8px 10px; font-size: 13px; height: 84px; overflow-y: auto; line-height: 1.5; margin-bottom: 10px; }
+  .bturn { text-align: center; font-size: 12.5px; color: var(--accent); margin-bottom: 6px; min-height: 1.2em; }
+  .blog { background: var(--bg); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; height: 82px; overflow-y: auto; line-height: 1.5; margin-bottom: 10px; }
   .blog p { margin: 0; }
   .blog p:not(:first-child) { color: var(--muted); }
   .bactions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .bact { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 6px; font-size: 15px; font-family: var(--font-display); }
+  .bact { border: 1px solid var(--line); background: var(--card-2); border-radius: 12px; padding: 9px 6px; font-size: 15px; font-family: var(--font-display); }
   .bact small { display: block; font-family: var(--font-body); font-size: 11px; color: var(--muted); }
   .bact.main { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
   .bact.main small { color: inherit; opacity: .8; }
-  .bact:disabled { opacity: .4; cursor: default; }
+  .bact:disabled { opacity: .35; cursor: default; }
   .bact.on { outline: 2px solid var(--accent); }
 
   /* Title */
-  .title-logo { font-family: var(--font-display); font-size: 34px; text-align: center; margin: 4px 0 0; }
-  .classes { display: grid; gap: 8px; }
-  .cls { display: flex; gap: 10px; align-items: center; text-align: left; width: 100%; border: 2px solid var(--line); background: var(--bg); border-radius: 14px; padding: 10px 12px; }
-  .cls .ce { font-size: 34px; }
+  .title-logo { font-family: var(--font-display); font-size: 32px; text-align: center; margin: 2px 0 0; }
+  .title-sub { text-align: center; color: var(--accent); font-family: var(--font-display); font-size: 15px; margin-bottom: 6px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .seg button { border: 1px solid var(--line); background: var(--card-2); border-radius: 10px; padding: 8px; font-family: var(--font-display); font-size: 15px; }
+  .seg button.on { border-color: var(--accent); background: #2a1d12; color: var(--accent); }
+  .name-in { width: 100%; border: 1px solid var(--line); background: var(--card-2); border-radius: 10px; padding: 9px 12px; font-size: 15px; margin-bottom: 8px; user-select: text; -webkit-user-select: text; }
+  .classes { display: grid; gap: 7px; }
+  .cls { display: flex; gap: 10px; align-items: center; text-align: left; width: 100%; border: 2px solid var(--line); background: var(--card-2); border-radius: 14px; padding: 9px 12px; }
+  .cls .ce { font-size: 32px; }
   .cls b { font-family: var(--font-display); font-weight: 400; font-size: 17px; }
-  .cls small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
-  .rules { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; }
+  .cls small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+  .rules { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 12px 0 0; padding-left: 18px; text-align: left; }
+  .rules b { color: var(--fg); font-weight: 400; }
   .num-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .num-grid button { font-family: var(--font-display); font-size: 20px; padding: 10px 0; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+  .num-grid button { font-family: var(--font-display); font-size: 20px; padding: 10px 0; border-radius: 10px; border: 1px solid var(--line); background: var(--card-2); }
   .result-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
-  .result-stats div { background: var(--bg); border-radius: 10px; padding: 8px; text-align: center; font-size: 12px; color: var(--muted); }
-  .result-stats b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--fg); }
+  .result-stats div { background: var(--card-2); border-radius: 10px; padding: 8px; text-align: center; font-size: 12px; color: var(--muted); }
+  .result-stats b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 17px; color: var(--fg); }
+  .info { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13.5px; margin: 6px 0 4px; }
+  .info dt { color: var(--muted); }
+  .info dd { margin: 0; }
 
-  .card-flip { perspective: 600px; }
   .card-flip .sheet { animation: flipIn .45s; }
-  @keyframes flipIn { from { transform: rotateY(90deg); } }
+  @keyframes flipIn { from { transform: perspective(600px) rotateY(90deg); } }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -238,10 +275,10 @@
 <div class="app">
   <section class="hud" aria-label="캐릭터 상태">
     <div class="hud-top">
-      <span class="hud-face" id="hFace">🗡️</span>
-      <div><div class="hud-name" id="hName">모험가</div><div class="hud-lv" id="hLv">Lv 1</div></div>
+      <span class="hud-face" id="hFace">🛡️</span>
+      <div class="hud-who"><div class="hud-name" id="hName">모험가</div><div class="hud-lv" id="hLv">Lv 1</div></div>
       <div class="hud-right">
-        <span title="골드">💰 <span id="hGold">0</span></span>
+        <span title="가문 골드">💰 <span id="hGold">0</span></span>
         <span title="포션">🧪 <span id="hPot">0</span></span>
         <button class="icon-btn" id="soundBtn" aria-label="소리 켜기/끄기">🔊</button>
         <button class="icon-btn" id="menuBtn" aria-label="메뉴">☰</button>
@@ -251,30 +288,29 @@
       <div class="bar hp"><i id="hHpBar"></i><b id="hHp">HP</b></div>
       <div class="bar mp"><i id="hMpBar"></i><b id="hMp">MP</b></div>
       <div class="bar exp"><i id="hExpBar"></i><b id="hExp">EXP</b></div>
+      <div class="bar st"><i id="hStBar"></i><b id="hSt">스트레스</b></div>
     </div>
-    <div class="stats">
-      <span>⚔️ 공격 <strong id="hAtk">0</strong></span>
-      <span>🛡️ 방어 <strong id="hDef">0</strong></span>
-      <span>🍀 행운 주사위 <strong id="hLuck">0</strong></span>
-      <span>🎲 턴 <strong id="hTurn">0</strong></span>
-    </div>
+    <div class="stats" id="hStats"></div>
   </section>
 
-  <div class="board-wrap">
+  <nav class="family" id="family" aria-label="가족"></nav>
+
+  <div class="board-wrap" id="boardWrap">
     <div class="board" id="board">
       <div class="center">
-        <div class="lap" id="lapText">1 / 5 바퀴<small>마왕 부활까지 5바퀴</small></div>
+        <div class="year" id="yearText"></div>
+        <div class="who" id="whoText"></div>
         <div class="dice"><div class="die" id="die1"></div><div class="die red" id="die2"></div></div>
         <button class="roll-btn" id="rollBtn">주사위 굴리기</button>
         <div class="sub-btns">
-          <button class="sub-btn" id="luckBtn">🍀 행운 주사위</button>
+          <button class="sub-btn build" id="buildBtn" hidden>🏗️ 짓기</button>
+          <button class="sub-btn" id="luckBtn" hidden>🍀 행운 주사위</button>
           <button class="sub-btn" id="bribeBtn" hidden>💰 늪 탈출</button>
           <button class="sub-btn" id="cancelPickBtn" hidden>그냥 머물기</button>
         </div>
-        <div class="hint" id="hint">더블이 나오면 한 번 더!</div>
+        <div class="hint" id="hint"></div>
       </div>
     </div>
-    <div class="token" id="token"><span id="tokenFace">🗡️</span></div>
   </div>
 
   <div class="log" id="log" aria-live="polite"></div>
@@ -287,113 +323,200 @@
   'use strict';
 
   // ---------- Data ----------
-  const MAX_LAP = 5;
-  const SAVE_KEY = 'dice-expedition-save-v1';
-  const BEST_KEY = 'dice-expedition-best-v1';
+  const BOSS_YEAR = 35;      // the demon king wakes in this year
+  const START_AGE = 18;
+  const ADULT_AGE = 10;      // children become playable at this age
+  const ROMANCE_AGE = 16;
+  const MAX_KIDS = 3;
+  const SAVE_KEY = 'dice-life-save-v2';
+  const BEST_KEY = 'dice-life-best-v2';
+  const SKILL_COST = 3;
+  const HERO_COLORS = ['#e0803f', '#4fa8ff', '#b07cff', '#4fcf86', '#ffcf4a', '#ff6f91'];
 
   const CLASSES = {
-    warrior: { name: '전사', face: '🛡️', hp: 110, mp: 6, atk: 9, def: 3,
-      skill: '강타', skillDesc: '(공격+주사위)×1.8 피해', blurb: '튼튼한 체력과 방어. 초보자 추천.' },
-    mage: { name: '마법사', face: '🧙', hp: 86, mp: 14, atk: 7, def: 2,
-      skill: '화염구', skillDesc: '공격×1.8 + 주사위 2개, 방어 무시', blurb: '몸은 약하지만 마나가 많고 화염구가 강력.' },
-    rogue: { name: '도적', face: '🗡️', hp: 95, mp: 8, atk: 9, def: 2,
-      skill: '급소 찌르기', skillDesc: '확정 치명타 + 골드 강탈', blurb: '주사위 5·6이 치명타, 골드 +25%, 도망 100% 성공.' },
+    warrior: { name: '전사', face: '🛡️', hp: 110, mp: 6, atk: 9, def: 3, int: 2,
+      skill: '강타', skillDesc: '(힘+🎲)×1.6 + 지력', blurb: '튼튼한 체력과 방어. 초보자 추천.' },
+    mage: { name: '마법사', face: '🧙', hp: 86, mp: 14, atk: 7, def: 2, int: 7,
+      skill: '화염구', skillDesc: '지력×1.6 + 🎲🎲, 방어 무시', blurb: '지력이 핵심. 나이 들수록 강해진다.' },
+    rogue: { name: '도적', face: '🗡️', hp: 95, mp: 8, atk: 9, def: 2, int: 4,
+      skill: '급소 찌르기', skillDesc: '확정 치명타 + 골드 강탈', blurb: '🎲5·6 치명타, 골드 +25%, 도망 100%.' },
   };
-  const SKILL_COST = 3;
 
   const MONSTERS = {
-    1: { name: '슬라임', icon: '💧', place: '슬라임 들판' },
-    2: { name: '고블린', icon: '👺', place: '고블린 숲' },
-    3: { name: '늑대', icon: '🐺', place: '늑대 골짜기' },
-    4: { name: '스켈레톤', icon: '💀', place: '해골 묘지' },
-    5: { name: '오크', icon: '👹', place: '오크 요새' },
-    6: { name: '마녀', icon: '🧛', place: '마녀의 탑' },
-    7: { name: '골렘', icon: '🗿', place: '골렘 광산' },
-    8: { name: '드래곤', icon: '🐉', place: '드래곤 둥지' },
+    1: { name: '슬라임', icon: '💧', place: '슬라임굴' },
+    2: { name: '고블린', icon: '👺', place: '고블린숲' },
+    3: { name: '늑대', icon: '🐺', place: '늑대골' },
+    4: { name: '스켈레톤', icon: '💀', place: '해골묘지' },
+    5: { name: '오크', icon: '👹', place: '오크요새' },
+    6: { name: '마녀', icon: '🧛', place: '마녀탑' },
+    7: { name: '골렘', icon: '🗿', place: '골렘광산' },
+    8: { name: '드래곤', icon: '🐉', place: '용의둥지' },
+  };
+  const TILE_INFO = {
+    start: { icon: '🏠', name: '집' }, lot: { icon: '🌾', name: '공터' }, treasure: { icon: '🎁', name: '보물' },
+    plaza: { icon: '⛲', name: '광장' }, labor: { icon: '🔨', name: '공사장' }, clerk: { icon: '📜', name: '서기소' },
+    tavern: { icon: '🍺', name: '술집' }, swamp: { icon: '🌫️', name: '저주의 늪' }, key: { icon: '🔑', name: '황금열쇠' },
+    inn: { icon: '🏨', name: '여관' }, shop: { icon: '🏪', name: '상점' }, shrine: { icon: '⛩️', name: '신전' },
+    portal: { icon: '🌀', name: '차원문' }, trap: { icon: '🕳️', name: '함정' },
+  };
+  // 9×9 ring, counter-clockwise from the bottom-right corner (집).
+  const LAYOUT = [
+    'start', 'm1', 'lot', 'treasure', 'm2', 'plaza', 'labor', 'tavern',
+    'swamp', 'm3', 'lot', 'key', 'inn', 'm4', 'shop', 'lot',
+    'shrine', 'm5', 'plaza', 'key', 'lot', 'm6', 'clerk', 'inn',
+    'portal', 'm7', 'tavern', 'treasure', 'lot', 'm8', 'shop', 'trap',
+  ];
+  const BOARD = LAYOUT.map((k) => k[0] === 'm'
+    ? { type: 'monster', tier: +k[1], icon: MONSTERS[k[1]].icon, name: MONSTERS[k[1]].place }
+    : { type: k, ...TILE_INFO[k] });
+  const N = BOARD.length;
+  const SIDE = 9;
+  const SWAMP = 8, PORTAL = 24;
+
+  const BUILD = {
+    fort: { icon: '🏰', name: '요새', cost: 120, income: 10, desc: '가문 전원 방어 +1/단계 · 들르면 회복·훈련' },
+    inn: { icon: '🏡', name: '여관', cost: 100, income: 15, desc: '들르면 무료 숙박 (완전 회복, 스트레스 -40)' },
+    tavern: { icon: '🍻', name: '술집', cost: 100, income: 20, desc: '들르면 무료 술판 (스트레스 -50)' },
+  };
+  const upCost = (b) => 80 + 70 * b.lvl;
+
+  const TRAITS = {
+    healer: { icon: '🌸', job: { f: '꽃집 주인', m: '약초상' }, likes: 'gift', likeText: '선물을 좋아함', perk: '배우자의 HP를 돌봐줌' },
+    knight: { icon: '⚔️', job: { f: '여기사', m: '기사' }, likes: 'atk', likeText: '강한 사람(힘)을 좋아함', perk: '보드의 몬스터를 대신 처치' },
+    scholar: { icon: '📚', job: { f: '사서', m: '학자' }, likes: 'int', likeText: '똑똑한 사람(지력)을 좋아함', perk: '아이들 지력이 매년 +1' },
+    merchant: { icon: '💰', job: { f: '상인', m: '상인' }, likes: 'fun', likeText: '여유로운 사람(스트레스 낮음)을 좋아함', perk: '장사로 돈을 벌어 옴' },
+  };
+  const NAMES = {
+    m: ['아론', '카이', '레온', '테오', '로빈', '한결', '도윤', '루카', '에단', '시온', '이안', '하람', '노아', '윤재', '라엘', '태오', '지후', '단', '이든', '세온'],
+    f: ['아리아', '리나', '세라', '엘린', '미아', '소피', '하나', '유나', '클라라', '다인', '루나', '서아', '이브', '나래', '시아', '로아', '예린', '하린', '엘라', '채원'],
   };
 
-  // Counter-clockwise from the bottom-right corner, like the classic board.
-  const BOARD = [
-    { type: 'start', icon: '🏁', name: '출발' },
-    { type: 'monster', tier: 1 },
-    { type: 'treasure', icon: '🎁', name: '보물상자' },
-    { type: 'monster', tier: 2 },
-    { type: 'key', icon: '🔑', name: '황금열쇠' },
-    { type: 'shop', icon: '🏪', name: '상점' },
-    { type: 'swamp', icon: '🌫️', name: '저주의 늪' },
-    { type: 'monster', tier: 3 },
-    { type: 'trap', icon: '🕳️', name: '함정' },
-    { type: 'inn', icon: '🏨', name: '여관' },
-    { type: 'monster', tier: 4 },
-    { type: 'treasure', icon: '🎁', name: '보물상자' },
-    { type: 'shrine', icon: '⛩️', name: '신전' },
-    { type: 'monster', tier: 5 },
-    { type: 'key', icon: '🔑', name: '황금열쇠' },
-    { type: 'monster', tier: 6 },
-    { type: 'shop', icon: '🏪', name: '상점' },
-    { type: 'trap', icon: '🕳️', name: '함정' },
-    { type: 'portal', icon: '🌀', name: '차원문' },
-    { type: 'monster', tier: 7 },
-    { type: 'treasure', icon: '🎁', name: '보물상자' },
-    { type: 'inn', icon: '🏨', name: '여관' },
-    { type: 'monster', tier: 8 },
-    { type: 'key', icon: '🔑', name: '황금열쇠' },
-  ];
-  const N = BOARD.length;
-  const SWAMP = 6, PORTAL = 18;
-  BOARD.forEach((t) => { if (t.type === 'monster') { t.icon = MONSTERS[t.tier].icon; t.name = MONSTERS[t.tier].place; } });
-
-  function tileRC(i) {
-    if (i <= 6) return [6, 6 - i];
-    if (i <= 12) return [6 - (i - 6), 0];
-    if (i <= 18) return [0, i - 12];
-    return [i - 18, 6];
-  }
-
   // ---------- State ----------
-  let S = null;
-  let busy = false;
-  let picking = false;
+  let G = null;
+  let busy = false, picking = false, pickResolve = null;
 
   const d6 = () => 1 + Math.floor(Math.random() * 6);
+  const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const $ = (id) => document.getElementById(id);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const expNeed = (lv) => 15 + 15 * lv;
 
-  function newGame(cls) {
-    const c = CLASSES[cls];
-    S = {
-      cls, lv: 1, exp: 0, hp: c.hp, maxHp: c.hp, mp: c.mp, maxMp: c.mp, atk: c.atk, def: c.def,
-      gold: 30, potions: 1, luck: 0, pos: 0, lap: 1, turn: 0, kills: 0, cleared: [],
-      stuck: 0, wl: 0, al: 0, rl: 0, log: [],
-    };
-    $('log').innerHTML = '';
-    log(`${c.face} ${c.name}의 원정이 시작됐다! ${MAX_LAP}바퀴를 돌면 마왕이 깨어난다.`);
-    save();
+  const all = () => Object.values(G.chars);
+  const heroes = () => all().filter((c) => c.alive && c.role === 'hero').sort((a, b) => a.id - b.id);
+  const spouses = () => all().filter((c) => c.alive && c.role === 'spouse');
+  const kids = () => all().filter((c) => c.alive && c.role === 'kid');
+  const isHero = (c) => !!c && c.alive && c.role === 'hero';
+  const actor = () => (G ? G.chars[G.order[G.turnIdx]] : null);
+  const spouseOf = (c) => { const s = c.spouseId && G.chars[c.spouseId]; return s && s.alive ? s : null; };
+  const age = (c) => G.year - c.born;
+
+  function stage(c) {
+    const a = age(c);
+    if (a < 4) return '아기';
+    if (a < 10) return '어린이';
+    if (a < 16) return c.gender === 'm' ? '소년' : '소녀';
+    if (a < 30) return '청년';
+    if (a < 45) return '장년';
+    if (a < 60) return '중년';
+    return '노년';
+  }
+  // Body peaks 16–35, then weakens; mind keeps growing with age.
+  function physFactor(a) {
+    if (a < 16) return 0.7 + Math.max(0, a - 10) * 0.05;
+    if (a <= 35) return 1;
+    return Math.max(0.45, 1 - (a - 35) * 0.018);
+  }
+  const intBonus = (a) => Math.max(0, Math.floor((a - 14) / 3));
+  const fortDef = () => Object.values(G.buildings).reduce((s, b) => s + (b.type === 'fort' ? b.lvl : 0), 0);
+  const income = () => Object.values(G.buildings).reduce((s, b) => s + BUILD[b.type].income * b.lvl, 0);
+
+  function eff(c) {
+    const a = age(c), phys = physFactor(a);
+    let atk = Math.round(c.atk * phys);
+    if (c.stress >= 70) atk = Math.round(atk * 0.8);
+    return { maxHp: Math.round(c.mhp * phys), atk, def: c.def + fortDef(), int: c.int + intBonus(a), phys };
   }
 
-  function enemyFor(tier, lap) {
-    const s = 1 + 0.4 * (lap - 1), a = 1 + 0.3 * (lap - 1);
+  function charFace(c) {
+    if (c.role === 'hero') return CLASSES[c.cls].face;
+    const a = age(c);
+    if (c.role === 'kid') return a < 4 ? '👶' : (c.gender === 'm' ? '👦' : '👧');
+    if (a >= 60) return c.gender === 'f' ? '👵' : '👴';
+    return c.gender === 'f' ? '👩' : '👨';
+  }
+  const spouseWord = (s) => (s.gender === 'f' ? '아내' : '남편');
+  const childWord = (k) => (k.gender === 'm' ? '아들' : '딸');
+  function relation(c) {
+    if (c.role === 'spouse') { const p = G.chars[c.partnerId]; return `${p ? p.name + '의 ' : ''}${spouseWord(c)}`; }
+    if (c.parentId) { const p = G.chars[c.parentId]; return `${p ? p.name + '의 ' : ''}${childWord(c)}`; }
+    return '가문의 시조';
+  }
+
+  function usedNames() { return new Set([...all().map((c) => c.name), ...G.cands.map((c) => c.name)]); }
+  function newName(g) {
+    const used = usedNames();
+    const free = NAMES[g].filter((n) => !used.has(n));
+    return free.length ? pick(free) : pick(NAMES[g]) + (G.year % 10);
+  }
+
+  function makeHero(base) {
+    const C = CLASSES[base.cls];
+    const c = Object.assign({
+      role: 'hero', mhp: C.hp, atk: C.atk, def: C.def, int: C.int, mmp: C.mp, lv: 1, exp: 0, stress: 10,
+      pos: 0, stuck: 0, kills: 0, laps: 0, wl: 0, al: 0, bl: 0, rl: 0, spouseId: null, kidIds: [], alive: true,
+    }, base);
+    c.color = HERO_COLORS[G.heroCount++ % HERO_COLORS.length];
+    c.hp = eff(c).maxHp; c.mp = c.mmp;
+    return c;
+  }
+
+  function newGame(cls, gender, name, persist = true) {
+    G = {
+      v: 2, year: 0, turnIdx: 0, order: [], gold: 40, potions: 1, luck: 0, chars: {}, nextId: 1, heroCount: 0,
+      buildings: {}, cleared: {}, cands: [], bossDone: false, endless: false, over: false, extra: false, doubles: 0,
+      turns: 0, maxGen: 1, stats: { kills: 0, births: 0, marriages: 0 }, log: [],
+    };
+    const f = makeHero({ id: G.nextId++, name, gender, cls, born: -START_AGE, gen: 1 });
+    G.chars[f.id] = f;
+    G.order = [f.id];
+    $('log').innerHTML = '';
+    log(`${CLASSES[cls].face} ${name}의 원정이 시작됐다! ${BOSS_YEAR}년 뒤 마왕이 깨어난다. 사랑하고, 일하고, 가문을 키워라.`);
+    if (persist) save();
+  }
+
+  function enemyFor(tier, year) {
+    const L = 1 + year / 7;
+    const s = 1 + 0.4 * (L - 1), a = 1 + 0.3 * (L - 1);
     const m = MONSTERS[tier];
     return {
-      name: m.name, icon: m.icon, lv: tier + (lap - 1) * 2,
+      name: m.name, icon: m.icon, lv: tier + Math.floor(year / 3.5),
       hp: Math.round((24 + 9 * tier) * s), atk: Math.round((5 + 1.4 * tier) * a),
-      def: Math.floor(tier * 0.6 + (lap - 1) * 1.2),
+      def: Math.floor(tier * 0.6 + (L - 1) * 1.2),
       exp: Math.round((10 + 5 * tier) * a), gold: Math.round((8 + 4 * tier) * a),
     };
   }
-  const BOSS = () => ({ name: '마왕', icon: '😈', lv: 20, hp: 380, atk: 22, def: 8, exp: 0, gold: 0, boss: true });
+  function bossFor(n) {
+    return { name: '마왕', icon: '😈', lv: 40, hp: 300 + 160 * n, atk: 24, def: 9, exp: 0, gold: 0, boss: true };
+  }
 
   // ---------- Persistence ----------
   function save() {
-    try { if (S && !S.over) localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ }
+    try { if (G && !G.over) localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch (e) { /* storage unavailable */ }
   }
   function loadSave() {
-    try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+    try { const raw = localStorage.getItem(SAVE_KEY); const g = raw ? JSON.parse(raw) : null; return g && g.v === 2 ? g : null; } catch (e) { return null; }
   }
   function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ } }
   function loadBest() { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || null; } catch (e) { return null; } }
-  function saveBest(rec) { try { localStorage.setItem(BEST_KEY, JSON.stringify(rec)); } catch (e) { /* ignore */ } }
+  function recordBest(won) {
+    const rec = { year: G.year, gen: G.maxGen, won: won || G.bossDone, family: all().length };
+    const best = loadBest();
+    const better = !best || (rec.won && !best.won) || (rec.won === best.won && (rec.gen > best.gen || (rec.gen === best.gen && rec.year > best.year)));
+    if (better) { try { localStorage.setItem(BEST_KEY, JSON.stringify(rec)); } catch (e) { /* ignore */ } }
+    return better;
+  }
 
   // ---------- Sound ----------
   let soundOn = true, actx = null;
@@ -416,9 +539,18 @@
     hurt: () => beep(90, 0.18, 'sawtooth', 0.06),
     good: () => { [523, 659, 784].forEach((f, i) => setTimeout(() => beep(f, 0.1, 'triangle', 0.06), i * 80)); },
     bad: () => { [330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.16, 'triangle', 0.06), i * 120)); },
+    love: () => { [659, 880, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.14, 'sine', 0.07), i * 110)); },
   };
 
   // ---------- Rendering ----------
+  function tileRC(i) {
+    const L = SIDE - 1;
+    if (i <= L) return [L, L - i];
+    if (i <= 2 * L) return [L - (i - L), 0];
+    if (i <= 3 * L) return [0, i - 2 * L];
+    return [i - 3 * L, L];
+  }
+
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
   function drawDie(el, v) {
     if (!el.children.length) for (let i = 0; i < 9; i++) el.appendChild(document.createElement('i'));
@@ -431,11 +563,9 @@
     BOARD.forEach((t, i) => {
       const el = document.createElement('div');
       const [r, c] = tileRC(i);
-      el.className = 'tile ' + (i % 6 === 0 ? 'corner' : t.type);
       el.style.gridRow = r + 1; el.style.gridColumn = c + 1;
-      el.innerHTML = `<span class="ti">${t.icon}</span><span class="tl">${t.name}</span>`;
-      if (t.type === 'monster') el.insertAdjacentHTML('beforeend', '<span class="badge"></span><span class="flag"></span>');
-      el.addEventListener('click', () => onTileClick(i));
+      el.innerHTML = '<span class="ti"></span><span class="tl"></span><span class="badge"></span><span class="flag"></span>';
+      el.addEventListener('click', () => { if (picking && pickResolve) pickResolve(i); });
       board.appendChild(el);
       tileEls.push(el);
     });
@@ -443,78 +573,153 @@
 
   function renderBoard() {
     BOARD.forEach((t, i) => {
-      if (t.type !== 'monster') return;
       const el = tileEls[i];
-      const cleared = S.cleared.includes(i);
-      el.classList.toggle('cleared', cleared);
-      el.querySelector('.badge').textContent = cleared ? '' : 'Lv' + enemyFor(t.tier, S.lap).lv;
+      const b = G && G.buildings[i];
+      const cleared = G && t.type === 'monster' && !b && G.cleared[i] > G.year;
+      el.className = 'tile ' + (i % (SIDE - 1) === 0 ? 'corner' : t.type) + (b ? ' owned' : '') + (cleared ? ' cleared' : '');
+      el.querySelector('.ti').textContent = b ? BUILD[b.type].icon : t.icon;
+      el.querySelector('.tl').textContent = b ? `${BUILD[b.type].name}${'★'.repeat(b.lvl)}` : t.name;
+      el.querySelector('.badge').textContent = G && t.type === 'monster' && !b && !cleared ? 'Lv' + enemyFor(t.tier, G.year).lv : '';
       el.querySelector('.flag').textContent = cleared ? '🚩' : '';
     });
   }
 
-  function placeToken(i, hop) {
-    const [r, c] = tileRC(i);
-    const tk = $('token');
-    tk.style.left = (c * 100 / 7) + '%';
-    tk.style.top = (r * 100 / 7) + '%';
-    if (hop) { tk.classList.remove('hop'); void tk.offsetWidth; tk.classList.add('hop'); }
+  const tokenEls = new Map();
+  const OFFS = [[-20, -26], [20, -26], [-20, 12], [20, 12], [0, -8], [0, 24]];
+  function renderTokens(hopId) {
+    const wrap = $('boardWrap');
+    const ents = [...heroes(), ...spouses()];
+    const byTile = {};
+    ents.forEach((e) => { (byTile[e.pos] = byTile[e.pos] || []).push(e); });
+    const cur = actor();
+    const keep = new Set();
+    ents.forEach((e) => {
+      keep.add(e.id);
+      let el = tokenEls.get(e.id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'token';
+        el.innerHTML = '<div class="off"><span></span></div>';
+        wrap.appendChild(el); tokenEls.set(e.id, el);
+      }
+      const [r, c] = tileRC(e.pos);
+      el.style.left = (c * 100 / SIDE) + '%'; el.style.top = (r * 100 / SIDE) + '%';
+      const group = byTile[e.pos];
+      const off = group.length === 1 ? [0, -12] : OFFS[group.indexOf(e) % OFFS.length];
+      el.style.setProperty('--dx', off[0] + '%'); el.style.setProperty('--dy', off[1] + '%');
+      el.classList.toggle('npc', e.role === 'spouse');
+      el.classList.toggle('active', !!cur && e.id === cur.id);
+      const span = el.querySelector('span');
+      span.textContent = charFace(e);
+      if (e.role === 'hero') span.style.background = e.color;
+      if (hopId === e.id) { el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop'); }
+    });
+    for (const [id, el] of tokenEls) if (!keep.has(id)) { el.remove(); tokenEls.delete(id); }
   }
 
   function renderHud() {
-    const c = CLASSES[S.cls];
-    $('hFace').textContent = c.face; $('tokenFace').textContent = c.face;
-    $('hName').textContent = c.name;
-    $('hLv').textContent = `Lv ${S.lv} · ${c.skill}`;
-    $('hGold').textContent = S.gold; $('hPot').textContent = S.potions;
-    $('hAtk').textContent = S.atk; $('hDef').textContent = S.def; $('hLuck').textContent = S.luck; $('hTurn').textContent = S.turn;
-    $('hHpBar').style.width = Math.max(0, 100 * S.hp / S.maxHp) + '%'; $('hHp').textContent = `HP ${Math.max(0, S.hp)}/${S.maxHp}`;
-    $('hMpBar').style.width = (100 * S.mp / S.maxMp) + '%'; $('hMp').textContent = `MP ${S.mp}/${S.maxMp}`;
-    $('hExpBar').style.width = (100 * S.exp / expNeed(S.lv)) + '%'; $('hExp').textContent = `EXP ${S.exp}/${expNeed(S.lv)}`;
-    const left = MAX_LAP - S.lap + 1;
-    $('lapText').innerHTML = `${Math.min(S.lap, MAX_LAP)} / ${MAX_LAP} 바퀴<small>${left <= 1 ? '⚠️ 이번 바퀴 끝에 마왕이 깨어난다!' : `마왕 부활까지 ${left}바퀴`}</small>`;
-    renderControls();
+    const c = actor() || heroes()[0];
+    $('hGold').textContent = G.gold; $('hPot').textContent = G.potions;
+    if (!c) return;
+    const C = CLASSES[c.cls], e = eff(c), a = age(c);
+    $('hFace').textContent = C.face; $('hFace').style.borderColor = c.color;
+    $('hName').textContent = `${c.name} · ${C.name}`;
+    $('hLv').textContent = `Lv ${c.lv} · ${a}세 ${stage(c)} · ${C.skill}`;
+    c.hp = Math.min(c.hp, e.maxHp);
+    $('hHpBar').style.width = Math.max(0, 100 * c.hp / e.maxHp) + '%'; $('hHp').textContent = `HP ${Math.max(0, c.hp)}/${e.maxHp}`;
+    $('hMpBar').style.width = (100 * c.mp / c.mmp) + '%'; $('hMp').textContent = `MP ${c.mp}/${c.mmp}`;
+    $('hExpBar').style.width = (100 * c.exp / expNeed(c.lv)) + '%'; $('hExp').textContent = `EXP ${c.exp}/${expNeed(c.lv)}`;
+    $('hStBar').style.width = c.stress + '%';
+    $('hSt').textContent = `스트레스 ${c.stress}${c.stress >= 70 ? ' · 지침' : c.stress <= 20 ? ' · 의욕' : ''}`;
+    const physTxt = e.phys < 1 ? ` <span class="down">${a < 16 ? '성장중' : '노화'} ${Math.round((e.phys - 1) * 100)}%</span>` : '';
+    const intTxt = intBonus(a) ? ` <span class="up">+${intBonus(a)}</span>` : '';
+    const fd = fortDef();
+    $('hStats').innerHTML = `<span>⚔️ 힘 <strong>${e.atk}</strong>${physTxt}</span>`
+      + `<span>🛡️ 방어 <strong>${e.def}</strong>${fd ? ` <span class="up">요새+${fd}</span>` : ''}</span>`
+      + `<span>🧠 지력 <strong>${e.int}</strong>${intTxt}</span>`
+      + `<span>🍀 <strong>${G.luck}</strong></span>`
+      + `<span>📈 연수입 <strong>${income()}G</strong></span>`;
+  }
+
+  function renderFamily() {
+    const cur = actor();
+    const list = [...heroes(), ...spouses(), ...kids()];
+    $('family').innerHTML = list.map((c) => {
+      let sub;
+      if (c.role === 'hero') sub = `${age(c)}세 · Lv${c.lv} · HP ${Math.round(100 * c.hp / eff(c).maxHp)}%`;
+      else if (c.role === 'spouse') sub = `${age(c)}세 · ${spouseWord(c)} ❤️${c.aff}`;
+      else sub = `${age(c)}세 · ${childWord(c)}`;
+      const ring = c.role === 'hero' ? `style="border-color:${c.color}"` : '';
+      return `<button class="chip ${c.role === 'spouse' ? 'npc' : ''} ${cur && cur.id === c.id ? 'active' : ''}" data-id="${c.id}"><span class="cf" ${ring}>${charFace(c)}</span><span class="cn">${c.name}<small>${sub}</small></span></button>`;
+    }).join('');
+    $('family').querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => { if (!busy && !picking) showInfo(G.chars[b.dataset.id]); }));
+  }
+
+  function renderCenter() {
+    const left = BOSS_YEAR - G.year;
+    $('yearText').innerHTML = G.bossDone
+      ? `📅 ${G.year}년차<small>🌅 평화의 시대 · ${G.maxGen}대 가문</small>`
+      : `📅 ${G.year}년차<small class="${left <= 3 ? 'warn' : ''}">${left <= 0 ? '⚠️ 마왕이 깨어난다!' : `😈 마왕 부활까지 ${left}년`}</small>`;
+    const c = actor();
+    $('whoText').textContent = c ? `${CLASSES[c.cls].face} ${c.name} (${age(c)}세 ${stage(c)})의 차례` : '';
   }
 
   function renderControls() {
-    const idle = !busy && !picking && S && !S.over;
+    const c = actor();
+    const idle = !busy && !picking && G && !G.over && isHero(c);
     $('rollBtn').disabled = !idle;
-    $('rollBtn').textContent = S && S.stuck > 0 ? '탈출 시도 (더블!)' : (S && S.extra ? '한 번 더 굴리기!' : '주사위 굴리기');
-    $('luckBtn').hidden = !(S && S.luck > 0) || (S && S.stuck > 0);
+    $('rollBtn').textContent = !c ? '주사위 굴리기'
+      : c.burnout ? '😵 번아웃: 한 해 쉬기'
+        : c.stuck > 0 ? '탈출 시도 (더블!)' : G.extra ? '한 번 더 굴리기!' : '주사위 굴리기';
+    const special = c && (c.stuck > 0 || c.burnout);
+    $('luckBtn').hidden = !(G && G.luck > 0) || special;
     $('luckBtn').disabled = !idle;
-    $('luckBtn').textContent = `🍀 행운 주사위 (${S ? S.luck : 0})`;
-    const bribe = bribeCost();
-    $('bribeBtn').hidden = !(S && S.stuck > 0);
-    $('bribeBtn').disabled = !idle || S.gold < bribe;
-    $('bribeBtn').textContent = `💰 ${bribe}G 내고 탈출`;
+    $('luckBtn').textContent = `🍀 행운 주사위 (${G ? G.luck : 0})`;
+    $('bribeBtn').hidden = !(c && c.stuck > 0);
+    $('bribeBtn').disabled = !idle || G.gold < bribeCost();
+    $('bribeBtn').textContent = `💰 ${bribeCost()}G 내고 탈출`;
+    const bk = c && !G.over ? buildableHere(c) : null;
+    $('buildBtn').hidden = !bk || G.extra;
+    $('buildBtn').disabled = !idle;
+    $('buildBtn').textContent = bk === 'upgrade' ? '🏗️ 증축' : '🏗️ 여기에 짓기';
     $('cancelPickBtn').hidden = !picking;
     $('board').classList.toggle('picking', picking);
   }
-  const bribeCost = () => S ? 20 + 10 * S.lap : 0;
+  const bribeCost = () => (G ? 20 + 2 * G.year : 0);
+
+  function renderAll() { renderHud(); renderFamily(); renderCenter(); renderBoard(); renderTokens(); renderControls(); }
 
   function hint(t) { $('hint').textContent = t; }
+  function idleHint() {
+    const c = actor();
+    if (!c) return hint('');
+    if (c.burnout) return hint('스트레스가 한계! 이번 차례는 쉬어야 한다');
+    if (c.stuck > 0) return hint(`늪에 빠짐: 더블이 나와야 탈출 (${c.stuck}턴)`);
+    if (G.extra) return hint('더블! 한 번 더 굴리세요');
+    if (buildableHere(c)) return hint('이 칸에 건물을 지을 수 있다');
+    hint('더블이 나오면 한 번 더!');
+  }
 
   function log(msg) {
-    if (S) { S.log.unshift(msg); S.log.length = Math.min(S.log.length, 30); }
+    if (G) { G.log.unshift(msg); G.log.length = Math.min(G.log.length, 40); }
     const p = document.createElement('p'); p.textContent = msg;
     const el = $('log'); el.prepend(p);
-    while (el.children.length > 30) el.lastChild.remove();
+    while (el.children.length > 40) el.lastChild.remove();
   }
 
-  function floatText(text, color, anchor) {
-    const wrap = document.querySelector('.board-wrap');
+  function floatText(text, color, tile) {
     const f = document.createElement('div');
     f.className = 'floater'; f.textContent = text; f.style.color = color;
-    const [r, c] = tileRC(anchor ?? S.pos);
-    f.style.left = ((c + 0.5) * 100 / 7) + '%'; f.style.top = (r * 100 / 7) + '%';
-    wrap.appendChild(f); setTimeout(() => f.remove(), 1150);
+    const c = actor();
+    const [r, col] = tileRC(tile ?? (c ? c.pos : 0));
+    f.style.left = ((col + 0.5) * 100 / SIDE) + '%'; f.style.top = (r * 100 / SIDE) + '%';
+    $('boardWrap').appendChild(f); setTimeout(() => f.remove(), 1150);
   }
+  function flashTile(i) { const el = tileEls[i]; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 
   // ---------- Modal helpers ----------
   const modal = $('modal'), sheet = $('sheet');
-  function openModal(html, cls = '') {
-    sheet.innerHTML = html; modal.className = 'modal show ' + cls;
-    sheet.scrollTop = 0;
-  }
+  function openModal(html, cls = '') { sheet.innerHTML = html; modal.className = 'modal show ' + cls; sheet.scrollTop = 0; }
   function closeModal() { modal.className = 'modal'; sheet.innerHTML = ''; }
 
   // Show a dialog with choice buttons; resolves with the chosen value.
@@ -525,7 +730,7 @@
         : c.ghost
           ? `<button class="ghost" data-i="${i}">${c.label}</button>`
           : `<button class="choice" data-i="${i}" ${c.disabled ? 'disabled' : ''}><span class="ce">${c.icon || ''}</span><span class="ct">${c.label}${c.sub ? `<small>${c.sub}</small>` : ''}</span>${c.price != null ? `<span class="cp">${c.price}G</span>` : ''}</button>`).join('');
-      openModal(`${emoji ? `<div class="big-emoji">${emoji}</div>` : ''}<h2>${title}</h2>${desc ? `<p class="desc">${desc}</p>` : ''}<div class="choices">${items}</div>`, cls);
+      openModal(`${emoji ? `<div class="big-emoji">${emoji}</div>` : ''}<h2>${title}</h2>${desc ? `<div class="desc">${desc}</div>` : ''}<div class="choices">${items}</div>`, cls);
       sheet.querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => {
         const c = choices[+b.dataset.i];
         closeModal(); resolve(c.value);
@@ -534,29 +739,43 @@
   }
   const notice = (emoji, title, desc, cls) => ask({ emoji, title, desc, cls, choices: [{ label: '확인', primary: true, value: true }] });
 
-  // ---------- Stats changes ----------
-  function heal(n) { const before = S.hp; S.hp = Math.min(S.maxHp, S.hp + n); return S.hp - before; }
-  function gainGold(n) { S.gold += n; floatText(`+${n}G`, 'var(--gold)'); sfx.coin(); }
+  // ---------- Stat changes ----------
+  function heal(c, n) { const before = c.hp; c.hp = Math.min(eff(c).maxHp, c.hp + n); return c.hp - before; }
+  function gainGold(n, tile) { G.gold += n; floatText(`+${n}G`, 'var(--gold)', tile); sfx.coin(); }
+  function spend(n) { G.gold -= n; sfx.coin(); }
 
-  async function gainExp(n) {
-    S.exp += n;
-    while (S.exp >= expNeed(S.lv)) {
-      S.exp -= expNeed(S.lv); S.lv++;
-      S.maxHp += 12; S.atk += 2; S.def += 1; S.maxMp += 2; S.mp = S.maxMp;
-      heal(Math.round(S.maxHp * 0.3));
-      renderHud(); sfx.good();
-      log(`🎉 레벨 업! Lv ${S.lv} (최대HP+12, 공격+2, 방어+1)`);
-      await notice('🎉', `레벨 업! Lv ${S.lv}`, '최대 HP +12 · 공격 +2 · 방어 +1 · 최대 MP +2<br>HP 일부와 MP를 모두 회복했다.');
+  function addStress(c, n) {
+    c.stress = clamp(c.stress + n, 0, 100);
+    if (n > 0 && c.stress >= 100 && !c.burnout && c.role === 'hero') {
+      c.burnout = true;
+      const d = Math.round(eff(c).maxHp * 0.15);
+      c.hp = Math.max(1, c.hp - d);
+      log(`😵 ${c.name}의 스트레스가 폭발했다! 번아웃 — HP -${d}, 다음 차례를 쉰다.`);
+      sfx.bad();
     }
-    renderHud();
+  }
+
+  async function gainExp(c, n) {
+    const bonus = c.stress <= 20;
+    n = Math.round(n * (bonus ? 1.25 : 1));
+    c.exp += n;
+    while (c.exp >= expNeed(c.lv)) {
+      c.exp -= expNeed(c.lv); c.lv++;
+      c.mhp += 12; c.atk += 2; c.def += 1; c.int += 1; c.mmp += 2; c.mp = c.mmp;
+      heal(c, Math.round(eff(c).maxHp * 0.3));
+      renderAll(); sfx.good();
+      log(`🎉 ${c.name} 레벨 업! Lv ${c.lv}`);
+      await notice('🎉', `${c.name} 레벨 업! Lv ${c.lv}`, '최대 HP +12 · 힘 +2 · 방어 +1 · 지력 +1 · 최대 MP +2<br>HP 일부와 MP를 모두 회복했다.');
+    }
+    renderAll();
+    return n;
   }
 
   // ---------- Turn flow ----------
   async function rollDice(forced) {
     const d1 = $('die1'), d2 = $('die2');
     let a, b;
-    if (forced) { a = Math.min(6, forced - 1); b = forced - a; }
-    else { a = d6(); b = d6(); }
+    if (forced) { a = Math.min(6, forced - 1); b = forced - a; } else { a = d6(); b = d6(); }
     d1.classList.add('rolling'); d2.classList.add('rolling');
     for (let k = 0; k < 9; k++) { drawDie(d1, d6()); drawDie(d2, d6()); sfx.tick(); await sleep(55); }
     d1.classList.remove('rolling'); d2.classList.remove('rolling');
@@ -565,280 +784,721 @@
   }
 
   async function takeTurn(forced) {
-    if (busy || picking || S.over) return;
+    const c = actor();
+    if (busy || picking || !G || G.over || !isHero(c)) return;
     busy = true; renderControls();
-    if (!S.extra) S.turn++;
-    S.extra = false;
+    if (c.burnout) {
+      c.burnout = false; c.stress = 50;
+      log(`😵 ${c.name}은(는) 번아웃으로 한 해를 푹 쉬었다. (스트레스 50)`);
+      return endTurn(false);
+    }
+    if (!G.extra) G.turns++;
+    G.extra = false;
     const [a, b] = await rollDice(forced);
     const dbl = !forced && a === b;
     const total = a + b;
 
-    if (S.stuck > 0) {
+    if (c.stuck > 0) {
       if (dbl) {
-        S.stuck = 0; S.doubles = 0;
-        log(`🎲 ${a}+${b} 더블! 늪에서 빠져나왔다.`); sfx.good();
-        await move(total);
+        c.stuck = 0; G.doubles = 0;
+        log(`🎲 ${a}+${b} 더블! ${c.name}이(가) 늪에서 빠져나왔다.`); sfx.good();
+        await move(c, total);
       } else {
-        S.stuck--;
-        log(`🎲 ${a}+${b} … 늪에서 빠져나오지 못했다. ${S.stuck > 0 ? `(남은 ${S.stuck}턴)` : '(다음 턴엔 자유!)'}`);
+        c.stuck--;
+        log(`🎲 ${a}+${b} … ${c.name}은(는) 늪에서 빠져나오지 못했다. ${c.stuck > 0 ? `(남은 ${c.stuck}턴)` : '(다음 턴엔 자유!)'}`);
         sfx.bad();
       }
       return endTurn(false);
     }
 
     if (dbl) {
-      S.doubles = (S.doubles || 0) + 1;
-      if (S.doubles >= 3) {
-        S.doubles = 0;
+      G.doubles++;
+      if (G.doubles >= 3) {
+        G.doubles = 0;
         log(`🎲 ${a}+${b} 더블 3연속! 저주가 발동해 늪으로 끌려간다…`); sfx.bad();
         await notice('🌫️', '더블 3연속!', '욕심이 과했다. 저주의 늪으로 끌려간다.');
-        await warp(SWAMP);
-        S.stuck = 2;
+        await warp(c, SWAMP);
+        c.stuck = 2;
         return endTurn(false);
       }
-      log(`🎲 ${a}+${b} = ${total} 더블!`);
+      log(`🎲 ${c.name}: ${a}+${b} = ${total} 더블!`);
     } else {
-      S.doubles = 0;
-      log(forced ? `🍀 행운 주사위로 ${total}칸!` : `🎲 ${a}+${b} = ${total}`);
+      G.doubles = 0;
+      log(forced ? `🍀 ${c.name}: 행운 주사위로 ${total}칸!` : `🎲 ${c.name}: ${a}+${b} = ${total}`);
     }
-    const alive = await move(total);
-    endTurn(alive && dbl && !S.over && S.stuck === 0);
+    const alive = await move(c, total);
+    endTurn(alive && dbl && isHero(c) && c.stuck === 0 && !c.burnout);
   }
 
-  function endTurn(again) {
+  async function endTurn(again) {
+    if (!G || G.over) { busy = false; return; }
+    if (again) {
+      G.extra = true; busy = false;
+      renderAll(); idleHint(); save();
+      return;
+    }
+    G.extra = false; G.doubles = 0;
+    busy = true; renderControls();
+    G.turnIdx++;
+    while (G.turnIdx < G.order.length && !isHero(G.chars[G.order[G.turnIdx]])) G.turnIdx++;
+    if (G.turnIdx >= G.order.length) await endRound();
     busy = false;
-    if (S.over) return;
-    if (again) { S.extra = true; hint('더블! 한 번 더 굴리세요'); }
-    else { S.doubles = 0; hint(S.stuck > 0 ? `늪에 빠짐: 더블이 나와야 탈출 (${S.stuck}턴)` : '더블이 나오면 한 번 더!'); }
-    renderHud(); renderBoard(); save();
+    if (!G || G.over) return;
+    renderAll(); idleHint(); save();
   }
 
-  // Move forward step by step; resolves the landing tile. Returns false if the run ended.
-  async function move(steps) {
+  // Everyone has moved: spouses take their NPC turns, then a year passes.
+  async function endRound() {
+    hint('한 해가 저물어 간다…');
+    for (const s of spouses()) await spouseTurn(s);
+    await yearTick();
+    if (G.over) return;
+    if (!heroes().length) {
+      if (!kids().length) { await gameOver('가문의 대가 끊겼다'); return; }
+      const k = kids().sort((a, b) => b.born - a.born).pop();
+      const wait = ADULT_AGE - age(k);
+      log(`⏳ 남은 아이 ${k.name}이(가) 자랄 때까지 ${wait}년이 흐른다…`);
+      await notice('⏳', '세월이 흐른다', `모험을 떠날 수 있는 가족이 없다.<br>${k.name}이(가) ${ADULT_AGE}살이 될 때까지 ${wait}년을 기다린다.`);
+      while (!heroes().length && !G.over) await yearTick();
+      if (G.over) return;
+    }
+    G.order = heroes().map((c) => c.id);
+    G.turnIdx = 0;
+  }
+
+  async function yearTick() {
+    G.year++;
+    const inc = income();
+    if (inc) { G.gold += inc; log(`📈 ${G.year}년차 건물 수입 +${inc}G`); }
+    for (const h of heroes()) { addStress(h, 3); h.hp = Math.min(h.hp, eff(h).maxHp); }
+    for (const s of spouses()) {
+      s.aff = clamp(s.aff - 2, 0, 100);
+      if (s.aff <= 0) await spouseLeaves(s);
+    }
+    for (const s of spouses()) {
+      if (s.trait !== 'scholar') continue;
+      kids().filter((k) => k.parentId === s.partnerId).forEach((k) => { k.xInt = (k.xInt || 0) + 1; });
+    }
+    // Births
+    for (const h of heroes()) {
+      const s = spouseOf(h);
+      if (!s) continue;
+      const mother = h.gender === 'f' ? h : s;
+      if (age(mother) > 42 || h.kidIds.length >= MAX_KIDS) continue;
+      if (Math.random() < 0.12 + s.aff / 350) await birth(h, s);
+    }
+    // Coming of age
+    for (const k of kids()) if (age(k) >= ADULT_AGE) await comingOfAge(k);
+    // Old age
+    for (const c of [...heroes(), ...spouses()]) {
+      const a = age(c);
+      if (a >= 70 && Math.random() < (a - 69) * 0.07) await naturalDeath(c);
+    }
+    for (const k of Object.keys(G.cleared)) if (G.cleared[k] <= G.year) delete G.cleared[k];
+    renderAll();
+    if (!G.bossDone && G.year >= BOSS_YEAR) await bossFight();
+  }
+
+  // Move forward step by step, then resolve the landing tile. Returns false if the hero died.
+  async function move(c, steps) {
     for (let s = 0; s < steps; s++) {
-      S.pos = (S.pos + 1) % N;
-      placeToken(S.pos, true); sfx.step();
-      await sleep(190);
-      if (S.pos === 0) {
-        const cont = await passStart(s === steps - 1);
-        if (!cont) return false;
-      }
+      c.pos = (c.pos + 1) % N;
+      renderTokens(c.id); sfx.step();
+      await sleep(170);
+      if (c.pos === 0) await passHome(c, s === steps - 1);
     }
-    return resolveTile();
+    return resolveTile(c);
   }
 
-  async function warp(to) {
-    S.pos = to; placeToken(to, true); sfx.step(); await sleep(260);
+  async function warp(c, to) { c.pos = to; renderTokens(c.id); sfx.step(); await sleep(260); }
+
+  async function passHome(c, landed) {
+    c.laps++;
+    flashTile(0);
+    const pay = (20 + 6 * G.year) * (landed ? 2 : 1);
+    const h = heal(c, Math.round(eff(c).maxHp * (landed ? 0.4 : 0.2)));
+    c.mp = Math.min(c.mmp, c.mp + Math.ceil(c.mmp / 2));
+    const fam = !!spouseOf(c) || kids().length > 0;
+    addStress(c, fam ? -20 : -10);
+    gainGold(pay, 0);
+    log(`🏠 ${c.name} 귀가! ${landed ? '집에 딱 멈춰 2배! ' : ''}생활비 +${pay}G, HP +${h}${fam ? ', 가족과 쉬며 스트레스 -20' : ''}`);
+    renderAll();
+    for (const k of kids()) await raiseKid(c, k);
   }
 
-  async function passStart(landed) {
-    S.lap++;
-    S.cleared = [];
-    tileEls[0].classList.remove('flash'); void tileEls[0].offsetWidth; tileEls[0].classList.add('flash');
-    if (S.lap > MAX_LAP) {
-      renderHud();
-      log('😈 마왕이 깨어났다! 최후의 결전!');
-      await notice('😈', '마왕 부활!', `${MAX_LAP}바퀴를 모두 돌았다. 출발점에 마왕이 나타났다!<br>이기면 세계를 구한다. 도망칠 수 없다.`);
-      const r = await battle(BOSS());
-      if (r === 'win') await finish(true);
-      return false;
-    }
-    const bonus = (30 + 15 * S.lap) * (landed ? 2 : 1);
-    const h = heal(Math.round(S.maxHp * (landed ? 0.4 : 0.2)));
-    S.mp = Math.min(S.maxMp, S.mp + Math.ceil(S.maxMp / 2));
-    gainGold(bonus);
-    log(`🏁 ${S.lap}바퀴째 돌입! ${landed ? '출발점에 딱 멈춰 보너스 2배! ' : ''}골드 +${bonus}, HP +${h}. 몬스터들이 더 강해졌다…`);
-    renderHud(); renderBoard();
-    return true;
-  }
-
-  async function resolveTile() {
-    const t = BOARD[S.pos];
-    tileEls[S.pos].classList.remove('flash'); void tileEls[S.pos].offsetWidth; tileEls[S.pos].classList.add('flash');
+  async function resolveTile(c) {
+    const i = c.pos, t = BOARD[i], b = G.buildings[i];
+    flashTile(i);
+    if (b) return onBuilding(c, b);
     switch (t.type) {
       case 'start': return true;
-      case 'monster': return onMonster(t);
-      case 'treasure': return onTreasure();
-      case 'key': return onKey();
-      case 'shop': return onShop();
-      case 'inn': return onInn();
-      case 'trap': return onTrap();
-      case 'shrine': return onShrine();
-      case 'swamp': return onSwamp();
-      case 'portal': return onPortal();
+      case 'monster': return onMonster(c, t);
+      case 'treasure': return onTreasure(c);
+      case 'key': return onKey(c);
+      case 'shop': return onShop(c);
+      case 'inn': return onInn(c);
+      case 'tavern': return onTavern(c);
+      case 'plaza': return onPlaza(c);
+      case 'labor': return onWork(c, 'labor');
+      case 'clerk': return onWork(c, 'clerk');
+      case 'lot': return onLot(c);
+      case 'trap': return onTrap(c);
+      case 'shrine': return onShrine(c);
+      case 'swamp': return onSwamp(c);
+      case 'portal': return onPortal(c);
     }
     return true;
   }
 
   // ---------- Tile handlers ----------
-  async function onMonster(t) {
-    if (S.cleared.includes(S.pos)) {
-      const g = 5 + 5 * S.lap;
+  async function onMonster(c, t) {
+    if (G.cleared[c.pos] > G.year) {
+      const g = 5 + G.year;
       gainGold(g);
       log(`🚩 정복한 ${t.name}. 남은 전리품 ${g}G를 주웠다.`);
+      if (G.gold >= 100) await buildMenu(c);
       return true;
     }
-    const e = enemyFor(t.tier, S.lap);
-    const r = await battle(e);
-    if (r === 'win') S.cleared.push(S.pos);
-    return r !== 'lose';
+    const res = await battle([c], enemyFor(t.tier, G.year));
+    if (res.r === 'lose') { await killHero(c, `${MONSTERS[t.tier].name}에게 패배`); return false; }
+    if (res.r === 'win') {
+      G.cleared[c.pos] = G.year + 3;
+      renderBoard();
+      if (G.gold >= 100) await buildMenu(c, '정복한 땅에 건물을 지을까?');
+    }
+    return true;
   }
 
-  async function onTreasure() {
+  async function onTreasure(c) {
     if (Math.random() < 0.15) {
       log('🎁 보물상자가… 입을 벌렸다! 미믹이다!');
-      const base = enemyFor(4, S.lap);
-      const r = await battle({ ...base, name: '미믹', icon: '🧰', hp: Math.round(base.hp * 0.8), gold: base.gold * 2 });
-      return r !== 'lose';
+      const base = enemyFor(4, G.year);
+      const res = await battle([c], { ...base, name: '미믹', icon: '🧰', hp: Math.round(base.hp * 0.8), gold: base.gold * 2 });
+      if (res.r === 'lose') { await killHero(c, '미믹에게 패배'); return false; }
+      return true;
     }
     const roll = Math.random();
     if (roll < 0.6) {
-      const g = 20 + 15 * S.lap + d6() * 3;
+      const g = 20 + 4 * G.year + d6() * 3;
       gainGold(g); log(`🎁 보물상자에서 ${g}G를 찾았다!`);
       await notice('💰', `${g} 골드!`, '반짝이는 금화가 가득하다.');
     } else if (roll < 0.85) {
-      S.potions++; sfx.good(); log('🎁 보물상자에서 포션을 찾았다!');
+      G.potions++; sfx.good(); log('🎁 보물상자에서 포션을 찾았다!');
       await notice('🧪', '포션 획득!', '전투 중에 마시면 HP를 50% 회복한다.');
     } else {
-      S.luck++; sfx.good(); log('🎁 보물상자에서 행운의 주사위를 찾았다!');
+      G.luck++; sfx.good(); log('🎁 보물상자에서 행운의 주사위를 찾았다!');
       await notice('🍀', '행운의 주사위!', '원하는 눈(2~12)만큼 정확히 이동할 수 있다.');
     }
     return true;
   }
 
   const KEY_CARDS = [
-    { w: 3, emoji: '⛵', title: '순풍', desc: '등 뒤로 바람이 분다. 3칸 앞으로!', run: async () => { await sleep(100); return move(3); } },
-    { w: 2, emoji: '🌪️', title: '역풍', desc: '돌풍에 밀려 2칸 뒤로.', run: async () => { S.pos = (S.pos - 2 + N) % N; placeToken(S.pos, true); await sleep(300); return resolveTile(); } },
-    { w: 3, emoji: '💰', title: '떠돌이 상인의 사례', desc: '길 잃은 상인을 도와주고 사례금을 받았다.', run: async () => { gainGold(20 * S.lap + 10); return true; } },
-    { w: 2, emoji: '🦹', title: '소매치기', desc: '정신을 차려보니 지갑이 가볍다… (골드 25% 잃음)', run: async () => { const l = Math.floor(S.gold * 0.25); S.gold -= l; floatText(`-${l}G`, 'var(--bad)'); sfx.bad(); return true; } },
-    { w: 2, emoji: '✨', title: '요정의 축복', desc: 'HP와 MP가 모두 회복됐다.', run: async () => { heal(S.maxHp); S.mp = S.maxMp; sfx.good(); return true; } },
-    { w: 2, emoji: '☠️', title: '독버섯', desc: '배가 고파 버섯을 먹었는데… (HP 15% 감소, 죽지는 않음)', run: async () => { const d = Math.round(S.maxHp * 0.15); S.hp = Math.max(1, S.hp - d); floatText(`-${d}`, 'var(--hp)'); sfx.hurt(); return true; } },
-    { w: 2, emoji: '📜', title: '고대 비석', desc: '비석의 글귀에서 깨달음을 얻었다.', run: async () => { const x = 15 * S.lap; log(`📜 경험치 +${x}`); await gainExp(x); return true; } },
-    { w: 1, emoji: '🍀', title: '네잎클로버', desc: '행운의 주사위를 얻었다!', run: async () => { S.luck++; sfx.good(); return true; } },
-    { w: 1, emoji: '🌀', title: '차원 균열', desc: '발밑이 갈라지며 차원문으로 빨려 들어간다!', run: async () => { await warp(PORTAL); return onPortal(); } },
-    { w: 1, emoji: '🏇', title: '역마차', desc: '역마차를 얻어 타고 출발점까지 직행! (바퀴 보너스 획득)', run: async () => { const steps = (N - S.pos) % N || N; return move(steps); } },
+    { w: 3, emoji: '⛵', title: '순풍', desc: '등 뒤로 바람이 분다. 3칸 앞으로!', run: async (c) => { await sleep(100); return move(c, 3); } },
+    { w: 2, emoji: '🌪️', title: '역풍', desc: '돌풍에 밀려 2칸 뒤로.', run: async (c) => { c.pos = (c.pos - 2 + N) % N; renderTokens(c.id); await sleep(300); return resolveTile(c); } },
+    { w: 3, emoji: '💰', title: '떠돌이 상인의 사례', desc: '길 잃은 상인을 도와주고 사례금을 받았다.', run: async () => { gainGold(20 + 4 * G.year); return true; } },
+    { w: 2, emoji: '🦹', title: '소매치기', desc: '정신을 차려보니 지갑이 가볍다… (골드 25% 잃음)', run: async () => { const l = Math.floor(G.gold * 0.25); G.gold -= l; floatText(`-${l}G`, 'var(--bad)'); sfx.bad(); return true; } },
+    { w: 2, emoji: '✨', title: '요정의 축복', desc: 'HP와 MP가 모두 회복됐다.', run: async (c) => { heal(c, 9999); c.mp = c.mmp; sfx.good(); return true; } },
+    { w: 2, emoji: '☠️', title: '독버섯', desc: '배가 고파 버섯을 먹었는데… (HP 15% 감소, 죽지는 않음)', run: async (c) => { const d = Math.round(eff(c).maxHp * 0.15); c.hp = Math.max(1, c.hp - d); floatText(`-${d}`, 'var(--hp)'); sfx.hurt(); return true; } },
+    { w: 2, emoji: '📜', title: '고대 비석', desc: '비석의 글귀에서 깨달음을 얻었다. (경험치, 지력 +1)', run: async (c) => { c.int++; await gainExp(c, 10 + 3 * G.year); return true; } },
+    { w: 2, emoji: '🎊', title: '마을 축제', desc: '온 마을이 들썩인다. 실컷 놀았다! (스트레스 -30)', run: async (c) => { addStress(c, -30); sfx.good(); return true; } },
+    { w: 2, emoji: '😩', title: '과로', desc: '밀린 일이 산더미다… (스트레스 +20)', run: async (c) => { addStress(c, 20); sfx.bad(); return true; } },
+    { w: 2, emoji: '💌', title: '연애편지', desc: '누군가 몰래 편지를 남겼다.', run: async (c) => {
+      const s = spouseOf(c);
+      if (s) { s.aff = clamp(s.aff + 20, 0, 100); log(`💌 ${spouseWord(s)} ${s.name}의 편지. 애정 +20`); sfx.love(); return true; }
+      if (age(c) < ROMANCE_AGE) { log('💌 …아직 어려서 무슨 말인지 모르겠다.'); return true; }
+      const x = pick(candsFor(c)); x.aff[c.id] = clamp((x.aff[c.id] || 0) + 25, 0, 100);
+      log(`💌 ${x.name}의 편지였다! 호감 +25 (${x.aff[c.id]}/100)`); sfx.love(); return true;
+    } },
+    { w: 1, emoji: '🍀', title: '네잎클로버', desc: '행운의 주사위를 얻었다!', run: async () => { G.luck++; sfx.good(); return true; } },
+    { w: 1, emoji: '🌀', title: '차원 균열', desc: '발밑이 갈라지며 차원문으로 빨려 들어간다!', run: async (c) => { await warp(c, PORTAL); return onPortal(c); } },
+    { w: 1, emoji: '🏇', title: '역마차', desc: '역마차를 얻어 타고 집까지 직행! (귀가 보너스 2배)', run: async (c) => move(c, (N - c.pos) % N || N) },
   ];
-  async function onKey() {
-    const total = KEY_CARDS.reduce((s, c) => s + c.w, 0);
+  async function onKey(c) {
+    const total = KEY_CARDS.reduce((s, k) => s + k.w, 0);
     let r = Math.random() * total, card = KEY_CARDS[0];
-    for (const c of KEY_CARDS) { if ((r -= c.w) < 0) { card = c; break; } }
+    for (const k of KEY_CARDS) { if ((r -= k.w) < 0) { card = k; break; } }
     log(`🔑 황금열쇠: ${card.title} — ${card.desc}`);
     await notice(card.emoji, `황금열쇠 · ${card.title}`, card.desc, 'card-flip');
-    const res = await card.run();
-    renderHud();
+    const res = await card.run(c);
+    renderAll();
     return res;
   }
 
   const shopPrice = {
     potion: () => 25,
-    weapon: () => 40 + 25 * S.wl,
-    armor: () => 35 + 25 * S.al,
-    ring: () => 40 + 25 * S.rl,
+    weapon: (c) => 40 + 25 * c.wl,
+    armor: (c) => 35 + 25 * c.al,
+    book: (c) => 40 + 25 * c.bl,
+    ring: (c) => 40 + 25 * c.rl,
     luck: () => 50,
+    flower: () => 30,
   };
-  async function onShop() {
+  async function onShop(c) {
     for (;;) {
-      renderHud();
+      renderAll();
+      const s = spouseOf(c);
       const items = [
-        { value: 'potion', icon: '🧪', label: '포션', sub: `HP 50% 회복 (보유 ${S.potions})` },
-        { value: 'weapon', icon: '⚔️', label: `무기 강화 +${S.wl + 1}`, sub: '공격 +3' },
-        { value: 'armor', icon: '🛡️', label: `방어구 강화 +${S.al + 1}`, sub: '방어 +2' },
-        { value: 'ring', icon: '💍', label: '생명의 반지', sub: '최대 HP +20 (즉시 20 회복)' },
+        { value: 'potion', icon: '🧪', label: '포션', sub: `HP 50% 회복 (가문 보유 ${G.potions})` },
+        { value: 'weapon', icon: '⚔️', label: `무기 강화 +${c.wl + 1}`, sub: '힘 +3' },
+        { value: 'armor', icon: '🛡️', label: `방어구 강화 +${c.al + 1}`, sub: '방어 +2' },
+        { value: 'book', icon: '📖', label: '지혜의 서', sub: '지력 +3 (스킬 피해·일 수입·연애에 도움)' },
+        { value: 'ring', icon: '💍', label: '생명의 반지', sub: '최대 HP +20' },
         { value: 'luck', icon: '🍀', label: '행운의 주사위', sub: '원하는 칸 수만큼 이동' },
-      ].map((it) => ({ ...it, price: shopPrice[it.value](), disabled: S.gold < shopPrice[it.value]() }));
+      ];
+      if (s) items.push({ value: 'flower', icon: '💐', label: `${spouseWord(s)}에게 줄 선물`, sub: `${s.name}의 애정 +25 (현재 ${s.aff})` });
+      items.forEach((it) => { it.price = shopPrice[it.value](c); it.disabled = G.gold < it.price; });
       items.push({ value: null, label: '나가기', primary: true });
-      const pick = await ask({ emoji: '🏪', title: '상점', desc: `보유 골드 💰 ${S.gold}G`, choices: items });
-      if (!pick) break;
-      S.gold -= shopPrice[pick](); sfx.coin();
-      if (pick === 'potion') S.potions++;
-      else if (pick === 'weapon') { S.wl++; S.atk += 3; }
-      else if (pick === 'armor') { S.al++; S.def += 2; }
-      else if (pick === 'ring') { S.rl++; S.maxHp += 20; heal(20); }
-      else if (pick === 'luck') S.luck++;
-      log(`🏪 ${items.find((i) => i.value === pick).label} 구매`);
+      const p = await ask({ emoji: '🏪', title: '상점', desc: `${c.name} · 보유 골드 💰 ${G.gold}G`, choices: items });
+      if (!p) break;
+      spend(shopPrice[p](c));
+      if (p === 'potion') G.potions++;
+      else if (p === 'weapon') { c.wl++; c.atk += 3; }
+      else if (p === 'armor') { c.al++; c.def += 2; }
+      else if (p === 'book') { c.bl++; c.int += 3; }
+      else if (p === 'ring') { c.rl++; c.mhp += 20; heal(c, 20); }
+      else if (p === 'luck') G.luck++;
+      else if (p === 'flower') { s.aff = clamp(s.aff + 25, 0, 100); sfx.love(); }
+      log(`🏪 ${c.name}: ${items.find((i) => i.value === p).label} 구매`);
     }
     return true;
   }
 
-  async function onInn() {
-    const cost = 10 * S.lap;
-    const pick = await ask({
-      emoji: '🏨', title: '여관', desc: `HP ${S.hp}/${S.maxHp} · MP ${S.mp}/${S.maxMp}`,
+  async function onInn(c) {
+    const cost = 10 + G.year;
+    const p = await ask({
+      emoji: '🏨', title: '여관', desc: `${c.name} · HP ${c.hp}/${eff(c).maxHp} · 스트레스 ${c.stress}`,
       choices: [
-        { value: 'rest', icon: '🛏️', label: '푹 쉬기', sub: 'HP·MP 모두 회복', price: cost, disabled: S.gold < cost },
-        { value: 'nap', icon: '🪑', label: '로비에서 쪽잠', sub: 'HP 20% 회복 (무료)' },
+        { value: 'rest', icon: '🛏️', label: '푹 자기', sub: 'HP·MP 완전 회복, 스트레스 -30', price: cost, disabled: G.gold < cost },
+        { value: 'nap', icon: '🪑', label: '로비에서 쪽잠', sub: '무료 · HP 20% 회복, 스트레스 -5' },
       ],
     });
-    if (pick === 'rest') { S.gold -= cost; heal(S.maxHp); S.mp = S.maxMp; sfx.good(); log(`🏨 여관에서 푹 쉬었다. (-${cost}G)`); }
-    else { const h = heal(Math.round(S.maxHp * 0.2)); log(`🏨 로비에서 쪽잠을 잤다. HP +${h}`); }
+    if (p === 'rest') { spend(cost); heal(c, 9999); c.mp = c.mmp; addStress(c, -30); sfx.good(); log(`🏨 ${c.name}이(가) 여관에서 푹 잤다. (-${cost}G)`); }
+    else { const h = heal(c, Math.round(eff(c).maxHp * 0.2)); addStress(c, -5); log(`🏨 ${c.name}이(가) 로비에서 쪽잠을 잤다. HP +${h}`); }
     floatText('💤', 'var(--fg)');
     return true;
   }
 
-  async function onTrap() {
-    const r = d6();
-    if (r >= 5) { log(`🕳️ 함정을 발견했다! 🎲${r} — 가볍게 피했다.`); floatText('회피!', 'var(--ok)'); return true; }
-    const d = Math.round(S.maxHp * 0.12) + S.lap * 2;
-    S.hp -= d; sfx.hurt(); floatText(`-${d}`, 'var(--hp)');
-    log(`🕳️ 함정에 빠졌다! 🎲${r} — HP -${d} (5 이상이면 회피)`);
-    renderHud();
-    if (S.hp <= 0) { await finish(false, '함정'); return false; }
-    return true;
-  }
-
-  async function onShrine() {
-    const pick = await ask({
-      emoji: '⛩️', title: '신전의 축복', desc: '여신이 하나의 축복을 내려준다.',
+  async function onTavern(c) {
+    const s = spouseOf(c);
+    const canDate = !s && age(c) >= ROMANCE_AGE;
+    const bet = 20 + 2 * G.year;
+    const p = await ask({
+      emoji: '🍺', title: '술집', desc: `${c.name} · 스트레스 ${c.stress} · 💰${G.gold}G<br>시끌벅적한 웃음소리와 음악이 흘러나온다.`,
       choices: [
-        { value: 'atk', icon: '⚔️', label: '힘의 축복', sub: '공격 +3' },
-        { value: 'def', icon: '🛡️', label: '수호의 축복', sub: '방어 +2' },
-        { value: 'hp', icon: '❤️', label: '생명의 축복', sub: '최대 HP +15' },
-        { value: 'heal', icon: '✨', label: '치유의 축복', sub: 'HP·MP 완전 회복' },
+        { value: 'drink', icon: '🍺', label: '한잔 하기', sub: '스트레스 -25', price: 10, disabled: G.gold < 10 },
+        { value: 'party', icon: '🎉', label: '진탕 놀기', sub: '스트레스 -55 · 🎲6이면 영감(능력치 +1), 🎲1이면 숙취', price: 35, disabled: G.gold < 35 },
+        { value: 'show', icon: '🎶', label: '가희의 무대와 술판', sub: s ? `스트레스 -45 · 들키면 ${spouseWord(s)} 애정 -20 (40%)` : '스트레스 -45, 호감 가는 사람이 생길지도', price: 30, disabled: G.gold < 30 },
+        { value: 'gamble', icon: '🎲', label: '주사위 도박', sub: `${bet}G를 걸고 딜러와 2d6 대결 (이기면 2배)`, price: bet, disabled: G.gold < bet },
+        ...(canDate ? [{ value: 'date', icon: '💞', label: '이성과 어울리기', sub: '연애 상대를 만난다' }] : []),
+        { value: null, label: '그냥 나가기', ghost: true },
       ],
     });
-    if (pick === 'atk') S.atk += 3; else if (pick === 'def') S.def += 2;
-    else if (pick === 'hp') { S.maxHp += 15; heal(15); } else { heal(S.maxHp); S.mp = S.maxMp; }
-    sfx.good(); log('⛩️ 여신의 축복을 받았다.');
+    if (!p) return true;
+    if (p === 'drink') { spend(10); addStress(c, -25); log(`🍺 ${c.name}이(가) 한잔 걸쳤다. 스트레스 -25`); }
+    else if (p === 'party') { spend(35); await party(c, -55); }
+    else if (p === 'show') {
+      spend(30); addStress(c, -45); sfx.good();
+      if (s && Math.random() < 0.4) {
+        s.aff = clamp(s.aff - 20, 0, 100); sfx.bad();
+        log(`🎶 ${c.name}의 술판이 ${spouseWord(s)} ${s.name}에게 들켰다! 애정 -20`);
+        await notice('😠', '들켰다!', `${spouseWord(s)} ${s.name}이(가) 단단히 화가 났다. (애정 -20 → ${s.aff})`);
+      } else if (!s && age(c) >= ROMANCE_AGE && Math.random() < 0.5) {
+        const x = pick(candsFor(c)); x.aff[c.id] = clamp((x.aff[c.id] || 0) + 15, 0, 100);
+        log(`🎶 무대 뒤에서 ${x.name}와(과) 눈이 맞았다! 호감 +15`); sfx.love();
+      } else log(`🎶 ${c.name}이(가) 가희의 노래에 취해 밤새 놀았다. 스트레스 -45`);
+    } else if (p === 'gamble') await gamble(c, bet);
+    else if (p === 'date') await romance(c);
+    renderAll();
     return true;
   }
 
-  async function onSwamp() {
-    S.stuck = 2;
-    log('🌫️ 저주의 늪에 빠졌다! 더블을 굴리거나 골드를 내야 빠져나간다. (최대 2턴)');
+  async function party(c, amount) {
+    addStress(c, amount);
+    const r = d6();
+    if (r === 6) {
+      const k = pick(['atk', 'int']);
+      c[k]++;
+      sfx.good(); log(`🎉 ${c.name}이(가) 진탕 놀다 영감을 얻었다! ${k === 'atk' ? '힘' : '지력'} +1`);
+      await notice('💡', '영감!', `실컷 놀고 나니 머리가 맑아졌다.<br>${k === 'atk' ? '힘' : '지력'} +1, 스트레스 ${amount}`);
+    } else if (r === 1) {
+      const d = Math.round(eff(c).maxHp * 0.1);
+      c.hp = Math.max(1, c.hp - d); sfx.hurt();
+      log(`🤢 ${c.name}: 숙취… HP -${d} (스트레스 ${amount})`);
+    } else log(`🎉 ${c.name}이(가) 진탕 놀았다! 스트레스 ${amount}`);
+  }
+
+  async function gamble(c, bet) {
+    const me = [d6(), d6()], dealer = [d6(), d6()];
+    const a = me[0] + me[1], b = dealer[0] + dealer[1];
+    let title, emoji;
+    if (a > b) { G.gold += bet; emoji = '🤑'; title = `승리! +${bet}G`; sfx.coin(); }
+    else if (a < b) { G.gold -= bet; emoji = '💸'; title = `패배… -${bet}G`; sfx.bad(); }
+    else { emoji = '🤝'; title = '무승부'; }
+    addStress(c, a > b ? -15 : 5);
+    log(`🎲 도박: ${c.name} ${me.join('+')}=${a} vs 딜러 ${dealer.join('+')}=${b} → ${title}`);
+    await notice(emoji, title, `${c.name} 🎲${me[0]}+${me[1]} = <b>${a}</b><br>딜러 🎲${dealer[0]}+${dealer[1]} = <b>${b}</b>`);
+  }
+
+  // ---------- Romance & family ----------
+  function candsFor(c) {
+    const g = c.gender === 'm' ? 'f' : 'm';
+    let list = G.cands.filter((x) => x.gender === g);
+    while (list.length < 3) {
+      const taken = list.map((x) => x.trait);
+      const traits = Object.keys(TRAITS).filter((t) => !taken.includes(t));
+      const x = { id: 'c' + (G.nextId++), name: newName(g), gender: g, trait: pick(traits.length ? traits : Object.keys(TRAITS)), aff: {}, ageOff: rand(-3, 3) };
+      G.cands.push(x); list.push(x);
+    }
+    return list;
+  }
+
+  async function onPlaza(c) {
+    if (age(c) < ROMANCE_AGE) {
+      addStress(c, -10);
+      log(`⛲ ${c.name}이(가) 광장에서 친구들과 뛰어놀았다. 스트레스 -10`);
+      return true;
+    }
+    await romance(c);
+    return true;
+  }
+
+  async function romance(c) {
+    const s = spouseOf(c);
+    if (s) return outing(c, s);
+    const list = candsFor(c);
+    const who = await ask({
+      emoji: '💞', title: '누구를 만날까?', desc: `${c.name} (${age(c)}세) · 💰${G.gold}G`,
+      choices: [...list.map((x) => ({
+        value: x.id, icon: TRAITS[x.trait].icon, label: `${x.name} · ${TRAITS[x.trait].job[x.gender]}`,
+        sub: `❤️ ${x.aff[c.id] || 0}/100 · ${TRAITS[x.trait].likeText}`,
+      })), { value: null, label: '그냥 지나가기', ghost: true }],
+    });
+    if (!who) return;
+    const x = G.cands.find((z) => z.id === who);
+    const T = TRAITS[x.trait];
+    const a = x.aff[c.id] || 0;
+    const giftGain = T.likes === 'gift' ? 30 : 20;
+    const act = await ask({
+      emoji: T.icon, title: `${x.name}와(과) 함께`, desc: `❤️ 호감 ${a}/100 · ${T.likeText}<br>결혼하면: ${T.perk}`,
+      choices: [
+        { value: 'talk', icon: '💬', label: '대화하기', sub: '무료 · 🎲 + 상대가 좋아하는 능력치로 판정' },
+        { value: 'gift', icon: '🎁', label: '선물하기', sub: `호감 +${giftGain}`, price: 25, disabled: G.gold < 25 },
+        { value: 'date', icon: '🌹', label: '데이트', sub: '호감 +30, 스트레스 -20', price: 40, disabled: G.gold < 40 },
+        { value: 'propose', icon: '💍', label: '청혼하기', sub: a >= 100 ? '성공 확률 5/6' : '호감 100 필요', price: 100, disabled: a < 100 || G.gold < 100 },
+        { value: null, label: '돌아가기', ghost: true },
+      ],
+    });
+    if (!act) return;
+    const e = eff(c);
+    let gain = 0, msg = '';
+    if (act === 'talk') {
+      const val = T.likes === 'atk' ? e.atk : T.likes === 'int' ? e.int : T.likes === 'fun' ? (c.stress < 40 ? 16 : 4) : 8;
+      const r = d6(), bonus = Math.floor(val / 4), ok = r + bonus >= 6;
+      gain = ok ? 20 : 6;
+      addStress(c, -5);
+      msg = `🎲${r} + ${bonus} ${ok ? '— 대화가 무르익었다!' : '— 조금 어색했다.'}`;
+    } else if (act === 'gift') { spend(25); gain = giftGain; msg = '선물을 받고 환하게 웃는다.'; }
+    else if (act === 'date') { spend(40); gain = 30; addStress(c, -20); msg = '즐거운 데이트였다.'; }
+    else if (act === 'propose') {
+      spend(100);
+      const r = d6();
+      if (r >= 2) return marry(c, x);
+      x.aff[c.id] = clamp(a - 25, 0, 100); sfx.bad();
+      log(`💔 ${c.name}의 청혼… 🎲${r} 실패. ${x.name}: "아직은 마음의 준비가…"`);
+      await notice('💔', '청혼 실패', `🎲${r} — ${x.name}이(가) 조금 더 시간을 달라고 한다. (호감 -25)`);
+      return;
+    }
+    x.aff[c.id] = clamp(a + gain, 0, 100);
+    sfx.love();
+    log(`💞 ${c.name} ♥ ${x.name}: 호감 +${gain} (${x.aff[c.id]}/100)`);
+    await notice(T.icon, `${x.name} ❤️ ${x.aff[c.id]}/100`, `${msg}<br>호감 +${gain}${x.aff[c.id] >= 100 ? '<br><b>이제 청혼할 수 있다! 💍</b>' : ''}`);
+  }
+
+  async function marry(c, x) {
+    const s = {
+      id: G.nextId++, name: x.name, gender: x.gender, role: 'spouse', trait: x.trait,
+      born: G.year - Math.max(ROMANCE_AGE, age(c) + x.ageOff), pos: c.pos, aff: 80, partnerId: c.id, alive: true,
+    };
+    G.chars[s.id] = s; c.spouseId = s.id;
+    G.cands = G.cands.filter((z) => z !== x);
+    G.stats.marriages++;
+    addStress(c, -30);
+    sfx.love(); renderAll();
+    log(`💒 ${c.name}와(과) ${s.name}이(가) 결혼했다! (${TRAITS[s.trait].perk})`);
+    await notice('💒', '결혼!', `${c.name}와(과) ${s.name}이(가) 부부가 되었다.<br>${spouseWord(s)}는 NPC로 보드를 돌아다니며 가문을 돕는다.<br><b>${TRAITS[s.trait].icon} ${TRAITS[s.trait].perk}</b><br>애정이 높을수록 아이가 잘 생긴다. 애정이 0이 되면 떠나버린다!`);
+  }
+
+  async function outing(c, s) {
+    const p = await ask({
+      emoji: '👪', title: '가족과 함께', desc: `${spouseWord(s)} ${s.name} · ❤️ 애정 ${s.aff}/100`,
+      choices: [
+        { value: 'outing', icon: '🧺', label: '가족 나들이', sub: '스트레스 -25, 애정 +15', price: 20, disabled: G.gold < 20 },
+        { value: 'gift', icon: '💐', label: '선물하기', sub: '애정 +25', price: 30, disabled: G.gold < 30 },
+        { value: 'walk', icon: '🚶', label: '함께 산책', sub: '무료 · 애정 +5, 스트레스 -5' },
+      ],
+    });
+    if (p === 'outing') { spend(20); addStress(c, -25); s.aff = clamp(s.aff + 15, 0, 100); }
+    else if (p === 'gift') { spend(30); s.aff = clamp(s.aff + 25, 0, 100); }
+    else { addStress(c, -5); s.aff = clamp(s.aff + 5, 0, 100); }
+    sfx.love();
+    log(`👪 ${c.name}와(과) ${s.name}: ${p === 'outing' ? '가족 나들이' : p === 'gift' ? '선물' : '산책'} (애정 ${s.aff})`);
+  }
+
+  async function raiseKid(c, k) {
+    const p = await ask({
+      emoji: charFace(k), title: `${k.name} (${age(k)}세) 돌보기`,
+      desc: `${relation(k)} · 교육 ${k.edu} · 훈련 ${k.train} · 유대 ${k.bond}<br>${ADULT_AGE}살이 되면 직접 플레이할 수 있다.`,
+      choices: [
+        { value: 'edu', icon: '📚', label: '공부시키기', sub: '성인 시 지력 +2', price: 30, disabled: G.gold < 30 },
+        { value: 'train', icon: '🗡️', label: '검술 훈련', sub: '성인 시 최대HP +8, 힘 +1', price: 30, disabled: G.gold < 30 },
+        { value: 'play', icon: '🧸', label: '놀아주기', sub: `무료 · 유대 +1 (모든 능력 +1), ${c.name} 스트레스 -15` },
+      ],
+    });
+    if (p === 'edu') { spend(30); k.edu++; }
+    else if (p === 'train') { spend(30); k.train++; }
+    else { k.bond++; addStress(c, -15); }
+    log(`🧸 ${c.name}이(가) ${k.name}을(를) ${p === 'edu' ? '공부시켰다' : p === 'train' ? '훈련시켰다' : '놀아줬다'}.`);
+  }
+
+  async function birth(h, s) {
+    const gender = Math.random() < 0.5 ? 'm' : 'f';
+    const k = {
+      id: G.nextId++, name: newName(gender), gender, role: 'kid', born: G.year, parentId: h.id, otherParentId: s.id,
+      edu: 0, train: 0, bond: 0, xInt: 0, alive: true, gen: h.gen + 1,
+    };
+    G.chars[k.id] = k; h.kidIds.push(k.id); G.stats.births++;
+    s.aff = clamp(s.aff + 10, 0, 100);
+    sfx.love(); renderAll();
+    log(`🍼 ${h.name}와(과) ${s.name}의 ${childWord(k)} ${k.name}이(가) 태어났다!`);
+    await notice('🍼', `${childWord(k)} 탄생!`, `${h.name}와(과) ${s.name} 사이에 ${k.name}이(가) 태어났다.<br>🏠 집을 지날 때 공부·훈련·놀아주기로 키울 수 있다.<br>${ADULT_AGE}살이 되면 직접 플레이!`);
+  }
+
+  async function comingOfAge(k) {
+    const cls = await ask({
+      emoji: charFace(k), title: `${k.name}, ${ADULT_AGE}살!`,
+      desc: `${relation(k)}이(가) 모험을 떠날 나이가 되었다. 직업을 골라주세요.<br>교육 ${k.edu} · 훈련 ${k.train} · 유대 ${k.bond}${k.xInt ? ` · 학자 부모 지력 +${k.xInt}` : ''}`,
+      choices: Object.entries(CLASSES).map(([key, C]) => ({ value: key, icon: C.face, label: C.name, sub: `${C.blurb} 스킬 ${C.skill}` })),
+    });
+    const parent = G.chars[k.parentId];
+    const inh = parent ? Math.floor(parent.lv / 3) : 0;
+    const C = CLASSES[cls];
+    const h = makeHero({
+      id: k.id, name: k.name, gender: k.gender, cls, born: k.born, gen: k.gen, parentId: k.parentId,
+      mhp: C.hp + k.train * 8 + k.bond * 5, atk: C.atk + k.train + k.bond + inh, def: C.def + k.bond,
+      int: C.int + k.edu * 2 + k.bond + inh + (k.xInt || 0), stress: 0,
+    });
+    G.chars[k.id] = h;
+    G.maxGen = Math.max(G.maxGen, h.gen);
+    sfx.good(); renderAll();
+    log(`🎒 ${h.name}이(가) ${C.name}(으)로 모험을 시작한다! 이제 직접 플레이할 수 있다.`);
+    await notice(C.face, `${h.name} 출전!`, `${h.name}이(가) 집에서 출발한다. 매년 다른 가족과 번갈아 주사위를 굴린다.<br>${inh ? `부모에게 물려받은 재능: 힘·지력 +${inh}<br>` : ''}아직 어려서 힘이 약하지만 16살까지 쑥쑥 자란다.`);
+  }
+
+  async function spouseTurn(s) {
+    const steps = d6() + d6();
+    for (let i = 0; i < steps; i++) { s.pos = (s.pos + 1) % N; renderTokens(s.id); await sleep(80); }
+    const p = G.chars[s.partnerId];
+    const t = BOARD[s.pos], b = G.buildings[s.pos];
+    const msgs = [];
+    if (b) { const g = 10 + 10 * b.lvl; G.gold += g; msgs.push(`${BUILD[b.type].name} 일을 도와 +${g}G`); }
+    if (s.trait === 'healer' && isHero(p)) {
+      const h = heal(p, Math.round(eff(p).maxHp * 0.15));
+      if (h) msgs.push(`${p.name}에게 약초를 달여 HP +${h}`);
+    } else if (s.trait === 'knight' && t.type === 'monster' && !b && !(G.cleared[s.pos] > G.year)) {
+      const e = enemyFor(t.tier, G.year), g = Math.round(e.gold / 2);
+      G.cleared[s.pos] = G.year + 3; G.gold += g;
+      msgs.push(`${MONSTERS[t.tier].name}를 처치! +${g}G`);
+    } else if (s.trait === 'scholar' && (t.type === 'clerk' || t.type === 'shop')) {
+      const g = 20 + G.year; G.gold += g; msgs.push(`글을 써서 +${g}G`);
+    } else if (s.trait === 'merchant' && ['shop', 'tavern', 'plaza', 'lot', 'labor'].includes(t.type)) {
+      const g = 20 + G.year; G.gold += g; msgs.push(`장사로 +${g}G`);
+    }
+    if (isHero(p) && p.pos === s.pos) { addStress(p, -20); s.aff = clamp(s.aff + 8, 0, 100); msgs.push(`${p.name}와(과) 마주쳐 함께 시간을 보냈다 (스트레스 -20)`); }
+    if (msgs.length) { log(`${charFace(s)} ${spouseWord(s)} ${s.name}: ${msgs.join(', ')}`); floatText('♥', 'var(--love)', s.pos); }
+    renderAll();
+  }
+
+  async function spouseLeaves(s) {
+    s.alive = false; s.left = true;
+    const p = G.chars[s.partnerId];
+    if (p) p.spouseId = null;
+    sfx.bad(); renderAll();
+    log(`💔 ${spouseWord(s)} ${s.name}이(가) 집을 떠났다… (애정 0)`);
+    await notice('💔', `${s.name}이(가) 떠났다`, `애정이 바닥나 ${spouseWord(s)}가 짐을 싸서 떠났다.<br>${p ? p.name + '은(는) 다시 연애할 수 있다.' : ''}`);
+  }
+
+  async function naturalDeath(c) {
+    if (c.role === 'hero') return killHero(c, '노환');
+    c.alive = false;
+    const p = G.chars[c.partnerId];
+    if (p) p.spouseId = null;
+    renderAll(); sfx.bad();
+    log(`🕯️ ${spouseWord(c)} ${c.name}이(가) ${age(c)}세로 세상을 떠났다.`);
+    await notice('🕯️', `${c.name} 영면`, `${relation(c)} ${c.name}이(가) ${age(c)}세로 눈을 감았다.`);
+  }
+
+  async function killHero(c, cause) {
+    c.alive = false; c.hp = 0;
+    renderAll(); sfx.bad();
+    log(`💀 ${c.name}이(가) ${age(c)}세로 쓰러졌다 — ${cause}`);
+    const heirs = heroes().length + kids().length;
+    await notice('💀', `${c.name} 사망`, `${relation(c)} ${c.name}, 향년 ${age(c)}세.<br>${cause}${heirs ? '<br>가문의 다른 이들이 뜻을 잇는다.' : ''}`);
+  }
+
+  // ---------- Remaining tiles ----------
+  async function onWork(c, kind) {
+    const e = eff(c);
+    const base = kind === 'labor' ? 15 + e.atk * 2 : 15 + e.int * 3;
+    const p = await ask({
+      emoji: kind === 'labor' ? '🔨' : '📜', title: kind === 'labor' ? '공사장' : '서기소',
+      desc: `${kind === 'labor' ? '힘쓰는 일. 젊을수록 많이 번다.' : '머리 쓰는 일. 나이 들수록(지력) 많이 번다.'}<br>예상 수입 ${base + 3}~${base + 18}G · 스트레스 +12`,
+      choices: [
+        { value: true, icon: '💪', label: '일하기', sub: `${kind === 'labor' ? '힘' : '지력'} ${kind === 'labor' ? e.atk : e.int} 기준` },
+        { value: false, label: '그냥 지나가기', ghost: true },
+      ],
+    });
+    if (!p) return true;
+    const pay = base + d6() * 3;
+    gainGold(pay); addStress(c, 12);
+    log(`${kind === 'labor' ? '🔨' : '📜'} ${c.name}이(가) 일해서 ${pay}G를 벌었다. (스트레스 +12)`);
+    await gainExp(c, 5);
+    return true;
+  }
+
+  function buildableHere(c) {
+    const i = c.pos, t = BOARD[i], b = G.buildings[i];
+    if (b) return b.lvl < 3 ? 'upgrade' : null;
+    if (t.type === 'lot') return 'build';
+    if (t.type === 'monster' && G.cleared[i] > G.year) return 'build';
+    return null;
+  }
+
+  async function onLot(c) {
+    if (G.gold >= 100) await buildMenu(c);
+    else log(`🌾 빈 공터. 100G가 있으면 건물을 지을 수 있다. (현재 ${G.gold}G)`);
+    return true;
+  }
+
+  async function buildMenu(c, title) {
+    const i = c.pos, b = G.buildings[i];
+    if (b) {
+      const B = BUILD[b.type], cost = upCost(b);
+      if (b.lvl >= 3) return;
+      const ok = await ask({
+        emoji: B.icon, title: `${B.name} 증축 ★${b.lvl} → ★${b.lvl + 1}`,
+        desc: `연 수입 ${B.income * b.lvl}G → ${B.income * (b.lvl + 1)}G${b.type === 'fort' ? '<br>가문 전원 방어 +1' : ''}<br>보유 💰${G.gold}G`,
+        choices: [{ value: true, icon: '🏗️', label: '증축하기', price: cost, disabled: G.gold < cost }, { value: false, label: '그만두기', ghost: true }],
+      });
+      if (!ok) return;
+      spend(cost); b.lvl++; sfx.good();
+      log(`🏗️ ${BOARD[i].name}의 ${B.name}을(를) ★${b.lvl}로 증축했다!`);
+      renderAll();
+      return;
+    }
+    const onLair = BOARD[i].type === 'monster';
+    const p = await ask({
+      emoji: '🏗️', title: title || '건물 짓기',
+      desc: `${BOARD[i].name} · 보유 💰${G.gold}G<br>건물은 매년 수입을 내고, 가족이 들르면 혜택을 준다.${onLair ? '<br>몬스터 소굴에 지으면 이 칸의 몬스터는 영영 사라진다.' : ''}`,
+      choices: [
+        ...Object.entries(BUILD).map(([k, v]) => ({ value: k, icon: v.icon, label: v.name, sub: `연 수입 ${v.income}G · ${v.desc}`, price: v.cost, disabled: G.gold < v.cost })),
+        { value: null, label: '나중에', ghost: true },
+      ],
+    });
+    if (!p) return;
+    spend(BUILD[p].cost);
+    G.buildings[i] = { type: p, lvl: 1, by: c.id };
+    delete G.cleared[i];
+    sfx.good();
+    log(`🏗️ ${c.name}이(가) ${BOARD[i].name}에 ${BUILD[p].name}을(를) 지었다! (연 수입 +${BUILD[p].income}G)`);
+    renderAll();
+  }
+
+  async function onBuilding(c, b) {
+    const B = BUILD[b.type];
+    let desc;
+    if (b.type === 'fort') {
+      const h = heal(c, Math.round(eff(c).maxHp * 0.5));
+      desc = `우리 가문의 요새. 병사들이 맞이한다. HP +${h}`;
+    } else if (b.type === 'inn') {
+      heal(c, 9999); c.mp = c.mmp; addStress(c, -40);
+      desc = '우리 여관에서 공짜로 푹 잤다. HP·MP 완전 회복, 스트레스 -40';
+    } else {
+      await party(c, -50);
+      desc = '우리 술집에서 공짜 술판! 스트레스 -50';
+    }
+    sfx.good();
+    log(`${B.icon} ${c.name}: ${desc}`);
+    const choices = [];
+    if (b.type === 'fort') choices.push({ value: 'train', icon: '🏋️', label: '병사들과 훈련', sub: '힘 +1, 방어 +1, 스트레스 +5', price: 30, disabled: G.gold < 30 });
+    if (b.lvl < 3) choices.push({ value: 'up', icon: '🏗️', label: `증축 ★${b.lvl + 1}`, sub: `연 수입 +${B.income}G${b.type === 'fort' ? ', 가문 방어 +1' : ''}`, price: upCost(b), disabled: G.gold < upCost(b) });
+    choices.push({ value: null, label: '확인', primary: true });
+    const p = await ask({ emoji: B.icon, title: `우리 ${B.name} ${'★'.repeat(b.lvl)}`, desc, choices });
+    if (p === 'train') { spend(30); c.atk++; c.def++; addStress(c, 5); log(`🏋️ ${c.name}: 요새에서 훈련! 힘 +1, 방어 +1`); }
+    else if (p === 'up') {
+      const cost = upCost(b);
+      spend(cost); b.lvl++; sfx.good();
+      log(`🏗️ ${B.name}을(를) ★${b.lvl}로 증축했다!`);
+    }
+    renderAll();
+    return true;
+  }
+
+  async function onTrap(c) {
+    const r = d6();
+    if (r >= 5) { log(`🕳️ 함정을 발견했다! 🎲${r} — ${c.name}이(가) 가볍게 피했다.`); floatText('회피!', 'var(--ok)'); return true; }
+    const d = Math.round(eff(c).maxHp * 0.12) + Math.floor(G.year / 2);
+    c.hp -= d; addStress(c, 5); sfx.hurt(); floatText(`-${d}`, 'var(--hp)');
+    log(`🕳️ ${c.name}이(가) 함정에 빠졌다! 🎲${r} — HP -${d} (5 이상이면 회피)`);
+    renderAll();
+    if (c.hp <= 0) { await killHero(c, '함정'); return false; }
+    return true;
+  }
+
+  async function onShrine(c) {
+    const p = await ask({
+      emoji: '⛩️', title: '신전의 축복', desc: `여신이 ${c.name}에게 하나의 축복을 내려준다.`,
+      choices: [
+        { value: 'atk', icon: '⚔️', label: '힘의 축복', sub: '힘 +3' },
+        { value: 'def', icon: '🛡️', label: '수호의 축복', sub: '방어 +2' },
+        { value: 'int', icon: '🧠', label: '지혜의 축복', sub: '지력 +3' },
+        { value: 'heal', icon: '✨', label: '정화의 축복', sub: 'HP·MP 완전 회복, 스트레스 0' },
+      ],
+    });
+    if (p === 'atk') c.atk += 3; else if (p === 'def') c.def += 2; else if (p === 'int') c.int += 3;
+    else { heal(c, 9999); c.mp = c.mmp; c.stress = 0; }
+    sfx.good(); log(`⛩️ ${c.name}이(가) 여신의 축복을 받았다.`);
+    return true;
+  }
+
+  async function onSwamp(c) {
+    c.stuck = 2;
+    log(`🌫️ ${c.name}이(가) 저주의 늪에 빠졌다! 더블을 굴리거나 골드를 내야 빠져나간다. (최대 2턴)`);
     await notice('🌫️', '저주의 늪', '발이 빠져 움직일 수 없다.<br>더블이 나오면 탈출! 아니면 최대 2턴 갇힌다.');
     return true;
   }
 
-  let pickResolve = null;
-  async function onPortal() {
-    await notice('🌀', '차원문', '원하는 칸을 골라 순간이동할 수 있다.<br>출발점을 지나치면 바퀴 수도 올라간다.');
+  async function onPortal(c) {
+    await notice('🌀', '차원문', '원하는 칸을 골라 순간이동할 수 있다.<br>집을 지나치면 귀가 보너스도 받는다.');
     picking = true; renderControls();
     hint('이동할 칸을 누르세요');
     const target = await new Promise((r) => { pickResolve = r; });
     picking = false; pickResolve = null; renderControls();
-    if (target == null || target === PORTAL) { log('🌀 차원문 앞에 머물렀다.'); return true; }
-    const steps = (target - S.pos + N) % N;
-    log(`🌀 차원문을 통해 ${BOARD[target].name}(으)로!`);
-    // Teleport: skip the hop-by-hop walk but still count passing the start tile.
-    if (S.pos + steps >= N) {
-      await warp(0);
-      const cont = await passStart(target === 0);
-      if (!cont) return false;
-    }
-    await warp(target);
-    return resolveTile();
-  }
-
-  function onTileClick(i) {
-    if (picking && pickResolve) pickResolve(i);
+    if (target == null || target === c.pos) { log(`🌀 ${c.name}은(는) 차원문 앞에 머물렀다.`); return true; }
+    const steps = (target - c.pos + N) % N;
+    log(`🌀 ${c.name}이(가) 차원문을 통해 ${BOARD[target].name}(으)로!`);
+    if (c.pos + steps >= N) { await warp(c, 0); await passHome(c, target === 0); }
+    await warp(c, target);
+    return resolveTile(c);
   }
 
   // ---------- Battle ----------
-  function battle(e) {
+  function battle(party, e) {
     return new Promise((resolve) => {
-      const c = CLASSES[S.cls];
       const E = { ...e, max: e.hp };
+      const up = (p) => p.hp > 0;
+      const single = party.length === 1;
       let auto = false, acting = false, done = false;
+      let queue = party.filter(up), qi = 0;
       const lines = [];
       sfx.hurt();
       log(`⚔️ ${E.name} Lv${E.lv} 출현!`);
@@ -846,123 +1506,156 @@
       openModal(`
         <h2>${E.boss ? '최후의 결전' : '전투!'}</h2>
         <div class="battle-field">
-          <div class="fighter"><div class="fe" id="bMe">${c.face}</div><div class="fn">${c.name} Lv${S.lv}</div>
-            <div class="bar hp"><i id="bMeBar"></i><b id="bMeHp"></b></div><div class="bar mp" style="height:10px;margin-top:3px"><i id="bMeMpBar"></i></div></div>
+          <div class="party ${single ? '' : 'many'}">${party.map((p) => `<div class="pm" data-id="${p.id}"><span class="fe">${charFace(p)}</span><div class="pn">${p.name} Lv${p.lv}</div><div class="bar hp"><i></i><b></b></div><div class="bar mp thin"><i></i></div></div>`).join('')}</div>
           <div class="vs">VS</div>
           <div class="fighter"><div class="fe" id="bEn">${E.icon}</div><div class="fn">${E.name} Lv${E.lv}</div>
             <div class="bar hp"><i id="bEnBar"></i><b id="bEnHp"></b></div><div class="fs" id="bEnStat"></div></div>
         </div>
+        <div class="bturn" id="bTurn"></div>
         <div class="blog" id="blog"></div>
         <div class="bactions">
-          <button class="bact main" id="bAtk">⚔️ 공격<small>공격력 + 🎲</small></button>
-          <button class="bact" id="bSkill">✨ ${c.skill}<small>MP ${SKILL_COST} · ${c.skillDesc}</small></button>
+          <button class="bact main" id="bAtk">⚔️ 공격<small>힘 + 🎲</small></button>
+          <button class="bact" id="bSkill">✨ 스킬<small></small></button>
           <button class="bact" id="bPot">🧪 포션<small id="bPotN"></small></button>
-          <button class="bact" id="bRun">🏃 도망<small>${E.boss ? '불가' : S.cls === 'rogue' ? '100% 성공' : '🎲 3 이상 성공'}</small></button>
+          <button class="bact" id="bRun">🏃 도망<small id="bRunN"></small></button>
           <button class="bact" id="bAuto" style="grid-column: 1 / -1">⏩ 자동 전투<small>스킬·포션을 알아서 사용</small></button>
         </div>`);
       const q = (id) => sheet.querySelector('#' + id);
+      const pmEl = (p) => sheet.querySelector(`.pm[data-id="${p.id}"]`);
+      const cur = () => queue[qi];
+      const enrage = () => (E.boss && E.hp < E.max / 2 ? 6 : 0);
 
-      function blog(msg) { lines.unshift(msg); q('blog').innerHTML = lines.slice(0, 12).map((l) => `<p>${l}</p>`).join(''); }
+      function blog(msg) { lines.unshift(msg); q('blog').innerHTML = lines.slice(0, 14).map((l) => `<p>${l}</p>`).join(''); }
       function draw() {
-        q('bMeBar').style.width = Math.max(0, 100 * S.hp / S.maxHp) + '%'; q('bMeHp').textContent = `${Math.max(0, S.hp)}/${S.maxHp}`;
-        q('bMeMpBar').style.width = (100 * S.mp / S.maxMp) + '%';
+        const m = cur();
+        party.forEach((p) => {
+          const el = pmEl(p), mh = eff(p).maxHp;
+          el.querySelector('.bar.hp i').style.width = Math.max(0, 100 * p.hp / mh) + '%';
+          el.querySelector('.bar.hp b').textContent = `${Math.max(0, p.hp)}/${mh}`;
+          el.querySelector('.bar.mp i').style.width = (100 * p.mp / p.mmp) + '%';
+          el.classList.toggle('cur', !single && !done && m === p);
+          el.classList.toggle('down', !up(p));
+        });
         q('bEnBar').style.width = Math.max(0, 100 * E.hp / E.max) + '%'; q('bEnHp').textContent = `${Math.max(0, E.hp)}/${E.max}`;
         q('bEnStat').textContent = `공격 ${E.atk + enrage()} · 방어 ${E.def}`;
-        q('bPotN').textContent = `HP 50% 회복 (${S.potions}개)`;
-        q('bAtk').disabled = acting || done;
-        q('bSkill').disabled = acting || done || S.mp < SKILL_COST;
-        q('bPot').disabled = acting || done || S.potions <= 0 || S.hp >= S.maxHp;
-        q('bRun').disabled = acting || done || !!E.boss;
+        if (m) {
+          const C = CLASSES[m.cls];
+          q('bTurn').textContent = single ? `${m.name} · 스트레스 ${m.stress}${m.stress >= 70 ? ' (지침: 힘 -20%)' : ''}` : `▶ ${m.name}의 차례`;
+          q('bSkill').innerHTML = `✨ ${C.skill}<small>MP ${SKILL_COST} · ${C.skillDesc}</small>`;
+          q('bRunN').textContent = E.boss || !single ? '불가' : m.cls === 'rogue' ? '100% 성공' : '🎲 3 이상 성공';
+          q('bPotN').textContent = `HP 50% 회복 (${G.potions}개)`;
+          q('bAtk').disabled = acting || done;
+          q('bSkill').disabled = acting || done || m.mp < SKILL_COST;
+          q('bPot').disabled = acting || done || G.potions <= 0 || m.hp >= eff(m).maxHp;
+          q('bRun').disabled = acting || done || !!E.boss || !single;
+        }
         q('bAuto').disabled = done;
         q('bAuto').classList.toggle('on', auto);
         q('bAuto').firstChild.textContent = auto ? '⏸️ 자동 멈추기' : '⏩ 자동 전투';
         renderHud();
       }
-      const enrage = () => (E.boss && E.hp < E.max / 2 ? 5 : 0);
-      function anim(id, cls) { const el = q(id); el.classList.remove('hit', 'lunge-r', 'lunge-l'); void el.offsetWidth; el.classList.add(cls); }
+      function anim(el, cls) { if (!el) return; el.classList.remove('hit', 'lunge-r', 'lunge-l'); void el.offsetWidth; el.classList.add(cls); }
 
-      function playerDamage(kind) {
-        const r = d6();
+      function damage(m, kind) {
+        const ef = eff(m), r = d6();
         if (kind === 'skill') {
-          if (S.cls === 'warrior') return { dmg: Math.max(1, Math.round((S.atk + r) * 1.8) - E.def), text: `강타! 🎲${r}` };
-          if (S.cls === 'mage') { const r2 = d6(); return { dmg: Math.round(S.atk * 1.8) + r + r2, text: `화염구! 🎲${r}+${r2}` }; }
-          return { dmg: Math.max(1, Math.round((S.atk + 6) * 1.6) - E.def), text: '급소 찌르기! 치명타', steal: true };
+          if (m.cls === 'warrior') return { dmg: Math.max(1, Math.round((ef.atk + r) * 1.6 + ef.int * 0.5) - E.def), text: `강타! 🎲${r}` };
+          if (m.cls === 'mage') { const r2 = d6(); return { dmg: Math.round(ef.int * 1.6 + ef.atk * 0.6) + r + r2, text: `화염구! 🎲${r}+${r2}` }; }
+          return { dmg: Math.max(1, Math.round((ef.atk + 6) * 1.5 + ef.int * 0.4) - E.def), text: '급소 찌르기! 치명타', steal: true };
         }
-        let dmg = Math.max(1, S.atk + r - E.def);
-        const crit = r === 6 || (S.cls === 'rogue' && r === 5);
+        let dmg = Math.max(1, ef.atk + r - E.def);
+        const crit = r === 6 || (m.cls === 'rogue' && r === 5);
         if (crit) dmg = Math.round(dmg * 1.5);
         return { dmg, text: crit ? `치명타! 🎲${r}` : `공격 🎲${r}` };
       }
 
       async function act(kind) {
         if (acting || done) return;
+        const m = cur();
         acting = true; draw();
         if (kind === 'potion') {
-          S.potions--; const h = heal(Math.round(S.maxHp * 0.5));
-          blog(`🧪 포션을 마셨다. HP +${h}`); sfx.good();
+          G.potions--; const h = heal(m, Math.round(eff(m).maxHp * 0.5));
+          blog(`🧪 ${m.name}이(가) 포션을 마셨다. HP +${h}`); sfx.good();
         } else if (kind === 'run') {
           const r = d6();
-          if (S.cls === 'rogue' || r >= 3) {
-            blog(`🏃 도망쳤다! ${S.cls === 'rogue' ? '' : `🎲${r}`}`);
-            log(`🏃 ${E.name}에게서 도망쳤다.`);
-            done = true; draw(); await sleep(700); closeModal(); return resolve('flee');
+          if (m.cls === 'rogue' || r >= 3) {
+            blog(`🏃 도망쳤다! ${m.cls === 'rogue' ? '' : `🎲${r}`}`);
+            log(`🏃 ${m.name}이(가) ${E.name}에게서 도망쳤다.`);
+            addStress(m, 8);
+            done = true; draw(); await sleep(700); closeModal(); resolve({ r: 'flee' }); return;
           }
           blog(`🏃 도망 실패… 🎲${r}`); sfx.bad();
         } else {
-          if (kind === 'skill') S.mp -= SKILL_COST;
-          const res = playerDamage(kind);
-          anim('bMe', 'lunge-r'); await sleep(150);
-          E.hp -= res.dmg; anim('bEn', 'hit'); sfx.hit();
+          if (kind === 'skill') m.mp -= SKILL_COST;
+          const res = damage(m, kind);
+          anim(pmEl(m).querySelector('.fe'), 'lunge-r'); await sleep(150);
+          E.hp -= res.dmg; anim(q('bEn'), 'hit'); sfx.hit();
           let extra = '';
-          if (res.steal) { const g = 5 * S.lap + 5; S.gold += g; extra = ` (+${g}G 강탈)`; }
-          blog(`${c.face} ${res.text} → ${E.name}에게 ${res.dmg} 피해${extra}`);
+          if (res.steal) { const g = 5 + G.year; G.gold += g; extra = ` (+${g}G 강탈)`; }
+          blog(`${charFace(m)} ${single ? '' : m.name + ' '}${res.text} → ${E.name}에게 ${res.dmg} 피해${extra}`);
         }
         draw();
-        await sleep(auto ? 380 : 480);
-
+        await sleep(auto ? 360 : 460);
         if (E.hp <= 0) return win();
 
-        // Enemy turn: a 1 on its die is a miss.
+        qi++;
+        while (qi < queue.length && !up(queue[qi])) qi++;
+        if (qi >= queue.length) {
+          await enemyTurn();
+          if (done) return;
+          queue = party.filter(up); qi = 0;
+        }
+        acting = false; draw();
+        if (auto) { await sleep(300); autoStep(); }
+      }
+
+      async function enemyTurn() {
+        const targets = party.filter(up);
+        const t = pick(targets);
         const r = d6();
-        anim('bEn', 'lunge-l'); await sleep(150);
-        if (r === 1) {
-          blog(`${E.icon} ${E.name}의 공격 🎲1 — 빗나갔다!`);
-        } else {
-          const dmg = Math.max(1, E.atk + enrage() + Math.floor(r / 2) - S.def);
-          S.hp -= dmg; anim('bMe', 'hit'); sfx.hurt();
-          blog(`${E.icon} ${E.name}의 공격 🎲${r} → ${dmg} 피해${enrage() ? ' (분노!)' : ''}`);
+        anim(q('bEn'), 'lunge-l'); await sleep(150);
+        if (r === 1) blog(`${E.icon} ${E.name}의 공격 🎲1 — 빗나갔다!`);
+        else {
+          const dmg = Math.max(1, E.atk + enrage() + Math.floor(r / 2) - eff(t).def);
+          t.hp -= dmg; anim(pmEl(t).querySelector('.fe'), 'hit'); sfx.hurt();
+          blog(`${E.icon} ${E.name}의 공격 🎲${r} → ${t.name}에게 ${dmg} 피해${enrage() ? ' (분노!)' : ''}`);
+          if (t.hp <= 0) { t.hp = 0; blog(`💀 ${t.name}이(가) 쓰러졌다!`); }
         }
         draw();
-        if (S.hp <= 0) return lose();
-        acting = false; draw();
-        if (auto) { await sleep(320); autoStep(); }
+        if (!party.some(up)) await lose();
+        else await sleep(250);
       }
 
       function autoStep() {
         if (!auto || done || acting) return;
-        const est = Math.max(1, S.atk + 3 - E.def);
-        if (S.hp < S.maxHp * 0.35 && S.potions > 0) return act('potion');
-        if (S.mp >= SKILL_COST && E.hp > est) return act('skill');
+        const m = cur();
+        const est = Math.max(1, eff(m).atk + 3 - E.def);
+        if (m.hp < eff(m).maxHp * 0.35 && G.potions > 0) return act('potion');
+        if (m.mp >= SKILL_COST && E.hp > est) return act('skill');
         act('attack');
       }
 
       async function win() {
         done = true; draw();
-        if (E.boss) { closeModal(); return resolve('win'); }
-        S.kills++;
-        const g = Math.round(E.gold * (S.cls === 'rogue' ? 1.25 : 1));
+        const fallen = party.filter((p) => !up(p));
+        if (E.boss) { await sleep(500); closeModal(); resolve({ r: 'win', fallen }); return; }
+        const survivors = party.filter(up);
+        survivors.forEach((p) => { p.kills++; addStress(p, 6); });
+        G.stats.kills++;
+        const g = Math.round(E.gold * (survivors.some((p) => p.cls === 'rogue') ? 1.25 : 1));
         blog(`🏆 ${E.name}을(를) 쓰러뜨렸다!`); sfx.good();
         await sleep(600); closeModal();
-        log(`🏆 ${E.name} 처치! EXP +${E.exp}, ${g}G`);
         gainGold(g);
-        await gainExp(E.exp);
-        resolve('win');
+        for (const p of survivors) {
+          const x = await gainExp(p, E.exp);
+          log(`🏆 ${p.name}: ${E.name} 처치! EXP +${x}${p.stress <= 20 ? ' (의욕 보너스)' : ''}, ${g}G, 스트레스 +6`);
+        }
+        resolve({ r: 'win', fallen });
       }
 
       async function lose() {
         done = true; draw(); await sleep(700); closeModal();
-        await finish(false, E.name);
-        resolve('lose');
+        resolve({ r: 'lose', fallen: party.slice() });
       }
 
       q('bAtk').addEventListener('click', () => act('attack'));
@@ -970,120 +1663,186 @@
       q('bPot').addEventListener('click', () => act('potion'));
       q('bRun').addEventListener('click', () => act('run'));
       q('bAuto').addEventListener('click', () => { auto = !auto; draw(); autoStep(); });
-      blog(`${E.icon} ${E.name} Lv${E.lv}이(가) 나타났다!`);
+      blog(`${E.icon} ${E.name} Lv${E.lv}이(가) 나타났다!${E.boss ? ' 가문 전원이 맞선다!' : ''}`);
       draw();
     });
   }
 
+  async function bossFight() {
+    const party = heroes();
+    if (!party.length) { await gameOver('마왕이 깨어났지만 맞설 자가 없었다'); return; }
+    log('😈 마왕이 깨어났다! 가문의 모든 모험가가 최후의 결전에 나선다!');
+    await notice('😈', '마왕 부활!', `${BOSS_YEAR}년이 흘러 마왕이 깨어났다.<br>${party.map((p) => `${charFace(p)} ${p.name}(${age(p)}세)`).join(', ')}이(가) 함께 싸운다.<br>도망칠 수 없다!`);
+    party.forEach((p) => { p.mp = p.mmp; });
+    const res = await battle(party, bossFor(party.length));
+    for (const p of res.fallen) if (p.alive) await killHero(p, '마왕과의 결전');
+    if (res.r !== 'win') { await gameOver('마왕에게 패배했다'); return; }
+    G.bossDone = true;
+    await victory();
+  }
+
   // ---------- End of run ----------
-  async function finish(won, killer) {
-    S.over = true; busy = false; clearSave(); renderControls();
-    const lap = Math.min(S.lap, MAX_LAP);
-    const score = (won ? 5000 : 0) + (lap - 1) * 400 + S.lv * 100 + S.kills * 30 + S.gold;
-    const best = loadBest();
-    const isBest = !best || score > best.score;
-    if (isBest) saveBest({ score, won, cls: S.cls, lap, lv: S.lv });
-    if (won) { sfx.good(); log('👑 마왕을 쓰러뜨렸다! 세계에 평화가 찾아왔다.'); }
-    else { sfx.bad(); log(`💀 ${killer}에게 쓰러졌다…`); }
-    const c = CLASSES[S.cls];
+  function statsHtml() {
+    return `<div class="result-stats">
+      <div>세월<b>${G.year}년</b></div>
+      <div>가문<b>${G.maxGen}대</b></div>
+      <div>결혼 / 출생<b>${G.stats.marriages} / ${G.stats.births}</b></div>
+      <div>건물 / 처치<b>${Object.keys(G.buildings).length}채 · ${G.stats.kills}마리</b></div>
+    </div>`;
+  }
+
+  async function victory() {
+    const isBest = recordBest(true);
+    sfx.good(); log('👑 마왕을 쓰러뜨렸다! 세계에 평화가 찾아왔다.');
+    const p = await new Promise((resolve) => {
+      openModal(`<div class="big-emoji">👑</div><h2>세계를 구했다!</h2>
+        <p class="desc">가문의 이름이 전설로 남는다.${isBest ? '<br>🏅 최고 기록!' : ''}</p>${statsHtml()}
+        <button class="primary" id="goOn">🌅 계속 살아가기</button><button class="ghost" id="toTitle">타이틀로</button>`);
+      sheet.querySelector('#goOn').addEventListener('click', () => { closeModal(); resolve('on'); });
+      sheet.querySelector('#toTitle').addEventListener('click', () => { closeModal(); resolve('title'); });
+    });
+    if (p === 'title') { G.over = true; clearSave(); busy = false; showTitle(); return; }
+    G.endless = true;
+    log('🌅 평화의 시대. 가문의 이야기는 계속된다.');
+  }
+
+  async function gameOver(reason) {
+    G.over = true; busy = false; clearSave(); renderControls();
+    const isBest = recordBest(false);
+    sfx.bad(); log(`💀 ${reason}`);
     await new Promise((resolve) => {
-      openModal(`<div class="big-emoji">${won ? '👑' : '💀'}</div>
-        <h2>${won ? '세계를 구했다!' : '원정 실패…'}</h2>
-        <p class="desc">${won ? `${c.face} ${c.name}이(가) 마왕을 물리쳤다!` : `${lap}바퀴째, ${killer}에게 쓰러졌다.`}</p>
-        <div class="result-stats">
-          <div>점수${isBest ? ' · 최고 기록!' : ''}<b>${score.toLocaleString()}</b></div>
-          <div>레벨<b>Lv ${S.lv}</b></div>
-          <div>바퀴 / 턴<b>${lap}바퀴 · ${S.turn}턴</b></div>
-          <div>처치 / 골드<b>${S.kills}마리 · ${S.gold}G</b></div>
-        </div>
+      openModal(`<div class="big-emoji">${G.bossDone ? '🕯️' : '💀'}</div><h2>${G.bossDone ? '가문의 이야기가 끝났다' : '원정 실패…'}</h2>
+        <p class="desc">${reason}.${isBest ? '<br>🏅 최고 기록!' : ''}</p>${statsHtml()}
         <button class="primary" id="againBtn">다시 도전</button>`);
       sheet.querySelector('#againBtn').addEventListener('click', () => { closeModal(); resolve(); });
     });
     showTitle();
   }
 
-  // ---------- Title / menu ----------
-  function resultStatsHtml(best) {
+  // ---------- Info / title / menu ----------
+  function showInfo(c) {
+    let rows;
+    if (c.role === 'hero') {
+      const e = eff(c), s = spouseOf(c);
+      rows = [
+        ['관계', relation(c)], ['나이', `${age(c)}세 · ${stage(c)}`], ['직업', `${CLASSES[c.cls].name} · Lv ${c.lv}`],
+        ['HP', `${c.hp}/${e.maxHp}`], ['힘', `${e.atk} (기본 ${c.atk}, 신체 ${Math.round(e.phys * 100)}%)`],
+        ['방어', `${e.def}`], ['지력', `${e.int} (나이 보너스 +${intBonus(age(c))})`], ['스트레스', `${c.stress}${c.burnout ? ' · 번아웃' : ''}`],
+        ['배우자', s ? `${s.name} ❤️${s.aff}` : '없음'], ['자녀', c.kidIds.map((id) => G.chars[id]).filter((k) => k && k.alive).map((k) => k.name).join(', ') || '없음'],
+        ['처치', `${c.kills}마리 · 귀가 ${c.laps}번`],
+      ];
+    } else if (c.role === 'spouse') {
+      rows = [['관계', relation(c)], ['나이', `${age(c)}세`], ['직업', TRAITS[c.trait].job[c.gender]], ['특기', TRAITS[c.trait].perk], ['애정', `${c.aff}/100 (매년 -2)`]];
+    } else {
+      rows = [['관계', relation(c)], ['나이', `${age(c)}세 (${ADULT_AGE}세에 출전)`], ['교육', c.edu], ['훈련', c.train], ['유대', c.bond]];
+    }
+    openModal(`<div class="big-emoji">${charFace(c)}</div><h2>${c.name}</h2>
+      <dl class="info">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+      <button class="primary" id="closeInfo">닫기</button>`);
+    sheet.querySelector('#closeInfo').addEventListener('click', closeModal);
+  }
+
+  const RULES_HTML = `<ul class="rules">
+    <li><b>1라운드 = 1년.</b> 주사위 2개 합만큼 이동, 더블이면 한 번 더 (3연속은 늪행). ${BOSS_YEAR}년차에 마왕이 깨어난다.</li>
+    <li><b>나이</b>: 36세부터 힘·체력이 줄고, 지력은 나이 들수록 오른다. 스킬 피해는 지력의 영향을 받는다.</li>
+    <li><b>스트레스</b>: 전투·일로 쌓이고 여관·술집·가족으로 푼다. 70↑ 힘 -20%, 20↓ 경험치 +25%, 100이면 번아웃.</li>
+    <li><b>연애·결혼</b>: ⛲ 광장과 🍺 술집에서 만나 호감 100이면 청혼. 배우자는 NPC로 보드를 돌며 가문을 돕는다.</li>
+    <li><b>2세</b>: 결혼하면 매년 아이가 생길 수 있다. 🏠 집을 지날 때 키우고, ${ADULT_AGE}살이 되면 직접 플레이!</li>
+    <li><b>건설</b>: 🌾 공터나 🚩 정복한 몬스터 칸에 서 있으면 요새·여관·술집을 지을 수 있다. 매년 수입.</li>
+    <li><b>돈벌기</b>: 🔨 공사장(힘), 📜 서기소(지력), 건물 수입, 보물, 도박.</li>
+  </ul>`;
+
+  function bestHtml(best) {
     if (!best) return '';
-    const c = CLASSES[best.cls];
-    return `<div class="result-stats">
-      <div>최고 기록<b>${best.score.toLocaleString()}점</b></div>
-      <div>${best.won ? '마왕 토벌' : '도달'}<b>${c ? c.face : ''} ${best.won ? '성공 👑' : `${best.lap}바퀴 · Lv${best.lv}`}</b></div>
-    </div>`;
+    return `<div class="result-stats"><div>최고 기록<b>${best.won ? '마왕 토벌 👑' : `${best.year}년 생존`}</b></div><div>가문<b>${best.gen}대 · ${best.family}명</b></div></div>`;
   }
 
   function showTitle() {
     const saved = loadSave();
     const best = loadBest();
+    let gender = 'm';
     openModal(`
       <div class="big-emoji">🎲</div>
       <div class="title-logo">주사위 원정대</div>
-      <p class="desc">주사위를 굴려 길을 따라 돌고, 몬스터를 쓰러뜨리며 강해지세요.<br>${MAX_LAP}바퀴를 다 돌면 출발점에 마왕이 깨어납니다.</p>
-      ${resultStatsHtml(best)}
-      ${saved && !saved.over ? `<button class="primary" id="contBtn">이어하기 (${CLASSES[saved.cls].face} Lv${saved.lv} · ${Math.min(saved.lap, MAX_LAP)}바퀴)</button><p class="desc" style="margin:10px 0 6px">또는 새 원정 시작</p>` : '<p class="desc" style="margin:4px 0 8px">직업을 고르세요</p>'}
+      <div class="title-sub">사랑하고, 벌고, 늙어가는 가문의 연대기</div>
+      ${bestHtml(best)}
+      ${saved ? `<button class="primary" id="contBtn">이어하기 (${saved.year}년차 · ${Object.values(saved.chars).filter((c) => c.alive).length}명 가문)</button><p class="desc" style="margin:10px 0 6px">또는 새 가문 시작</p>` : '<p class="desc" style="margin:4px 0 8px">가문의 시조를 만드세요</p>'}
+      <div class="seg"><button data-g="m" class="on">🙋‍♂️ 남자</button><button data-g="f">🙋‍♀️ 여자</button></div>
+      <input class="name-in" id="nameIn" maxlength="6" placeholder="이름 (비우면 자동)" autocomplete="off">
       <div class="classes">
-        ${Object.entries(CLASSES).map(([k, c]) => `<button class="cls" data-cls="${k}"><span class="ce">${c.face}</span><span><b>${c.name}</b><small>HP ${c.hp} · MP ${c.mp} · 공격 ${c.atk} · 방어 ${c.def}<br>${c.blurb}<br>스킬 ${c.skill}: ${c.skillDesc}</small></span></button>`).join('')}
+        ${Object.entries(CLASSES).map(([k, c]) => `<button class="cls" data-cls="${k}"><span class="ce">${c.face}</span><span><b>${c.name}</b><small>HP ${c.hp} · 힘 ${c.atk} · 방어 ${c.def} · 지력 ${c.int}<br>${c.blurb}<br>스킬 ${c.skill}: ${c.skillDesc}</small></span></button>`).join('')}
       </div>
-      <ul class="rules">
-        <li>주사위 2개의 합만큼 이동. <b>더블</b>이면 한 번 더! 3연속 더블은 늪행.</li>
-        <li>출발점을 지날 때마다 골드·회복 보너스, 대신 몬스터가 강해집니다.</li>
-        <li>쓰러뜨린 몬스터 칸엔 🚩 깃발 — 그 바퀴 동안은 안전합니다.</li>
-        <li>🔑 황금열쇠, 🌀 차원문, ⛩️ 신전, 🏪 상점을 잘 활용하세요.</li>
-      </ul>`);
+      ${RULES_HTML}`);
     const cont = sheet.querySelector('#contBtn');
     if (cont) cont.addEventListener('click', () => { closeModal(); startWith(saved); });
+    sheet.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => {
+      gender = b.dataset.g;
+      sheet.querySelectorAll('[data-g]').forEach((x) => x.classList.toggle('on', x === b));
+    }));
     sheet.querySelectorAll('[data-cls]').forEach((b) => b.addEventListener('click', async () => {
-      if (saved && !saved.over) {
+      const typed = sheet.querySelector('#nameIn').value.trim().slice(0, 6);
+      const name = typed || pick(NAMES[gender]);
+      const g = gender;
+      if (saved) {
         closeModal();
-        const ok = await ask({ emoji: '⚠️', title: '새로 시작할까요?', desc: '진행 중인 원정 기록이 사라집니다.', choices: [
+        const ok = await ask({ emoji: '⚠️', title: '새로 시작할까요?', desc: '진행 중인 가문 기록이 사라집니다.', choices: [
           { label: '새로 시작', primary: true, value: true }, { label: '취소', ghost: true, value: false }] });
         if (!ok) return showTitle();
       } else closeModal();
-      newGame(b.dataset.cls);
-      startWith(S);
+      newGame(b.dataset.cls, g, name);
+      startWith(G);
     }));
   }
 
   function startWith(state) {
-    S = state;
+    G = state;
     busy = false; picking = false;
-    if (!S.log) S.log = [];
     $('log').innerHTML = '';
-    [...S.log].reverse().forEach((m) => { const p = document.createElement('p'); p.textContent = m; $('log').prepend(p); });
-    placeToken(S.pos, false);
+    [...G.log].reverse().forEach((m) => { const p = document.createElement('p'); p.textContent = m; $('log').prepend(p); });
+    for (const [, el] of tokenEls) el.remove();
+    tokenEls.clear();
     drawDie($('die1'), 1); drawDie($('die2'), 1);
-    renderHud(); renderBoard();
-    hint(S.extra ? '더블! 한 번 더 굴리세요' : S.stuck > 0 ? `늪에 빠짐: 더블이 나와야 탈출 (${S.stuck}턴)` : '더블이 나오면 한 번 더!');
+    renderAll(); idleHint();
   }
 
   async function openMenu() {
-    if (busy || picking) return;
-    const pick = await ask({ emoji: '📜', title: '메뉴', choices: [
+    if (busy || picking || !G || G.over) return;
+    const p = await ask({ emoji: '📜', title: '메뉴', choices: [
       { value: 'resume', label: '계속하기', primary: true },
+      { value: 'rules', label: '규칙 보기', ghost: true },
       { value: 'title', label: '타이틀로 (진행 상황은 저장됨)', ghost: true },
     ] });
-    if (pick === 'title') { save(); showTitle(); }
+    if (p === 'rules') { await ask({ emoji: '📖', title: '규칙', desc: RULES_HTML, choices: [{ label: '닫기', primary: true, value: true }] }); }
+    if (p === 'title') { save(); showTitle(); }
   }
 
   // ---------- Wiring ----------
   $('rollBtn').addEventListener('click', () => takeTurn());
-  $('luckBtn').addEventListener('click', async () => {
-    if (busy || picking || S.luck <= 0 || S.stuck > 0) return;
+  $('luckBtn').addEventListener('click', () => {
+    const c = actor();
+    if (busy || picking || G.luck <= 0 || !c || c.stuck > 0 || c.burnout) return;
     openModal(`<div class="big-emoji">🍀</div><h2>행운의 주사위</h2><p class="desc">이동할 칸 수를 고르세요 (더블 아님)</p>
       <div class="num-grid">${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<button data-n="${n}">${n}</button>`).join('')}<button data-n="0">취소</button></div>`);
     sheet.querySelectorAll('[data-n]').forEach((b) => b.addEventListener('click', () => {
       const n = +b.dataset.n; closeModal();
       if (!n) return;
-      S.luck--; takeTurn(n);
+      G.luck--; takeTurn(n);
     }));
   });
   $('bribeBtn').addEventListener('click', () => {
-    if (busy || S.stuck <= 0 || S.gold < bribeCost()) return;
+    const c = actor();
+    if (busy || !c || c.stuck <= 0 || G.gold < bribeCost()) return;
     const cost = bribeCost();
-    S.gold -= cost; S.stuck = 0; sfx.coin();
-    log(`💰 ${cost}G를 내고 늪에서 빠져나왔다. 이제 주사위를 굴리세요.`);
-    hint('더블이 나오면 한 번 더!');
-    renderHud(); save();
+    spend(cost); c.stuck = 0;
+    log(`💰 ${c.name}이(가) ${cost}G를 내고 늪에서 빠져나왔다. 이제 주사위를 굴리세요.`);
+    renderAll(); idleHint(); save();
+  });
+  $('buildBtn').addEventListener('click', async () => {
+    const c = actor();
+    if (busy || picking || !isHero(c)) return;
+    busy = true; renderControls();
+    await buildMenu(c);
+    busy = false; renderAll(); idleHint(); save();
   });
   $('cancelPickBtn').addEventListener('click', () => { if (pickResolve) pickResolve(null); });
   $('menuBtn').addEventListener('click', openMenu);
@@ -1096,9 +1855,10 @@
 
   buildBoard();
   drawDie($('die1'), 1); drawDie($('die2'), 1);
-  // Placeholder state so the board renders behind the title screen.
-  S = { cls: 'warrior', lv: 1, exp: 0, hp: 110, maxHp: 110, mp: 6, maxMp: 6, atk: 9, def: 3, gold: 0, potions: 0, luck: 0, pos: 0, lap: 1, turn: 0, kills: 0, cleared: [], stuck: 0, log: [], over: true };
-  placeToken(0, false); renderHud(); renderBoard();
+  // Placeholder family so the board renders behind the title screen (never saved).
+  newGame('warrior', 'm', '아론', false);
+  G.over = true;
+  renderAll();
   showTitle();
 })();
 </script>
