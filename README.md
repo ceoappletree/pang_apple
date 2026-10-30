@@ -9,6 +9,8 @@
 빌드 과정이 없습니다. `index.html`을 브라우저로 열면 됩니다.
 (로컬 서버로 열어도 됩니다: `python3 -m http.server` 후 http://localhost:8000)
 
+새 Claude 세션에서 작업을 이어가려면 [`NEW_SESSION.md`](NEW_SESSION.md)의 시작 프롬프트를 붙여 넣으세요.
+
 ## 세트
 
 | 세트 | 악기 (작은 것 → 큰 것) | 노래 | 해금 |
@@ -69,3 +71,4 @@
 - `src/dj.js` — 박자에 맞춰 고개를 흔드는 DJ 동물
 - `src/game.js` — 물리(matter.js), 입력, 머지, 그리기
 - `lib/matter.min.js` — matter-js 0.19.0 (MIT)
+- `tools/build_artifact.py` — 공유 플레이 링크(Claude 아티팩트)용으로 모든 파일을 HTML 하나로 묶기 (`dist/`에 생성)
